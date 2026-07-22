@@ -7,6 +7,13 @@ export interface TargetExport {
   messages: Array<Record<string, unknown>>;
 }
 
+export interface UpdateStatus {
+  checked: boolean;
+  updateAvailable: boolean;
+  latestVersion?: string;
+  downloads?: { windows?: string; macos?: string };
+}
+
 export class ApiError extends Error {
   constructor(message: string, readonly code: string, readonly status: number) {
     super(message);
@@ -34,6 +41,7 @@ export function createApiClient(fetcher: Fetcher = globalThis.fetch.bind(globalT
   return {
     loadState: () => request<AppState>("/api/state"),
     loadAbout: () => request<{ html: string }>("/api/about"),
+    updateStatus: () => request<UpdateStatus>("/api/update"),
     saveState: (state: AppState) => request<AppState>("/api/state", { method: "PUT", body: JSON.stringify(state) }),
     exportTarget: (targetId: string) => request<TargetExport>(`/api/targets/${encodeURIComponent(targetId)}/export`),
     monitorStatus: () => request<{ enabled: boolean; testMode: boolean; status: string }>("/api/monitor/status"),

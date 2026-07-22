@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { basePersonas as fallbackBasePersonas } from "./catalog";
-import { api } from "./api";
+import { api, type UpdateStatus } from "./api";
 import sweetyLogo from "../../../web/images/logo.png";
 import {
   aggregateDurationMs,
@@ -48,6 +48,7 @@ import {
 import { personaPreview } from "./personaPreview";
 import { getCopy, type Copy } from "./i18n";
 import { defaultState, loadState, saveState } from "./storage";
+import { UpdateNotice, startUpdateStatusPolling } from "./UpdateNotice";
 
 type Page = "dashboard" | "settings" | "targets" | "catalog" | "about";
 type CatalogKind = "persona";
@@ -68,6 +69,7 @@ function App() {
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ checked: false, updateAvailable: false });
 
   const setState: StateSetter = (updater) => setAppState((current) => {
     const next = updater(current);
@@ -80,6 +82,10 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = locale === "zh-TW" ? "zh-Hant" : "en";
   }, [locale]);
+
+  useEffect(() => {
+    return startUpdateStatusPolling(() => api.updateStatus(), setUpdateStatus);
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -236,7 +242,7 @@ function App() {
           </header>
 
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-            {activePage === "dashboard" ? <Dashboard state={state} locale={locale} copy={copy} /> : null}
+            {activePage === "dashboard" ? <Dashboard state={state} locale={locale} copy={copy} updateStatus={updateStatus} /> : null}
             {activePage === "settings" ? <SettingsPage state={state} setState={setState} copy={copy} onToast={setToast} /> : null}
             {activePage === "targets" ? <TargetsPage state={state} setState={setState} locale={locale} copy={copy} onToast={setToast} /> : null}
             {activePage === "catalog" ? <CatalogPage state={state} setState={setState} locale={locale} copy={copy} onToast={setToast} /> : null}
@@ -295,7 +301,7 @@ function AboutPage({ copy }: { copy: Copy }) {
   );
 }
 
-function Dashboard({ state, locale, copy }: { state: AppState; locale: Locale; copy: Copy }) {
+function Dashboard({ state, locale, copy, updateStatus }: { state: AppState; locale: Locale; copy: Copy; updateStatus: UpdateStatus }) {
   const metrics = [
     { label: copy.targetCount, value: state.targets.length.toLocaleString(), icon: Users, color: "text-sky-600 bg-sky-100 dark:bg-sky-950 dark:text-sky-300" },
     { label: copy.totalDuration, value: formatDurationHours(aggregateDurationMs(state.targets), locale), icon: Clock3, color: "text-amber-700 bg-amber-100 dark:bg-amber-950 dark:text-amber-300" },
@@ -306,6 +312,7 @@ function Dashboard({ state, locale, copy }: { state: AppState; locale: Locale; c
 
   return (
     <div className="space-y-8">
+      <UpdateNotice update={updateStatus} copy={copy} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => {
           const Icon = metric.icon;
