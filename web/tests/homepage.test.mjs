@@ -7,11 +7,18 @@ const html = await readFile(new URL('index.html', webRoot), 'utf8').catch(() => 
 const css = await readFile(new URL('homepage.css', webRoot), 'utf8').catch(() => '');
 const javascript = await readFile(new URL('homepage.js', webRoot), 'utf8').catch(() => '');
 const deployHelper = await readFile(new URL('../app/tools/deploy_homepage.php', webRoot), 'utf8').catch(() => '');
+const updateManifest = JSON.parse(await readFile(new URL('sweety-update.json', webRoot), 'utf8').catch(() => '{}'));
 const robots = await readFile(new URL('robots.txt', webRoot), 'utf8').catch(() => '');
 const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(() => '');
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
+
+test('production update manifest is safe for current 1.0.1 installations and deploys publicly', () => {
+  assert.deepEqual(updateManifest, { latestVersion: '1.0.1', downloads: {} });
+  const manifest = deployHelper.match(/\$files\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
+  assert.match(manifest, /['"]sweety-update\.json['"]/);
+});
 
 test('resolveLocale follows browser language preference order and fallback', () => {
   const { resolveLocale } = homepage;

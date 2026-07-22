@@ -92,6 +92,7 @@ $files = [
     'robots.txt',
     'sitemap.xml',
     'llms.txt',
+    'sweety-update.json',
     'images/logo.webp',
     'images/logo.png',
     'images/eric.png',
