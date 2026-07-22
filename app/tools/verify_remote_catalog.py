@@ -1,9 +1,16 @@
 from io import BytesIO
 import base64
 from pathlib import Path
+import sys
 
 import requests
 from PIL import Image
+
+
+DESKTOP_SRC = Path(__file__).resolve().parents[1] / "desktop" / "src"
+sys.path.insert(0, str(DESKTOP_SRC))
+
+from sweety_app.catalog import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
 CATALOG_URL = "https://sweety.tw/sweety-catalog.php"
@@ -22,6 +29,7 @@ def main() -> None:
     response.raise_for_status()
     payload = response.json()
     prompt = payload["systemPromptTemplate"]
+    assert prompt == DEFAULT_SYSTEM_PROMPT_TEMPLATE
     for required_text in (
         "對話延續與好奇心：",
         "對話鉤子",
