@@ -45,7 +45,7 @@ const zhTW = {
   addTarget: "新增對象",
   targetName: "對象名稱",
   targetNameHint: "必須填寫 LINE 上顯示的完整名稱。",
-  targetNameWarning: "如果對方名稱會造成辨識困難，建議你先在 LINE 上為對方設定別名，尤其是名稱內有特殊字元，例如表情符號。",
+  targetNameWarning: "名稱設定後將不能修改，強烈建議在 LINE 上修改對方名稱，以避免對方更名。\n名稱不可包含特殊字元與表情符號，否則 Sweety 將無法正確辨識。",
   profileNotice: "對方很可能已在社群媒體得到您的年齡資訊，建議您選擇合適的年齡範圍及人設。",
   basePersonaEditHint: "＊如果你希望能修改基礎人設，增加其他細節，請點擊「增加到自訂人設」後，在自訂人設頁面進行修改",
   age: "年齡",
