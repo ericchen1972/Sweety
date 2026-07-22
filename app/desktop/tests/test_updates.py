@@ -5,6 +5,7 @@ import importlib
 import pytest
 import requests
 
+import sweety_app.updates as updates
 from sweety_app.updates import UpdateState, check_remote_update, normalize_manifest, parse_version
 
 
@@ -34,14 +35,22 @@ class FakeSession:
         return self.response
 
 
+class ExplosiveTruthinessSession(FakeSession):
+    def __bool__(self):
+        raise RuntimeError("session truthiness must not be evaluated")
+
+
 def manifest(version="1.10.0", downloads=None):
     return {
         "latestVersion": version,
-        "downloads": downloads
-        or {
-            "windows": "https://downloads.example.test/Sweety.exe",
-            "macos": "https://downloads.example.test/Sweety.dmg",
-        },
+        "downloads": (
+            {
+                "windows": "https://downloads.example.test/Sweety.exe",
+                "macos": "https://downloads.example.test/Sweety.dmg",
+            }
+            if downloads is None
+            else downloads
+        ),
     }
 
 
@@ -72,7 +81,10 @@ def test_parse_version_accepts_three_numeric_parts(value, expected):
     assert parse_version(value) == expected
 
 
-@pytest.mark.parametrize("value", ["1.0", "v1.0.1", "1.0.1-rc", "-1.0.1", "1.0.1.0", 101, None])
+@pytest.mark.parametrize(
+    "value",
+    ["1.0", "v1.0.1", "1.0.1-rc", "-1.0.1", "1.0.1.0", "１.０.０", "١.٠.٠", 101, None],
+)
 def test_parse_version_rejects_non_standard_values(value):
     assert parse_version(value) is None
 
@@ -106,6 +118,7 @@ def test_normalize_manifest_marks_newer_numeric_version_available_in_supported_o
         (manifest("0.9.9"), "1.0.0"),
         (manifest("invalid"), "1.0.0"),
         (manifest(), "invalid"),
+        (manifest(downloads={}), "1.0.0"),
         ({}, "1.0.0"),
         (None, "1.0.0"),
     ],
@@ -139,7 +152,7 @@ def test_normalize_manifest_omits_unknown_platforms_and_invalid_urls():
             downloads={
                 "linux": "https://downloads.example.test/Sweety.AppImage",
                 "windows": "https://downloads.example.test/Sweety.exe",
-                "macos": "https:///missing-host.dmg",
+                "macos": "https://[",
             }
         ),
         "1.0.0",
@@ -186,5 +199,28 @@ def test_check_remote_update_converts_network_failure_into_checked_no_update():
         "https://updates.example.test/manifest.json",
         session=FakeSession(error=requests.Timeout("offline")),
     )
+
+    assert state.snapshot() == {"checked": True, "updateAvailable": False}
+
+
+def test_check_remote_update_does_not_evaluate_injected_session_truthiness():
+    state = UpdateState()
+    session = ExplosiveTruthinessSession(FakeResponse(manifest()))
+
+    check_remote_update(state, "1.0.0", "https://updates.example.test/manifest.json", session=session)
+
+    assert len(session.calls) == 1
+    assert state.snapshot()["updateAvailable"] is True
+
+
+def test_check_remote_update_handles_session_constructor_failure(monkeypatch):
+    state = UpdateState()
+
+    def raise_on_session_construction():
+        raise RuntimeError("requests unavailable")
+
+    monkeypatch.setattr(updates.requests, "Session", raise_on_session_construction)
+
+    check_remote_update(state, "1.0.0", "https://updates.example.test/manifest.json")
 
     assert state.snapshot() == {"checked": True, "updateAvailable": False}

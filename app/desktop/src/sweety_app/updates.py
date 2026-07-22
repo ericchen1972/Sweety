@@ -9,7 +9,7 @@ import requests
 
 
 SUPPORTED_PLATFORMS = ("windows", "macos")
-_VERSION_PATTERN = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+_VERSION_PATTERN = re.compile(r"([0-9]+)\.([0-9]+)\.([0-9]+)")
 
 
 class HttpSession(Protocol):
@@ -57,7 +57,10 @@ def normalize_manifest(payload: Any, current_version: Any) -> dict[str, Any]:
 def is_valid_https_url(value: Any) -> bool:
     if not isinstance(value, str):
         return False
-    parsed = urlparse(value)
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return False
     return parsed.scheme.lower() == "https" and bool(parsed.netloc)
 
 
@@ -86,8 +89,8 @@ def check_remote_update(
     *,
     session: HttpSession | None = None,
 ) -> None:
-    client = session or requests.Session()
     try:
+        client = session if session is not None else requests.Session()
         response = client.get(url, timeout=5)
         response.raise_for_status()
         state.finish(normalize_manifest(response.json(), current_version))
