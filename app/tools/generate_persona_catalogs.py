@@ -162,16 +162,8 @@ def canonical_content(item: dict[str, Any], locale: str) -> str:
     if item["id"] == "cautious-accounting-assistant" and locale == "zh-TW":
         style = WANG_STYLE_ZH
     if locale == "zh-TW":
-        ending = (
-            "你只熟悉自己生活與工作經驗內的事情；遇到超出範圍的專業問題會自然說不懂或請對方講簡單一點。"
-            "對方談到賺錢、投資或操作帳號時，你可以表現有點興趣，但會持續確認風險、流程與能否晚點再處理，不會突然爽快答應。"
-        )
-        return f"人物資料：\n{identity}\n\n{profile}\n\n風格個性：\n{style}\n\n{ending}".strip()
-    ending = (
-        "Stay within what this person could reasonably know from work and ordinary life. For unfamiliar professional topics, naturally admit uncertainty or ask for a simpler explanation. "
-        "When money, investing, account access, or an unfamiliar procedure appears, you may sound interested but keep checking risk and process and ask whether it can wait; never switch into immediate confident agreement."
-    )
-    return f"Character information:\n{identity}\n\n{profile}\n\nPersonality and style:\n{style}\n\n{ending}".strip()
+        return f"人物資料：\n{identity}\n\n{profile}\n\n風格個性：\n{style}".strip()
+    return f"Character information:\n{identity}\n\n{profile}\n\nPersonality and style:\n{style}".strip()
 
 
 def refresh_from_live() -> list[dict[str, Any]]:
@@ -203,6 +195,20 @@ def sql_string(value: str) -> str:
     return "'" + value.replace("\\", "\\\\").replace("'", "''") + "'"
 
 
+def update_catalog_module(catalog_module: str) -> str:
+    content_end = catalog_module.index("BASE_WEAPON_TEXT =")
+    prefix = catalog_module[:content_end]
+    import_line = "from .catalog_personas import BASE_PERSONAS"
+    compatibility_line = 'BASE_PERSONA_TEXT = {persona["id"]: persona["content"]["zh-TW"] for persona in BASE_PERSONAS}'
+    prefix = "\n".join(
+        line
+        for line in prefix.splitlines()
+        if line.strip() not in {import_line, compatibility_line}
+    ).rstrip()
+    compatibility_block = f"\n\n\n{import_line}\n\n{compatibility_line}\n\n\n"
+    return prefix + compatibility_block + catalog_module[content_end:]
+
+
 def generate(personas: list[dict[str, Any]]) -> None:
     FRONTEND.write_text(json.dumps(personas, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     FRONTEND_MODULE.write_text(
@@ -217,19 +223,8 @@ def generate(personas: list[dict[str, Any]]) -> None:
         f"BASE_PERSONAS = {repr(personas)}\n",
         encoding="utf-8",
     )
-    catalog_module = PYTHON_MODULE.read_text(encoding="utf-8")
-    content_end = catalog_module.index("BASE_WEAPON_TEXT =")
-    prefix = catalog_module[:content_end]
-    import_line = "from .catalog_personas import BASE_PERSONAS"
-    prefix = "\n".join(
-        line for line in prefix.splitlines() if line.strip() != import_line
-    ).rstrip()
-    compatibility_block = (
-        f"\n\n\n{import_line}\n\n"
-        'BASE_PERSONA_TEXT = {persona["id"]: persona["content"]["zh-TW"] for persona in BASE_PERSONAS}\n\n\n'
-    )
     PYTHON_MODULE.write_text(
-        prefix + compatibility_block + catalog_module[content_end:],
+        update_catalog_module(PYTHON_MODULE.read_text(encoding="utf-8")),
         encoding="utf-8",
     )
     values = []
