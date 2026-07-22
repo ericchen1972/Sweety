@@ -64,6 +64,7 @@ def test_frontend_styles_remote_author_card_and_circular_portrait():
 
     assert re.search(r"\.about-content \.author-card\s*\{", css)
     assert re.search(r"\.about-content \.author-avatar\s*\{", css)
+    assert "items-baseline" in css
     assert "rounded-full" in css
     assert "dark:bg-zinc-900" in css
 

@@ -206,6 +206,12 @@ test('homepage author card uses the public portrait and safe new-tab project lin
     const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     assert.match(html, new RegExp(`href="${escaped}"[^>]+target="_blank"[^>]+rel="noopener noreferrer"`));
   }
+  for (const href of ['https://line.me/ti/p/ekr53MoZc6', 'https://www.threads.com/@eric_slimweb']) {
+    const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    assert.match(html, new RegExp(`href="${escaped}"[^>]+target="_blank"[^>]+rel="noopener noreferrer"`));
+  }
+  assert.deepEqual(homepage.copy['zh-TW'].author.threads, { prefix: '如想得到更多AI開發應用訊息，請追蹤我的', label: 'Threads' });
+  assert.deepEqual(homepage.copy.en.author.threads, { prefix: 'For more AI development and application updates, follow me on', label: 'Threads' });
   assert.match(css, /\.author-card/);
   assert.match(css, /\.author-avatar[^}]*border-radius:\s*50%/s);
 });

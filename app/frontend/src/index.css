@@ -108,7 +108,7 @@ textarea {
   }
 
   .about-content .author-contact {
-    @apply mt-6 flex flex-wrap gap-x-6 gap-y-2 border-t border-zinc-200 pt-5 dark:border-zinc-700;
+    @apply mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-t border-zinc-200 pt-5 dark:border-zinc-700;
   }
 
   .about-content .author-invitation {
