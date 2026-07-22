@@ -13,6 +13,7 @@ MANAGEMENT_URL = f"http://{API_HOST}:{API_PORT}/"
 REMOTE_CATALOG_URL = os.getenv("SWEETY_REMOTE_CATALOG_URL", "https://sweety.tw/sweety-catalog.php")
 SWEETY_APP_TOKEN = os.getenv("SWEETY_APP_TOKEN", "sweety-desktop-catalog-v1")
 REMOTE_METRICS_URL = os.getenv("SWEETY_REMOTE_METRICS_URL", "https://sweety.tw/sweety-metrics.php")
+REMOTE_UPDATE_URL = os.getenv("SWEETY_UPDATE_URL", "https://sweety.tw/sweety-update.json").strip()
 SWEETY_METRICS_APP_TOKEN = os.getenv("SWEETY_METRICS_APP_TOKEN", "").strip()
 REGION_LOOKUP_URL = os.getenv("SWEETY_REGION_LOOKUP_URL", "https://api.country.is/")
 ABOUT_SWEETY_URL = os.getenv("SWEETY_ABOUT_URL", "https://sweety.tw/about_sweety.html")
