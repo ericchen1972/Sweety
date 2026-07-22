@@ -17,7 +17,8 @@ class AboutContentError(RuntimeError):
 
 
 class _AboutSanitizer(HTMLParser):
-    allowed_tags = {"main", "header", "section", "footer", "div", "span", "h1", "h2", "h3", "p", "ul", "ol", "li", "strong", "em", "br", "a"}
+    allowed_tags = {"main", "header", "section", "article", "footer", "div", "span", "h1", "h2", "h3", "p", "ul", "ol", "li", "strong", "em", "br", "a", "img"}
+    void_tags = {"br", "img"}
     blocked_tags = {"head", "script", "style", "iframe", "object", "embed", "form", "input", "button", "textarea", "select", "option", "link", "meta", "base"}
     blocked_void_tags = {"input", "link", "meta", "base"}
 
@@ -47,6 +48,16 @@ class _AboutSanitizer(HTMLParser):
                     'target="_blank"',
                     'rel="noreferrer noopener"',
                 ])
+            elif tag == "img" and name == "src" and value.startswith("https://sweety.tw/"):
+                safe_attrs.append(f'src="{html.escape(value, quote=True)}"')
+            elif tag == "img" and name == "alt":
+                safe_attrs.append(f'alt="{html.escape(value, quote=True)}"')
+            elif tag == "img" and name in {"width", "height"} and re.fullmatch(r"[1-9][0-9]{0,3}", value):
+                safe_attrs.append(f'{name}="{value}"')
+            elif tag == "img" and name == "loading" and value in {"lazy", "eager"}:
+                safe_attrs.append(f'loading="{value}"')
+            elif tag == "img" and name == "decoding" and value in {"async", "sync", "auto"}:
+                safe_attrs.append(f'decoding="{value}"')
         suffix = f" {' '.join(safe_attrs)}" if safe_attrs else ""
         self.parts.append(f"<{tag}{suffix}>")
 
@@ -55,7 +66,7 @@ class _AboutSanitizer(HTMLParser):
         if tag in self.blocked_tags and self.blocked_depth:
             self.blocked_depth -= 1
             return
-        if not self.blocked_depth and tag in self.allowed_tags and tag != "br":
+        if not self.blocked_depth and tag in self.allowed_tags and tag not in self.void_tags:
             self.parts.append(f"</{tag}>")
 
     def handle_data(self, data: str) -> None:

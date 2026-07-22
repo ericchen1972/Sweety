@@ -13,8 +13,9 @@ test('about page presents Sweety as an open-source project with a safe GitHub li
 
 test('about page includes the complete author card below its project content', () => {
   assert.match(html, /class="author-card"/);
-  assert.match(html, /src="\/images\/eric\.png"[^>]+width="256"[^>]+height="256"/);
+  assert.match(html, /src="https:\/\/sweety\.tw\/images\/eric\.png"[^>]+width="256"[^>]+height="256"/);
   for (const text of ['Eric / 網站 / AI 工程師', '20 年開發經驗', 'eric.chen1972@gmail.com', 'bobo2010', '任何程式開發、電商都歡迎與作者接洽']) assert.match(html, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(html, /<!--email_off-->[\s\S]*eric\.chen1972@gmail\.com[\s\S]*<!--\/email_off-->/);
   for (const href of ['https://slimweb.tw', 'https://slimweb.tw/kingjoo/', 'https://sweety.tw']) {
     assert.match(html, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]+target="_blank"[^>]+rel="noopener noreferrer"`));
   }
