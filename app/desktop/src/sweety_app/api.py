@@ -21,6 +21,10 @@ class MonitorController(Protocol):
     def snapshot(self) -> dict[str, Any]: ...
 
 
+class UpdateSource(Protocol):
+    def snapshot(self) -> dict[str, Any]: ...
+
+
 class PersonaValidator(Protocol):
     def validate_persona(self, text: str, settings: dict[str, Any]) -> None: ...
 
@@ -86,6 +90,7 @@ def create_app(
     frontend_dist: str | Path | None = None,
     persona_validator: PersonaValidator | None = None,
     about_loader: AboutLoader | None = None,
+    update_state: UpdateSource | None = None,
 ) -> FastAPI:
     database.migrate()
     repository = Repository(database)
@@ -118,6 +123,10 @@ def create_app(
     @app.get("/api/health")
     def health() -> dict[str, bool]:
         return {"ok": True}
+
+    @app.get("/api/update")
+    def update() -> dict[str, Any]:
+        return update_state.snapshot() if update_state is not None else {"checked": True, "updateAvailable": False}
 
     @app.get("/api/about")
     def about() -> Any:

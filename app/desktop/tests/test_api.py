@@ -12,6 +12,17 @@ class FakeAboutLoader:
         return "<main><h1>關於 Sweety</h1></main>"
 
 
+class FakeUpdateState:
+    def __init__(self, snapshot):
+        self._snapshot = snapshot
+
+    def snapshot(self):
+        return dict(self._snapshot)
+
+    def set_snapshot(self, snapshot):
+        self._snapshot = snapshot
+
+
 class AllowPersonaValidator:
     def __init__(self):
         self.calls = []
@@ -54,6 +65,34 @@ def test_health_and_empty_state(client):
     assert state["settings"]["openAiModel"] == "gpt-5.5"
     assert any(item["id"] == "cautious-accounting-assistant" for item in state["basePersonas"])
     assert state["targets"] == []
+
+
+def test_update_endpoint_reflects_the_same_injected_state_as_it_finishes(tmp_path):
+    update_state = FakeUpdateState({"checked": False, "updateAvailable": False})
+    client = TestClient(create_app(Database(tmp_path / "updates.sqlite3"), update_state=update_state))
+
+    assert client.get("/api/update").json() == {"checked": False, "updateAvailable": False}
+
+    update_state.set_snapshot({
+        "checked": True,
+        "updateAvailable": True,
+        "latestVersion": "1.0.2",
+        "downloads": {"macos": "https://downloads.example.test/Sweety.dmg"},
+    })
+
+    assert client.get("/api/update").json() == {
+        "checked": True,
+        "updateAvailable": True,
+        "latestVersion": "1.0.2",
+        "downloads": {"macos": "https://downloads.example.test/Sweety.dmg"},
+    }
+
+
+def test_update_endpoint_defaults_to_checked_unavailable_without_state(client):
+    response = client.get("/api/update")
+
+    assert response.status_code == 200
+    assert response.json() == {"checked": True, "updateAvailable": False}
 
 
 def test_about_endpoint_returns_sanitized_remote_content(tmp_path):

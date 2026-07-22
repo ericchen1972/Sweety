@@ -17,7 +17,7 @@ from Foundation import NSObject
 from .ai import AiClient
 from .about import AboutContentClient
 from .api import create_app
-from .config import ABOUT_SWEETY_URL, API_HOST, API_PORT, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, FRONTEND_DIST, LOGO_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, SWEETY_METRICS_APP_TOKEN, preferred_locale
+from .config import ABOUT_SWEETY_URL, API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, FRONTEND_DIST, LOGO_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, preferred_locale
 from .database import Database
 from .line_mac import LineMacAdapter
 from .monitor import MonitorController
@@ -28,6 +28,7 @@ from .remote_catalog import sync_remote_catalog
 from .region_access import check_region_access
 from .repositories import Repository
 from .runtime import ServerRuntime
+from .updates import UpdateState, check_remote_update
 
 
 def detected_locale() -> str:
@@ -35,11 +36,12 @@ def detected_locale() -> str:
 
 
 class SweetyAppDelegate(NSObject):
-    def initWithComponents_permissionStatus_locale_(
+    def initWithComponents_permissionStatus_locale_updateState_(
         self,
         components: tuple[Repository, MonitorController, ServerRuntime],
         permission_status: PermissionStatus,
         locale: str,
+        update_state: UpdateState,
     ):
         self = objc.super(SweetyAppDelegate, self).init()
         if self is None:
@@ -47,6 +49,7 @@ class SweetyAppDelegate(NSObject):
         self.repository, self.monitor, self.runtime = components
         self.permission_status = permission_status
         self.locale = locale
+        self.update_state = update_state
         self.panel = None
         return self
 
@@ -97,6 +100,12 @@ def main() -> None:
     database = Database(DATABASE_PATH)
     database.migrate()
     repository = Repository(database)
+    update_state = UpdateState()
+    threading.Thread(
+        target=check_remote_update,
+        args=(update_state, APP_VERSION, REMOTE_UPDATE_URL),
+        daemon=True,
+    ).start()
     region_access = check_region_access(url=REGION_LOOKUP_URL)
     threading.Thread(
         target=sync_remote_catalog,
@@ -125,12 +134,13 @@ def main() -> None:
         frontend_dist=FRONTEND_DIST,
         persona_validator=ai,
         about_loader=AboutContentClient(ABOUT_SWEETY_URL),
+        update_state=update_state,
     )
     runtime = ServerRuntime(api, API_HOST, API_PORT)
     runtime.start()
 
-    delegate = SweetyAppDelegate.alloc().initWithComponents_permissionStatus_locale_(
-        (repository, monitor, runtime), permission_status, detected_locale()
+    delegate = SweetyAppDelegate.alloc().initWithComponents_permissionStatus_locale_updateState_(
+        (repository, monitor, runtime), permission_status, detected_locale(), update_state
     )
     application.setDelegate_(delegate)
     signal.signal(signal.SIGINT, lambda *_args: application.terminate_(None))
