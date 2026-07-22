@@ -179,7 +179,7 @@ def test_native_panel_keeps_base_size_without_an_update_and_expands_only_once(tm
     controller.build()
 
     try:
-        assert tuple(controller.window.contentView().frame().size) == (420.0, 500.0)
+        assert tuple(controller.window.frame().size) == (420.0, 500.0)
         original_header_y = controller.logo_view.frame().origin.y
         state.finish({
             "checked": True,

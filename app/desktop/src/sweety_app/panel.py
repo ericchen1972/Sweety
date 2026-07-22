@@ -241,6 +241,11 @@ class PanelWindowController(NSObject):
         self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
             NSMakeRect(0, 0, 420, 500), style, NSBackingStoreBuffered, False
         )
+        frame = self.window.frame()
+        self.window.setFrame_display_(
+            NSMakeRect(frame.origin.x, frame.origin.y, 420, 500),
+            False,
+        )
         self.window.setTitle_("Sweety")
         self.window.setReleasedWhenClosed_(False)
         self.window.setDelegate_(self)
