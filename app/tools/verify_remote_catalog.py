@@ -20,7 +20,17 @@ LOCAL_PERSONA_IMAGES = Path(__file__).resolve().parents[2] / "web" / "images" / 
 def main() -> None:
     response = requests.get(CATALOG_URL, headers=HEADERS, timeout=20)
     response.raise_for_status()
-    personas = response.json()["basePersonas"]
+    payload = response.json()
+    prompt = payload["systemPromptTemplate"]
+    for required_text in (
+        "對話延續與好奇心：",
+        "對話鉤子",
+        "不打擾了",
+        "有空再聊",
+        "現在就能回答的具體疑問",
+    ):
+        assert required_text in prompt, required_text
+    personas = payload["basePersonas"]
     assert len(personas) == 24
 
     for age_group in ("20-35", "35-50", "50-65", "65+"):
@@ -45,7 +55,10 @@ def main() -> None:
     wang = next(persona for persona in personas if persona["id"] == "cautious-accounting-assistant")
     assert "與母親妹妹居住在新北市板橋" in wang["content"]["zh-TW"]
     assert "你不是詐騙吧？我朋友被騙過，好可怕.." in wang["content"]["zh-TW"]
-    print("Remote catalog OK: 24 detailed personas, simplified content contract, local-matching images, About HTML available")
+    print(
+        "Remote catalog OK: conversation prompt, 24 detailed personas, "
+        "simplified content contract, local-matching images, About HTML available"
+    )
 
 
 if __name__ == "__main__":
