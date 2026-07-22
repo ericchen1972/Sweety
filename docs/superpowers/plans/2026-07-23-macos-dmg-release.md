@@ -4,7 +4,7 @@
 
 **Goal:** Build, upload, and publish a verified drag-to-Applications DMG for Sweety 1.0.1.
 
-**Architecture:** A shell script owns deterministic local app/DMG construction and mounted-content verification. A PHP helper owns binary FTP upload and byte-size verification. The existing homepage configuration and static update manifest expose the same cache-busted HTTPS URL only after the binary upload succeeds.
+**Architecture:** A shell script owns deterministic DMG construction from an already-built app and mounted-content verification. A PHP release helper retrieves the existing private metrics token without printing it, rebuilds the signed app with the release environment, invokes the DMG script, then owns binary FTP upload and byte-size verification. The existing homepage configuration and static update manifest expose the same cache-busted HTTPS URL only after the binary upload succeeds.
 
 **Tech Stack:** Bash, `hdiutil`, PyInstaller, codesign, PHP FTP extension, static JavaScript/JSON, Node test runner
 
@@ -18,7 +18,7 @@
 
 - [ ] **Step 1: Write the failing build-script contract test**
 
-Read `app/desktop/build_dmg.sh` in `web/tests/homepage.test.mjs` and assert that it invokes `build_app.sh`, creates `dist/dmg-staging`, copies `Sweety.app`, creates `Applications -> /Applications`, calls `hdiutil create` and `hdiutil verify`, mounts the image, and checks both mounted entries.
+Read `app/desktop/build_dmg.sh` in `web/tests/homepage.test.mjs` and assert that it requires and code-sign verifies the existing `dist/Sweety.app`, creates `dist/dmg-staging`, copies `Sweety.app`, creates `Applications -> /Applications`, calls `hdiutil create` and `hdiutil verify`, mounts the image, and checks both mounted entries.
 
 - [ ] **Step 2: Run the test and verify RED**
 
@@ -28,10 +28,10 @@ Expected: failure because `build_dmg.sh` does not exist.
 
 - [ ] **Step 3: Implement `build_dmg.sh`**
 
-The script must:
+The script must start by requiring and verifying `dist/Sweety.app`, then:
 
 ```bash
-./build_app.sh
+codesign --verify --deep --strict dist/Sweety.app
 rm -rf dist/dmg-staging dist/Sweety-macos-latest.dmg
 mkdir -p dist/dmg-staging
 cp -R dist/Sweety.app dist/dmg-staging/
@@ -63,7 +63,7 @@ git commit -m "build: add verified macOS DMG packaging"
 
 - [ ] **Step 1: Write the failing upload-helper contract test**
 
-Assert the helper reads `web/sftp-config.json`, uploads `app/desktop/dist/Sweety-macos-latest.dmg` to `/sweety.tw/downloads/Sweety-macos-latest.dmg` with `FTP_BINARY`, creates the remote downloads directory, verifies `ftp_size()` against `filesize()`, and never prints credentials.
+Assert the helper reads `web/sftp-config.json`, downloads `/sweety.tw/.sweety-runtime-env.php`, parses but never prints `SWEETY_METRICS_APP_TOKEN`, exports it for `build_app.sh`, invokes `build_dmg.sh`, uploads `app/desktop/dist/Sweety-macos-latest.dmg` to `/sweety.tw/downloads/Sweety-macos-latest.dmg` with `FTP_BINARY`, creates the remote downloads directory, and verifies `ftp_size()` against `filesize()`.
 
 - [ ] **Step 2: Run the test and verify RED**
 
@@ -73,7 +73,7 @@ Expected: failure because `deploy_macos_release.php` does not exist.
 
 - [ ] **Step 3: Implement the PHP uploader**
 
-Reuse the existing JSON-with-comments config parsing, FTP login, passive-mode setting, and recursive directory creation pattern from `app/tools/deploy_homepage.php`. Upload exactly one DMG and print only its local size and remote path.
+Reuse the existing JSON-with-comments config parsing, FTP login, passive-mode setting, remote runtime-token parsing, and recursive directory creation pattern from `app/tools/deploy_homepage.php`. Set the token only in the child build environment, run `build_app.sh` followed by `build_dmg.sh`, upload exactly one DMG, and print only its local size and remote path.
 
 - [ ] **Step 4: Run contract and PHP syntax checks**
 
@@ -134,7 +134,7 @@ git add web/homepage.js web/sweety-update.json web/tests/homepage.test.mjs
 git commit -m "feat: publish macOS download links"
 ```
 
-### Task 4: Build and validate the release artifact
+### Task 4: Build, upload, and validate the release artifact
 
 **Files:**
 - Generate, do not commit: `app/desktop/dist/Sweety-macos-latest.dmg`
@@ -151,11 +151,11 @@ cd ../.. && node --test web/tests/*.test.mjs
 
 Expected: zero failures.
 
-- [ ] **Step 2: Build the DMG**
+- [ ] **Step 2: Build and upload the DMG with the release environment**
 
-Run from `app/desktop`: `./build_dmg.sh`
+Run from the repository root: `php app/tools/deploy_macos_release.php`
 
-Expected: the app signature, DMG verification, mounted entries, SHA-256, and size all validate.
+Expected: the app rebuild, signature, DMG verification, mounted entries, SHA-256, local size, upload, and remote FTP size all validate.
 
 - [ ] **Step 3: Record release identity**
 
@@ -168,33 +168,27 @@ stat -f %z app/desktop/dist/Sweety-macos-latest.dmg
 
 Expected: one SHA-256 digest and a positive byte size.
 
-### Task 5: Upload binary, deploy links, and verify live
+### Task 5: Deploy links and verify live
 
 **Files:**
 - Deploy: `app/desktop/dist/Sweety-macos-latest.dmg`
 - Deploy: files listed by `app/tools/deploy_homepage.php`
 
-- [ ] **Step 1: Upload and verify the DMG over FTP**
-
-Run: `php app/tools/deploy_macos_release.php`
-
-Expected: output confirms remote `/sweety.tw/downloads/Sweety-macos-latest.dmg` byte size equals the local artifact.
-
-- [ ] **Step 2: Deploy homepage and manifest**
+- [ ] **Step 1: Deploy homepage and manifest**
 
 Run: `php app/tools/deploy_homepage.php`
 
 Expected: all homepage files upload with verified sizes and the rebuilt app succeeds.
 
-- [ ] **Step 3: Verify live links and sizes**
+- [ ] **Step 2: Verify live links and sizes**
 
 Fetch `https://sweety.tw/`, `https://sweety.tw/homepage.js`, and `https://sweety.tw/sweety-update.json` with the release query. Confirm homepage JavaScript and manifest expose the same macOS URL and no Windows URL. Compare HTTP `Content-Length` with the local DMG size.
 
-- [ ] **Step 4: Download and validate the published DMG**
+- [ ] **Step 3: Download and validate the published DMG**
 
 Download the cache-busted public URL into `/tmp/Sweety-macos-latest.dmg`, verify its SHA-256 equals the local artifact, run `hdiutil verify`, mount read-only, and confirm `Sweety.app` plus the `/Applications` symlink.
 
-- [ ] **Step 5: Final repository check**
+- [ ] **Step 4: Final repository check**
 
 Run: `git status --short && git log -5 --oneline`
 
