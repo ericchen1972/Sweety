@@ -22,7 +22,8 @@ class LineAdapter(Protocol):
     def open_chat(self, contact: UnreadContact) -> bool: ...
     def read_visible_chat(self, target_name: str) -> str: ...
     def send_message(self, target_name: str, reply: str) -> bool: ...
-    def close_chat(self, target_name: str) -> None: ...
+    def close_chat(self, target_name: str) -> bool: ...
+    def close_other_chat_windows(self) -> bool: ...
 
 
 class AiAdapter(Protocol):
@@ -150,6 +151,11 @@ class MonitorController:
         if not targets:
             self._set_status("waiting", "no_enabled_targets")
             return False
+
+        try:
+            self.line.close_other_chat_windows()
+        except Exception:
+            pass
 
         try:
             contacts = self.line.unread_contacts()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from sweety_app.line_mac import (
     LineMacAdapter,
@@ -116,3 +117,53 @@ def test_send_message_refuses_a_different_chat_window(tmp_path: Path):
     assert adapter.send_message("不存在的對象", "AI 草稿") is False
     assert mouse.clicks == []
     assert mouse.keys == []
+
+
+def test_close_chat_clicks_whomai_close_button(tmp_path: Path):
+    captured = {}
+
+    def runner(args, **_kwargs):
+        captured["script"] = args[2]
+        return SimpleNamespace(returncode=0, stdout="success\n", stderr="")
+
+    adapter = LineMacAdapter(cache_dir=tmp_path, runner=runner)
+
+    assert adapter.close_chat("投資顧問") is True
+    assert 'set targetWindow to window "投資顧問"' in captured["script"]
+    assert "click button 1 of targetWindow" in captured["script"]
+    assert "AXClose" not in captured["script"]
+
+
+def test_close_chat_returns_false_when_applescript_fails(tmp_path: Path):
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: SimpleNamespace(returncode=1, stdout="", stderr="denied"),
+    )
+
+    assert adapter.close_chat("投資顧問") is False
+
+
+def test_close_other_chat_windows_closes_every_non_main_window(tmp_path: Path):
+    close_scripts = []
+
+    def runner(args, **_kwargs):
+        script = args[2]
+        if "repeat with w in every window" in script:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=(
+                    "name:LINE, position:20, 80, size:360, 800|"
+                    "name:對象 A, position:100, 200, size:500, 700|"
+                    "name:對象 B, position:120, 220, size:500, 700|"
+                ),
+                stderr="",
+            )
+        close_scripts.append(script)
+        return SimpleNamespace(returncode=0, stdout="success\n", stderr="")
+
+    adapter = LineMacAdapter(cache_dir=tmp_path, runner=runner)
+
+    assert adapter.close_other_chat_windows() is True
+    assert len(close_scripts) == 2
+    assert 'window "對象 A"' in close_scripts[0]
+    assert 'window "對象 B"' in close_scripts[1]

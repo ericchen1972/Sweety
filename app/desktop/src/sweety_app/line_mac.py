@@ -192,13 +192,38 @@ end tell'''
         finally:
             clipboard.copy(original)
 
-    def close_chat(self, target_name: str) -> None:
+    def close_chat(self, target_name: str) -> bool:
         safe_name = self._safe_window_name(target_name)
-        self._osascript(
-            f'''tell application "System Events" to tell process "LINE"
-if exists window "{safe_name}" then perform action "AXClose" of window "{safe_name}"
+        script = f'''tell application "System Events"
+tell process "LINE"
+  if not (exists window "{safe_name}") then return "already_closed"
+  set targetWindow to window "{safe_name}"
+  try
+    click button 1 of targetWindow
+    delay 0.5
+    return "success"
+  on error
+    return "failed"
+  end try
+end tell
 end tell'''
-        )
+        try:
+            result = self._osascript(script)
+        except Exception:
+            return False
+        return result.stdout.strip() in {"success", "already_closed"}
+
+    def close_other_chat_windows(self) -> bool:
+        try:
+            chat_windows = [item for item in self._windows() if item["name"] != "LINE"]
+        except Exception:
+            return False
+
+        closed_all = True
+        for window in chat_windows:
+            if not self.close_chat(str(window["name"])):
+                closed_all = False
+        return closed_all
 
     def _windows(self) -> list[dict[str, Any]]:
         script = '''tell application "System Events"

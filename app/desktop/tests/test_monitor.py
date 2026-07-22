@@ -30,19 +30,32 @@ def target_payload(name: str, reply_enabled: bool = True) -> dict:
 
 
 class FakeLine:
-    def __init__(self, contacts: list[UnreadContact], main_window: bool = True, send_success: bool = True) -> None:
+    def __init__(
+        self,
+        contacts: list[UnreadContact],
+        main_window: bool = True,
+        send_success: bool = True,
+        cleanup_success: bool = True,
+    ) -> None:
         self.contacts = contacts
         self.main_window = main_window
         self.send_success = send_success
+        self.cleanup_success = cleanup_success
         self.opened: list[str] = []
         self.sent: list[tuple[str, str]] = []
         self.closed = 0
+        self.events: list[str] = []
 
     def main_window_exists(self) -> bool:
         return self.main_window
 
     def unread_contacts(self) -> list[UnreadContact]:
+        self.events.append("unread_contacts")
         return self.contacts
+
+    def close_other_chat_windows(self) -> bool:
+        self.events.append("cleanup")
+        return self.cleanup_success
 
     def open_chat(self, contact: UnreadContact) -> bool:
         self.opened.append(contact.name)
@@ -88,6 +101,25 @@ def test_cycle_ignores_unchecked_and_ended_targets(repo):
     assert controller.run_cycle() is False
     assert line.opened == []
     assert line.sent == []
+
+
+def test_cycle_cleans_up_other_chat_windows_before_unread_scan(repo):
+    repo.create_target(target_payload("投資顧問"))
+    line = FakeLine([])
+    controller = MonitorController(repo, line, FakeAi(), sleeper=lambda _seconds: None)
+
+    controller.run_cycle()
+
+    assert line.events[:2] == ["cleanup", "unread_contacts"]
+
+
+def test_cycle_continues_unread_scan_when_pre_scan_cleanup_fails(repo):
+    repo.create_target(target_payload("投資顧問"))
+    line = FakeLine([], cleanup_success=False)
+    controller = MonitorController(repo, line, FakeAi(), sleeper=lambda _seconds: None)
+
+    assert controller.run_cycle() is False
+    assert line.events == ["cleanup", "unread_contacts"]
 
 
 def test_live_mode_sends_and_persists_exchange_and_metrics(repo):
