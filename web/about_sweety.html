@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="認識完全開源的主動式反詐騙 App Sweety，以及作者 Eric 的開發理念與相關專案。">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="icon" href="/images/logo.png" type="image/png">
+  <link rel="canonical" href="https://sweety.tw/about_sweety.html">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sweety.tw/about_sweety.html">
+  <meta property="og:title" content="關於 Sweety｜開源主動反詐 App">
+  <meta property="og:description" content="Sweety 完全開源，歡迎交流、延伸與共同投入主動反詐。">
+  <meta property="og:image" content="https://sweety.tw/images/sweety-social-1200x630.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>關於 Sweety｜開源主動反詐 App</title>
+  <style>
+    :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #18181b; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: #18181b; }
+    main { width: min(760px, calc(100% - 40px)); margin: 0 auto; padding: 56px 0 72px; }
+    header { display: flex; align-items: center; gap: 18px; padding-bottom: 28px; border-bottom: 1px solid #e4e4e7; }
+    header img { width: 64px; height: 64px; object-fit: contain; }
+    h1 { margin: 0; font-size: 30px; line-height: 1.2; letter-spacing: 0; }
+    .tagline { margin: 7px 0 0; color: #52525b; font-size: 15px; }
+    section { padding: 28px 0; border-bottom: 1px solid #e4e4e7; }
+    h2 { margin: 0 0 12px; font-size: 18px; letter-spacing: 0; }
+    p { margin: 0; color: #3f3f46; font-size: 15px; line-height: 1.85; }
+    p + p { margin-top: 12px; }
+    .notice { border-left: 3px solid #0ea5e9; padding-left: 16px; }
+    a { color: #1769aa; text-underline-offset: 3px; }
+    .git-link { display: inline-flex; align-items: center; margin-top: 18px; padding: 11px 20px; border-radius: 999px; color: #fff; background: #24292f; font-weight: 800; text-decoration: none; }
+    .git-link:hover { background: #111827; }
+    .author-section { border-bottom: 0; }
+    .author-card { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 32px; padding: 30px; border: 1px solid #d7e8f3; border-radius: 24px; background: linear-gradient(135deg, #eaf5fb, #fff 70%); }
+    .author-card .author-avatar { width: 140px; height: 140px; border: 5px solid #fff; border-radius: 50%; object-fit: cover; box-shadow: 0 14px 34px rgba(25,61,94,.18); }
+    .author-card h2 { font-size: 25px; }
+    .author-experience { color: #1769aa; font-weight: 800; }
+    .author-card h3 { margin: 24px 0 10px; font-size: 16px; }
+    .author-projects { display: grid; gap: 8px; margin: 0; padding-left: 20px; }
+    .author-contact { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 22px; padding-top: 18px; border-top: 1px solid #d7e8f3; }
+    .author-contact p { margin: 0; }
+    .author-invitation { margin-top: 18px; font-weight: 700; }
+    footer { padding-top: 26px; color: #71717a; font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      :root, body { background: #18181b; color: #fafafa; }
+      header, section { border-color: #3f3f46; }
+      .tagline, p { color: #d4d4d8; }
+      footer { color: #a1a1aa; }
+      .author-card { border-color: #3f3f46; background: #27272a; }
+    }
+    @media (max-width: 560px) {
+      main { width: min(100% - 28px, 760px); padding-top: 32px; }
+      header { align-items: flex-start; }
+      header img { width: 52px; height: 52px; }
+      h1 { font-size: 25px; }
+      .author-card { grid-template-columns: 1fr; }
+      .author-card .author-avatar { width: 112px; height: 112px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="/images/logo.png" alt="">
+      <div>
+        <h1>關於 Sweety</h1>
+        <p class="tagline">把詐騙者的時間，留在沒有受害者的對話裡。</p>
+      </div>
+    </header>
+
+    <section>
+      <h2>Sweety 是什麼</h2>
+      <p>Sweety 是一個協助使用者回應可疑訊息的反詐騙工具。它以自然、保守的方式延長對話，同時避免提供個資、金流資訊、驗證碼或執行高風險操作。</p>
+    </section>
+
+    <section>
+      <h2>設計原則</h2>
+      <p>對話內容與人設資料以安全為優先。Sweety 不協助推銷、招募、投資或導流，也不會在回覆中提供外部連結。</p>
+      <p>基本人設與系統規則可由 Sweety 伺服器更新；暫時無法連線時，App 仍會使用本機已保存的資料。</p>
+    </section>
+
+    <section class="notice">
+      <h2>請注意</h2>
+      <p>Sweety 不能取代警方、金融機構或專業反詐單位。遇到疑似詐騙時，請停止付款與提供資料，並透過可信任的官方管道查證。</p>
+    </section>
+
+    <section>
+      <h2>開源專案</h2>
+      <p>Sweety 作為主動式反詐 App，完全開源，你可以在 Git 上找到此專案，如果你有更好的想法，也歡迎拓展交流。</p>
+      <a class="git-link" href="https://github.com/ericchen1972/Sweety" target="_blank" rel="noopener noreferrer">前往 GitHub</a>
+    </section>
+
+    <section class="author-section">
+      <article class="author-card">
+        <img class="author-avatar" src="/images/eric.png" alt="Eric" width="256" height="256" loading="lazy" decoding="async">
+        <div>
+          <h2>Eric / 網站 / AI 工程師</h2>
+          <p class="author-experience">20 年開發經驗</p>
+          <h3>目前開發項目</h3>
+          <ul class="author-projects">
+            <li><a href="https://slimweb.tw" target="_blank" rel="noopener noreferrer">AI First 電商系統 SlimWeb</a></li>
+            <li><a href="https://slimweb.tw/kingjoo/" target="_blank" rel="noopener noreferrer">AI 主動行銷工具 KingJoo</a></li>
+            <li><a href="https://sweety.tw" target="_blank" rel="noopener noreferrer">主動式反詐騙 App Sweety</a></li>
+          </ul>
+          <div class="author-contact">
+            <p><strong>Email:</strong> <a href="mailto:eric.chen1972@gmail.com">eric.chen1972@gmail.com</a></p>
+            <p><strong>Line:</strong> bobo2010</p>
+          </div>
+          <p class="author-invitation">任何程式開發、電商都歡迎與作者接洽</p>
+        </div>
+      </article>
+    </section>
+
+    <footer>Sweety · 主動反詐</footer>
+  </main>
+</body>
+</html>

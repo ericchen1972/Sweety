@@ -1,0 +1,25 @@
+# Sweety
+
+> Sweety 是完全開源的主動式反詐騙 App，讓 AI 被動回覆可疑對象並消耗詐騙者的時間。
+
+## 核心資訊
+
+- 官方網站：https://sweety.tw/
+- 開源程式碼：https://github.com/ericchen1972/Sweety
+- 最新版本：1.0.1
+- 授權：MIT License
+- 支援平台：macOS；Windows 版即將推出
+- 作者：Eric，網站與 AI 工程師，20 年開發經驗
+
+## Sweety 如何運作
+
+使用者在 LINE 桌面 App 中選定要回覆的對象，指定人設並啟動 Sweety。AI 不會主動聯絡任何人，只會被動回覆已勾選的對象。使用者可隨時停止並自行接手對話。
+
+## 使用限制
+
+LINE 桌面 App 視窗必須完整位於螢幕左右邊緣之內，聯絡人也必須位於主視窗可視範圍，否則可能辨識失敗。
+
+## 更多資料
+
+- 關於 Sweety：https://sweety.tw/about_sweety.html
+- 首頁常見問題：https://sweety.tw/#instructions

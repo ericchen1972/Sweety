@@ -1,0 +1,34 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set root [file normalize [file join [file dirname [info script]] ../..]]
+set configPath [file join $root web sftp-config.json]
+set fileHandle [open $configPath r]
+set config [read $fileHandle]
+close $fileHandle
+
+if {![regexp {"host"\s*:\s*"([^"]+)"} $config -> host] ||
+    ![regexp {"user"\s*:\s*"([^"]+)"} $config -> user] ||
+    ![regexp {"password"\s*:\s*"([^"]+)"} $config -> password]} {
+    puts stderr "Unable to read SSH credentials from FTP configuration."
+    exit 1
+}
+
+if {$argc < 1} {
+    puts stderr "Usage: synology_ssh.exp <remote command>"
+    exit 1
+}
+
+set command [lindex $argv 0]
+spawn ssh -o StrictHostKeyChecking=accept-new -o PreferredAuthentications=password -o PubkeyAuthentication=no "$user@$host" $command
+
+expect {
+    -re {(?i)password:} {
+        send -- "$password\r"
+        exp_continue
+    }
+    eof
+}
+
+catch wait result
+exit [lindex $result 3]
