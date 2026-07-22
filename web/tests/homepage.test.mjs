@@ -8,6 +8,7 @@ const css = await readFile(new URL('homepage.css', webRoot), 'utf8').catch(() =>
 const javascript = await readFile(new URL('homepage.js', webRoot), 'utf8').catch(() => '');
 const deployHelper = await readFile(new URL('../app/tools/deploy_homepage.php', webRoot), 'utf8').catch(() => '');
 const dmgBuildHelper = await readFile(new URL('../app/desktop/build_dmg.sh', webRoot), 'utf8').catch(() => '');
+const macReleaseHelper = await readFile(new URL('../app/tools/deploy_macos_release.php', webRoot), 'utf8').catch(() => '');
 const updateManifest = JSON.parse(await readFile(new URL('sweety-update.json', webRoot), 'utf8').catch(() => '{}'));
 const robots = await readFile(new URL('robots.txt', webRoot), 'utf8').catch(() => '');
 const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(() => '');
@@ -25,6 +26,19 @@ test('macOS DMG build uses a drag-to-Applications staging folder and verifies th
   assert.match(dmgBuildHelper, /hdiutil attach[\s\S]*?readonly/);
   assert.match(dmgBuildHelper, /\[\[ -d [^\n]*Sweety\.app[^\n]*\]\]/);
   assert.match(dmgBuildHelper, /\[\[ -L [^\n]*Applications[^\n]*\]\]/);
+});
+
+test('macOS release helper preserves the metrics environment and verifies the uploaded binary', () => {
+  assert.match(macReleaseHelper, /web\/sftp-config\.json/);
+  assert.match(macReleaseHelper, /\/sweety\.tw\/\.sweety-runtime-env\.php/);
+  assert.match(macReleaseHelper, /SWEETY_METRICS_APP_TOKEN=\(\[a-f0-9\]\{64\}\)/);
+  assert.match(macReleaseHelper, /putenv\('SWEETY_METRICS_APP_TOKEN=' \./);
+  assert.match(macReleaseHelper, /build_app\.sh/);
+  assert.match(macReleaseHelper, /build_dmg\.sh/);
+  assert.match(macReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-macos-latest\.dmg/);
+  assert.match(macReleaseHelper, /FTP_BINARY/);
+  assert.match(macReleaseHelper, /ftp_size\([^)]*\)[^;]*filesize\(/s);
+  assert.doesNotMatch(macReleaseHelper, /echo[^;]*(?:password|metricsToken)/i);
 });
 
 test('production update manifest is safe for current 1.0.1 installations and deploys publicly', () => {
