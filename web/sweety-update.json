@@ -1,4 +1,6 @@
 {
   "latestVersion": "1.0.1",
-  "downloads": {}
+  "downloads": {
+    "macos": "https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2c2c458"
+  }
 }

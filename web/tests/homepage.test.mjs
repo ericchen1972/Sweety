@@ -15,6 +15,7 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2c2c458';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -42,7 +43,7 @@ test('macOS release helper preserves the metrics environment and verifies the up
 });
 
 test('production update manifest is safe for current 1.0.1 installations and deploys publicly', () => {
-  assert.deepEqual(updateManifest, { latestVersion: '1.0.1', downloads: {} });
+  assert.deepEqual(updateManifest, { latestVersion: '1.0.1', downloads: { macos: expectedMacDownload } });
   const manifest = deployHelper.match(/\$files\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
   assert.match(manifest, /['"]sweety-update\.json['"]/);
 });
@@ -243,8 +244,18 @@ test('homepage author card uses the public portrait and safe new-tab project lin
   assert.match(css, /\.author-avatar[^}]*border-radius:\s*50%/s);
 });
 
-test('download configuration is centralized and null URLs render disabled controls with platform SVGs', () => {
-  assert.deepEqual(homepage.downloadConfig, { windows: null, macos: null });
+test('download configuration enables the published macOS DMG and keeps Windows disabled', () => {
+  assert.deepEqual(homepage.downloadConfig, { windows: null, macos: expectedMacDownload });
+  assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
+    enabled: true,
+    href: expectedMacDownload,
+    label: '下載 macOS 版',
+  });
+  assert.deepEqual(homepage.getDownloadDecision('windows', 'zh-TW'), {
+    enabled: false,
+    href: null,
+    label: '即將推出',
+  });
   assert.equal((html.match(/data-platform="(?:windows|macos)"/g) ?? []).length, 2);
   assert.equal((html.match(/class="platform-icon[^"]*"[^>]*aria-hidden="true"/g) ?? []).length, 3);
   assert.equal((html.match(/class="download-action"[^>]*disabled/g) ?? []).length, 2);

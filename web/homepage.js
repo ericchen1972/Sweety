@@ -7,7 +7,10 @@ export function resolveLocale(locales, fallbackLocale) {
     : 'en';
 }
 
-export const downloadConfig = Object.freeze({ windows: null, macos: null });
+export const downloadConfig = Object.freeze({
+  windows: null,
+  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2c2c458',
+});
 
 export function splitWholeHours(totalHours) {
   const value = Number.isInteger(totalHours) && totalHours >= 0 ? totalHours : 0;
