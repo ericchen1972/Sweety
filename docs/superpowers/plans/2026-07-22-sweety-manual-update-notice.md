@@ -367,7 +367,7 @@ def test_main_starts_one_background_update_check_and_shares_state():
     assert "update_state = UpdateState()" in source
     assert "target=check_remote_update" in source
     assert "update_state=update_state" in source
-    assert "PanelBridge(" in source and "update_state=update_state" in source
+    assert "self.update_state = update_state" in source
 ```
 
 - [ ] **Step 5: Wire one background request into both consumers**
@@ -399,7 +399,7 @@ Create the state before the local API, start one worker, and inject it:
     )
 ```
 
-Add `update_state` to the delegate components tuple and construct `PanelBridge` with `update_state=update_state`. Keep all AppKit view mutations on the existing `refresh_` timer rather than the worker thread.
+Add `update_state` as a separate argument to `initWithComponents_permissionStatus_locale_updateState_` and store it as `self.update_state`. Task 4 will pass this stored object into `PanelBridge` when the bridge gains update support. This keeps Task 2 independently runnable while preserving one shared state object. Keep all AppKit view mutations on the existing `refresh_` timer rather than the worker thread.
 
 - [ ] **Step 6: Run focused tests and commit**
 
