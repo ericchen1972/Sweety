@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import webbrowser
 from collections.abc import Callable
 from typing import Any
 
@@ -11,10 +10,12 @@ from AppKit import (
     NSButton,
     NSColor,
     NSFont,
+    NSFontAttributeName,
     NSImage,
     NSImageLeading,
     NSImageScaleProportionallyUpOrDown,
     NSImageView,
+    NSLineBreakByWordWrapping,
     NSMakeRect,
     NSMenu,
     NSMenuItem,
@@ -22,15 +23,18 @@ from AppKit import (
     NSTextAlignmentCenter,
     NSTextField,
     NSVariableStatusItemLength,
+    NSView,
+    NSWorkspace,
     NSWindow,
     NSWindowStyleMaskClosable,
     NSWindowStyleMaskMiniaturizable,
     NSWindowStyleMaskTitled,
 )
-from Foundation import NSObject, NSTimer
+from Foundation import NSMutableAttributedString, NSMakeRange, NSObject, NSTimer, NSURL
 
 from .config import APP_VERSION, LOGO_PATH, MANAGEMENT_URL
 from .repositories import Repository
+from .updates import SUPPORTED_PLATFORMS, is_valid_https_url
 
 
 STATUS_COPY = {
@@ -68,18 +72,56 @@ def status_text(locale: str, snapshot: dict[str, Any]) -> str:
     return text
 
 
+def panel_update_downloads(update: dict[str, Any]) -> list[tuple[str, str]]:
+    if not update.get("updateAvailable"):
+        return []
+    downloads = update.get("downloads")
+    if not isinstance(downloads, dict):
+        return []
+    return [
+        (platform, url)
+        for platform in SUPPORTED_PLATFORMS
+        if is_valid_https_url(url := downloads.get(platform))
+    ]
+
+
+def panel_update_copy(locale: str, update: dict[str, Any]) -> dict[str, str]:
+    version = str(update.get("latestVersion", ""))
+    if locale == "zh-TW":
+        return {
+            "heading": f"新版 {version}，立即下載",
+            "note": "＊Mac OS 版安裝後請重新設定，輔助使用、螢幕與系統錄音以及自動化等三種權限",
+            "emphasis": "螢幕與系統錄音以及自動化等三種權限",
+            "windows": "Win 版",
+            "macos": "Mac OS 版",
+        }
+    return {
+        "heading": f"Version {version} is ready to download",
+        "note": "After installing the Mac OS version, configure Accessibility, Screen & System Audio Recording, and Automation permissions again.",
+        "emphasis": "Screen & System Audio Recording, and Automation permissions",
+        "windows": "Windows",
+        "macos": "Mac OS",
+    }
+
+
+def _open_external_url(url: str) -> bool:
+    return bool(NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(url)))
+
+
 class PanelBridge:
     def __init__(
         self,
         repository: Repository,
         monitor: Any,
         *,
-        opener: Callable[[str], Any] = webbrowser.open,
+        update_state: Any | None = None,
+        opener: Callable[[str], Any] = _open_external_url,
         quit_callback: Callable[[], None],
         on_changed: Callable[[], None] | None = None,
     ) -> None:
         self.repository = repository
         self.monitor = monitor
+        self.update_state = update_state
         self.opener = opener
         self.quit_callback = quit_callback
         self.on_changed = on_changed or (lambda: None)
@@ -88,7 +130,23 @@ class PanelBridge:
         payload = self.monitor.snapshot()
         payload["selectedTargetCount"] = len(self.repository.list_monitor_targets())
         payload["version"] = APP_VERSION
+        payload["update"] = (
+            self.update_state.snapshot()
+            if self.update_state is not None
+            else {"checked": True, "updateAvailable": False}
+        )
         return payload
+
+    def open_update(self, platform: str) -> bool:
+        if platform not in SUPPORTED_PLATFORMS:
+            return False
+        update = self.snapshot()["update"]
+        downloads = dict(panel_update_downloads(update))
+        url = downloads.get(platform)
+        if url is None:
+            return False
+        self.opener(url)
+        return True
 
     def start_monitor(self) -> bool:
         changed = bool(self.monitor.start())
@@ -116,6 +174,27 @@ def _label(text: str, frame: tuple[int, int, int, int], size: float, bold: bool 
 
 def _system_symbol(name: str, description: str) -> NSImage | None:
     return NSImage.imageWithSystemSymbolName_accessibilityDescription_(name, description)
+
+
+def _update_note_label(copy: dict[str, str]) -> NSTextField:
+    label = _label("", (16, 48, 340, 52), 11)
+    attributed = NSMutableAttributedString.alloc().initWithString_(copy["note"])
+    attributed.addAttribute_value_range_(
+        NSFontAttributeName,
+        NSFont.systemFontOfSize_(11),
+        NSMakeRange(0, len(copy["note"])),
+    )
+    emphasis_start = copy["note"].find(copy["emphasis"])
+    if emphasis_start >= 0:
+        attributed.addAttribute_value_range_(
+            NSFontAttributeName,
+            NSFont.boldSystemFontOfSize_(11),
+            NSMakeRange(emphasis_start, len(copy["emphasis"])),
+        )
+    label.setAttributedStringValue_(attributed)
+    label.setLineBreakMode_(NSLineBreakByWordWrapping)
+    label.setMaximumNumberOfLines_(3)
+    return label
 
 
 def _panel_button(
@@ -153,6 +232,8 @@ class PanelWindowController(NSObject):
         self.window = None
         self.status_item = None
         self.timer = None
+        self.update_views = []
+        self.update_layout_applied = False
         return self
 
     def build(self) -> None:
@@ -167,16 +248,18 @@ class PanelWindowController(NSObject):
         content = self.window.contentView()
 
         logo = NSImage.alloc().initWithContentsOfFile_(str(LOGO_PATH))
-        logo_view = NSImageView.alloc().initWithFrame_(NSMakeRect(24, 420, 48, 48))
-        logo_view.setImage_(logo)
-        logo_view.setImageScaling_(NSImageScaleProportionallyUpOrDown)
-        content.addSubview_(logo_view)
+        self.logo_view = NSImageView.alloc().initWithFrame_(NSMakeRect(24, 420, 48, 48))
+        self.logo_view.setImage_(logo)
+        self.logo_view.setImageScaling_(NSImageScaleProportionallyUpOrDown)
+        content.addSubview_(self.logo_view)
 
-        content.addSubview_(_label("Sweety", (84, 440, 210, 24), 19, True))
-        content.addSubview_(_label("Anti-scam companion", (84, 420, 220, 18), 12))
-        version = _label(f"v{APP_VERSION}", (328, 432, 66, 24), 11, True)
-        version.setAlignment_(NSTextAlignmentCenter)
-        content.addSubview_(version)
+        self.title_label = _label("Sweety", (84, 440, 210, 24), 19, True)
+        content.addSubview_(self.title_label)
+        self.subtitle_label = _label("Anti-scam companion", (84, 420, 220, 18), 12)
+        content.addSubview_(self.subtitle_label)
+        self.version_label = _label(f"v{APP_VERSION}", (328, 432, 66, 24), 11, True)
+        self.version_label.setAlignment_(NSTextAlignmentCenter)
+        content.addSubview_(self.version_label)
 
         selected_title = "已勾選對象" if self.locale == "zh-TW" else "Selected targets"
         content.addSubview_(_label(selected_title, (32, 344, 180, 20), 13))
@@ -225,6 +308,41 @@ class PanelWindowController(NSObject):
         self.window.makeKeyAndOrderFront_(None)
         NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
 
+    def _apply_update_layout(self, update: dict[str, Any]) -> None:
+        downloads = panel_update_downloads(update)
+        if self.update_layout_applied or not downloads:
+            return
+        self.update_layout_applied = True
+        frame = self.window.frame()
+        self.window.setFrame_display_(
+            NSMakeRect(frame.origin.x, frame.origin.y - 150, 420, 650),
+            True,
+        )
+        for view in (self.logo_view, self.title_label, self.subtitle_label, self.version_label):
+            moved = view.frame()
+            moved.origin.y += 150
+            view.setFrame_(moved)
+
+        card = NSView.alloc().initWithFrame_(NSMakeRect(24, 378, 372, 142))
+        card.setWantsLayer_(True)
+        card.layer().setCornerRadius_(10.0)
+        card.layer().setBorderWidth_(1.0)
+        card.layer().setBorderColor_(
+            NSColor.controlAccentColor().colorWithAlphaComponent_(0.55).CGColor()
+        )
+        card.layer().setBackgroundColor_(NSColor.controlBackgroundColor().CGColor())
+        copy = panel_update_copy(self.locale, update)
+        card.addSubview_(_label(copy["heading"], (16, 105, 340, 22), 15, True))
+        card.addSubview_(_update_note_label(copy))
+        button_width = 164 if len(downloads) == 2 else 340
+        for index, (platform, _url) in enumerate(downloads):
+            button = NSButton.buttonWithTitle_target_action_(copy[platform], self, "openUpdate:")
+            button.setIdentifier_(platform)
+            button.setFrame_(NSMakeRect(16 + index * 176, 10, button_width, 32))
+            card.addSubview_(button)
+        self.window.contentView().addSubview_(card)
+        self.update_views.append(card)
+
     @objc.IBAction
     def toggleMonitor_(self, _sender) -> None:
         if self.bridge.snapshot().get("enabled"):
@@ -238,6 +356,10 @@ class PanelWindowController(NSObject):
         self.bridge.open_management()
 
     @objc.IBAction
+    def openUpdate_(self, sender) -> None:
+        self.bridge.open_update(str(sender.identifier()))
+
+    @objc.IBAction
     def quitApp_(self, _sender) -> None:
         self.bridge.quit_app()
 
@@ -247,6 +369,7 @@ class PanelWindowController(NSObject):
 
     def refresh_(self, _timer) -> None:
         snapshot = self.bridge.snapshot()
+        self._apply_update_layout(snapshot["update"])
         enabled = bool(snapshot.get("enabled"))
         self.count_label.setStringValue_(str(snapshot.get("selectedTargetCount", 0)))
         self.status_label.setStringValue_(status_text(self.locale, snapshot))

@@ -126,3 +126,22 @@ def test_startup_wires_one_shared_update_state_to_background_check_api_and_deleg
         and node.value.id == "update_state"
         for node in ast.walk(delegate_initializer)
     )
+
+    launch_callback = next(
+        node
+        for node in delegate.body
+        if isinstance(node, ast.FunctionDef) and node.name == "applicationDidFinishLaunching_"
+    )
+    panel_bridge_call = next(
+        node
+        for node in ast.walk(launch_callback)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "PanelBridge"
+    )
+    assert any(
+        keyword.arg == "update_state"
+        and isinstance(keyword.value, ast.Attribute)
+        and isinstance(keyword.value.value, ast.Name)
+        and keyword.value.value.id == "self"
+        and keyword.value.attr == "update_state"
+        for keyword in panel_bridge_call.keywords
+    )

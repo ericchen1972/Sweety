@@ -59,6 +59,7 @@ class SweetyAppDelegate(NSObject):
         bridge = PanelBridge(
             self.repository,
             self.monitor,
+            update_state=self.update_state,
             quit_callback=lambda: application.terminate_(None),
         )
         self.panel = PanelWindowController.alloc().initWithBridge_locale_(bridge, self.locale)
