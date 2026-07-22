@@ -28,6 +28,12 @@ def _knowledge_boundary(prompt: str) -> str:
     return match.group(1)
 
 
+def _conversation_continuation(prompt: str) -> str:
+    match = re.search(r"對話延續與好奇心：\n(.*?)\n\n人設知識邊界：", prompt, flags=re.DOTALL)
+    assert match is not None, "prompt is missing the conversation-continuation section"
+    return match.group(1)
+
+
 @pytest.fixture(params=["bundled", "sql"])
 def prompt(request: pytest.FixtureRequest) -> str:
     if request.param == "bundled":
@@ -72,10 +78,34 @@ def test_persona_knowledge_boundary_does_not_contain_contradictory_instructions(
         assert contradiction not in boundary
 
 
+def test_conversation_continuation_requires_natural_curiosity_and_an_open_hook(prompt):
+    continuation = _conversation_continuation(prompt)
+
+    assert "對話鉤子" in continuation
+    assert "追問" in continuation
+    assert "好奇" in continuation
+    assert "不必每則都用問號" in continuation
+    assert "機械式反問" in continuation
+
+
+def test_conversation_continuation_avoids_terminal_replies_even_when_busy(prompt):
+    continuation = _conversation_continuation(prompt)
+
+    assert "不打擾了" in continuation
+    assert "有空再聊" in continuation
+    assert "正在忙" in continuation
+    assert "現在就能回答的具體疑問" in continuation
+    assert "不要只是接受對話結束" in continuation
+
+
 def test_bundled_and_sql_prompts_share_the_same_knowledge_boundary():
     assert _knowledge_boundary(DEFAULT_SYSTEM_PROMPT_TEMPLATE) == _knowledge_boundary(
         _sql_catalog_prompt()
     )
+
+
+def test_bundled_and_sql_prompts_are_identical():
+    assert DEFAULT_SYSTEM_PROMPT_TEMPLATE == _sql_catalog_prompt()
 
 
 def test_existing_safety_and_json_contract_remain_in_both_prompts(prompt):

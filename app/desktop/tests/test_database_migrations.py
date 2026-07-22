@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sweety_app.catalog import DEFAULT_SYSTEM_PROMPT_TEMPLATE
-from sweety_app.database import Database
+from sweety_app.database import CURRENT_SCHEMA_VERSION, Database
 from sweety_app.repositories import Repository
 
 
@@ -22,7 +22,7 @@ def test_v1_database_upgrades_its_bundled_system_prompt_to_current_schema(tmp_pa
 
     database.migrate()
 
-    assert _schema_version(database) == 4
+    assert _schema_version(database) == CURRENT_SCHEMA_VERSION
     assert Repository(database).get_system_prompt_template() == DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
@@ -35,7 +35,7 @@ def test_v2_migration_does_not_replace_a_later_cached_remote_prompt(tmp_path):
 
     database.migrate()
 
-    assert _schema_version(database) == 4
+    assert _schema_version(database) == CURRENT_SCHEMA_VERSION
     assert repository.get_system_prompt_template() == remote_prompt
 
 
@@ -50,7 +50,7 @@ def test_v2_database_upgrades_to_v3_without_replacing_remote_prompt(tmp_path):
 
     database.migrate()
 
-    assert _schema_version(database) == 4
+    assert _schema_version(database) == CURRENT_SCHEMA_VERSION
     assert repository.get_system_prompt_template() == remote_prompt
     with database.connect() as connection:
         columns = connection.execute("PRAGMA table_info(app_metadata)").fetchall()
@@ -90,7 +90,7 @@ def test_v3_persona_table_migrates_to_canonical_content_columns(tmp_path):
 
     database.migrate()
 
-    assert _schema_version(database) == 4
+    assert _schema_version(database) == CURRENT_SCHEMA_VERSION
     with database.connect() as connection:
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(base_personas)")}
         migrated = connection.execute("SELECT * FROM base_personas WHERE id = 'legacy-persona'").fetchone()
@@ -99,3 +99,44 @@ def test_v3_persona_table_migrates_to_canonical_content_columns(tmp_path):
         "content_zh_tw", "content_en", "image", "sort_order", "updated_at",
     }
     assert migrated["content_zh_tw"] == "人物資料：\n完整舊人設"
+
+
+def test_v4_database_upgrades_the_prior_official_prompt_to_schema_v5(tmp_path):
+    database = Database(tmp_path / "official-v4.sqlite3")
+    database.migrate()
+    prior_official_prompt = """你正在 LINE 上代替一名真實使用者回覆一個高風險、疑似詐騙的對象。
+
+說話方式：
+- 不要每次都反問，也不要每次都找藉口；依照最近對話自然決定。
+
+人設：
+{persona_text}
+目前共有 {total_messages} 筆。"""
+    with database.connect() as connection:
+        connection.execute("UPDATE schema_version SET version = 4")
+        connection.execute(
+            "UPDATE system_prompts SET template = ?, updated_at = datetime('now') WHERE singleton = 1",
+            (prior_official_prompt,),
+        )
+
+    database.migrate()
+
+    assert _schema_version(database) == 5
+    assert Repository(database).get_system_prompt_template() == DEFAULT_SYSTEM_PROMPT_TEMPLATE
+
+
+def test_v4_database_preserves_an_unrelated_remote_prompt_during_schema_v5_upgrade(tmp_path):
+    database = Database(tmp_path / "remote-v4.sqlite3")
+    database.migrate()
+    remote_prompt = "遠端自訂 prompt {persona_text} {total_messages}"
+    with database.connect() as connection:
+        connection.execute("UPDATE schema_version SET version = 4")
+        connection.execute(
+            "UPDATE system_prompts SET template = ?, updated_at = datetime('now') WHERE singleton = 1",
+            (remote_prompt,),
+        )
+
+    database.migrate()
+
+    assert _schema_version(database) == 5
+    assert Repository(database).get_system_prompt_template() == remote_prompt

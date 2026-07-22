@@ -9,7 +9,7 @@ from typing import Iterator
 from .catalog import BASE_PERSONAS, DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 
 SCHEMA = """
@@ -145,6 +145,20 @@ class Database:
                         UPDATE system_prompts
                         SET template = ?, updated_at = datetime('now')
                         WHERE singleton = 1
+                        """,
+                        (DEFAULT_SYSTEM_PROMPT_TEMPLATE,),
+                    )
+                if previous_version < 5:
+                    connection.execute(
+                        """
+                        UPDATE system_prompts
+                        SET template = ?, updated_at = datetime('now')
+                        WHERE singleton = 1
+                          AND instr(template, '對話延續與好奇心：') = 0
+                          AND instr(
+                              template,
+                              '不要每次都反問，也不要每次都找藉口；依照最近對話自然決定。'
+                          ) > 0
                         """,
                         (DEFAULT_SYSTEM_PROMPT_TEMPLATE,),
                     )
