@@ -172,9 +172,9 @@ test('Chinese copy preserves every supplied block and step verbatim', () => {
   }, {
     title: '面對詐騙，我們永遠只能被動的防禦嗎？',
     subtitle: '讓 AI 成為我們的武器',
-    body: '相信很多人都有這種疑問，我們的政府除了宣導、宣導、再宣導外，\n對於跨境詐騙，可以說是',
-    emphasis: '束手無策',
-    closing: '現在，用戶只要在閒置的電腦上運作 Sweety，\n就可以進行「主動反詐」',
+    body: '你覺得詐騙噁心嗎？\n除了刪除封鎖，視而不見外，現在～你有另一種選擇\n使用 Sweety 作為',
+    emphasis: '詐騙殺蟲劑',
+    closing: '只要在閒置的電腦上運作 Sweety，就可以開始殺蟲',
   });
   assert.deepEqual({
     title: copy['zh-TW'].time.title,
