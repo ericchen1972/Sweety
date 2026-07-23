@@ -9,6 +9,7 @@ const javascript = await readFile(new URL('homepage.js', webRoot), 'utf8').catch
 const deployHelper = await readFile(new URL('../app/tools/deploy_homepage.php', webRoot), 'utf8').catch(() => '');
 const dmgBuildHelper = await readFile(new URL('../app/desktop/build_dmg.sh', webRoot), 'utf8').catch(() => '');
 const macReleaseHelper = await readFile(new URL('../app/tools/deploy_macos_release.php', webRoot), 'utf8').catch(() => '');
+const windowsReleaseHelper = await readFile(new URL('../app/tools/deploy_windows_release.php', webRoot), 'utf8').catch(() => '');
 const updateManifest = JSON.parse(await readFile(new URL('sweety-update.json', webRoot), 'utf8').catch(() => '{}'));
 const robots = await readFile(new URL('robots.txt', webRoot), 'utf8').catch(() => '');
 const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(() => '');
@@ -40,6 +41,16 @@ test('macOS release helper preserves the metrics environment and verifies the up
   assert.match(macReleaseHelper, /FTP_BINARY/);
   assert.match(macReleaseHelper, /ftp_size\([^)]*\)[^;]*filesize\(/s);
   assert.doesNotMatch(macReleaseHelper, /echo[^;]*(?:password|metricsToken)/i);
+});
+
+test('Windows release helper validates and verifies the uploaded Inno Setup binary', () => {
+  assert.match(windowsReleaseHelper, /web\/sftp-config\.json/);
+  assert.match(windowsReleaseHelper, /Sweety-Windows-Setup-1\.0\.1\.exe/);
+  assert.match(windowsReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-Windows-Setup-latest\.exe/);
+  assert.match(windowsReleaseHelper, /fread\([^,]+,\s*2\)[^;]*===\s*['"]MZ['"]/s);
+  assert.match(windowsReleaseHelper, /FTP_BINARY/);
+  assert.match(windowsReleaseHelper, /ftp_size\([^)]*\)[^;]*filesize\(/s);
+  assert.doesNotMatch(windowsReleaseHelper, /echo[^;]*(?:password|user)/i);
 });
 
 test('production update manifest is safe for current 1.0.1 installations and deploys publicly', () => {
