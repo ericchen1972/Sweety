@@ -8,7 +8,7 @@
 - 開源程式碼：https://github.com/ericchen1972/Sweety
 - 最新版本：1.0.1
 - 授權：MIT License
-- 支援平台：macOS；Windows 版即將推出
+- 支援平台：Windows、macOS
 - 作者：Eric，網站與 AI 工程師，20 年開發經驗
 
 ## Sweety 如何運作

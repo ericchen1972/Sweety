@@ -17,6 +17,7 @@ const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => ''
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
 const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2c2c458';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-cec623ac';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -54,7 +55,13 @@ test('Windows release helper validates and verifies the uploaded Inno Setup bina
 });
 
 test('production update manifest is safe for current 1.0.1 installations and deploys publicly', () => {
-  assert.deepEqual(updateManifest, { latestVersion: '1.0.1', downloads: { macos: expectedMacDownload } });
+  assert.deepEqual(updateManifest, {
+    latestVersion: '1.0.1',
+    downloads: {
+      windows: expectedWindowsDownload,
+      macos: expectedMacDownload,
+    },
+  });
   const manifest = deployHelper.match(/\$files\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
   assert.match(manifest, /['"]sweety-update\.json['"]/);
 });
@@ -281,17 +288,20 @@ test('homepage author card uses the public portrait and safe new-tab project lin
   assert.match(css, /\.author-avatar[^}]*border-radius:\s*50%/s);
 });
 
-test('download configuration enables the published macOS DMG and keeps Windows disabled', () => {
-  assert.deepEqual(homepage.downloadConfig, { windows: null, macos: expectedMacDownload });
+test('download configuration enables the published Windows installer and macOS DMG', () => {
+  assert.deepEqual(homepage.downloadConfig, {
+    windows: expectedWindowsDownload,
+    macos: expectedMacDownload,
+  });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
     enabled: true,
     href: expectedMacDownload,
     label: '下載 macOS 版',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'zh-TW'), {
-    enabled: false,
-    href: null,
-    label: '即將推出',
+    enabled: true,
+    href: expectedWindowsDownload,
+    label: '下載 Windows 版',
   });
   assert.equal((html.match(/data-platform="(?:windows|macos)"/g) ?? []).length, 2);
   assert.equal((html.match(/class="platform-icon[^"]*"[^>]*aria-hidden="true"/g) ?? []).length, 3);
@@ -332,7 +342,7 @@ test('homepage exposes complete social metadata and machine-readable application
   }
   const app = graph.find((node) => node['@type'] === 'SoftwareApplication');
   assert.equal(app.softwareVersion, '1.0.1');
-  assert.equal(app.operatingSystem, 'macOS');
+  assert.equal(app.operatingSystem, 'Windows, macOS');
   assert.equal(app.offers.price, '0');
 });
 
@@ -344,6 +354,8 @@ test('robots, sitemap, and llms discovery files identify the canonical public si
   assert.match(llms, /^# Sweety/m);
   assert.match(llms, /主動式反詐騙 App/);
   assert.match(llms, /https:\/\/github\.com\/ericchen1972\/Sweety/);
+  assert.match(llms, /支援平台：Windows、macOS/);
+  assert.doesNotMatch(llms, /Windows 版即將推出/);
 });
 
 test('future download decisions allow HTTPS or safe relative paths and use action copy', () => {
