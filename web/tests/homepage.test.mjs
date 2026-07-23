@@ -500,6 +500,7 @@ test('header logo prefers a valid compressed WebP with a PNG fallback', async ()
 
 test('time content order and localization hooks match the DOM contract', () => {
   assert.ok(html.indexOf('data-copy="time.title"') < html.indexOf('data-copy="time.subtitle"'));
+  assert.match(html, /<script type="module" src="homepage\.js\?v=1\.0\.1-db112cf"><\/script>/);
   for (const hook of ['skipLink', 'brandLabel', 'nav.label', 'nav.antiScam', 'nav.download', 'nav.instructions']) {
     assert.match(html, new RegExp(`data-(?:copy|aria-label)="${hook.replace('.', '\\.')}`));
   }
