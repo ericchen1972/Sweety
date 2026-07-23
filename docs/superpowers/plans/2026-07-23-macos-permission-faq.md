@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `web/tests/homepage.test.mjs`
 
-- [ ] **Step 1: Replace the four-item FAQ test with a five-item contract**
+- [x] **Step 1: Replace the four-item FAQ test with a five-item contract**
 
 Rename the test to `homepage includes the LINE window warning and five independent localized FAQs`. Assert:
 
@@ -48,7 +48,7 @@ Also assert that the fifth `<details>` contains:
 
 and that JSON-LD includes the full Traditional Chinese question and answer.
 
-- [ ] **Step 2: Run the homepage test and verify RED**
+- [x] **Step 2: Run the homepage test and verify RED**
 
 Run: `node --test web/tests/homepage.test.mjs`
 
@@ -60,7 +60,7 @@ Expected: FAIL because both locale arrays and the HTML currently contain four FA
 - Modify: `web/homepage.js`
 - Modify: `web/index.html`
 
-- [ ] **Step 1: Add the fifth localized copy object**
+- [x] **Step 1: Add the fifth localized copy object**
 
 Append to the Traditional Chinese FAQ array:
 
@@ -82,7 +82,7 @@ Append to the English FAQ array:
 },
 ```
 
-- [ ] **Step 2: Add safe structured answer markup**
+- [x] **Step 2: Add safe structured answer markup**
 
 Append this fifth disclosure to `.faq-list`:
 
@@ -95,7 +95,7 @@ Append this fifth disclosure to `.faq-list`:
 
 The generic renderer continues assigning localized strings with `textContent`; do not add `innerHTML`.
 
-- [ ] **Step 3: Add the fifth JSON-LD question**
+- [x] **Step 3: Add the fifth JSON-LD question**
 
 Append to `FAQPage.mainEntity`:
 
@@ -110,13 +110,13 @@ Append to `FAQPage.mainEntity`:
 }
 ```
 
-- [ ] **Step 4: Run the homepage tests and verify GREEN**
+- [x] **Step 4: Run the homepage tests and verify GREEN**
 
 Run: `node --test web/tests/homepage.test.mjs`
 
 Expected: all homepage tests PASS.
 
-- [ ] **Step 5: Commit the FAQ implementation**
+- [x] **Step 5: Commit the FAQ implementation**
 
 ```bash
 git add web/homepage.js web/index.html web/tests/homepage.test.mjs
@@ -129,7 +129,7 @@ git commit -m "feat: add macOS permission recovery FAQ"
 - Deploy: `web/homepage.js`
 - Deploy: `web/index.html`
 
-- [ ] **Step 1: Run static verification**
+- [x] **Step 1: Run static verification**
 
 Run:
 
@@ -140,13 +140,13 @@ git diff --check
 
 Expected: all web tests PASS and the diff check exits zero.
 
-- [ ] **Step 2: Deploy the homepage**
+- [x] **Step 2: Deploy the homepage**
 
 Run: `php app/tools/deploy_homepage.php`
 
 Expected: all homepage files upload with verified sizes, the metrics schema check succeeds, and the signed local app rebuild succeeds.
 
-- [ ] **Step 3: Verify the live homepage and JavaScript**
+- [x] **Step 3: Verify the live homepage and JavaScript**
 
 Fetch `https://sweety.tw/` and `https://sweety.tw/homepage.js` with a cache-busting query. Assert:
 
@@ -155,7 +155,7 @@ Fetch `https://sweety.tw/` and `https://sweety.tw/homepage.js` with a cache-bust
 - Live JSON-LD contains the full Traditional Chinese question and answer.
 - Live JavaScript contains both localized fifth FAQ objects.
 
-- [ ] **Step 4: Record completion**
+- [x] **Step 4: Record completion**
 
 Mark all plan checkboxes complete and commit the updated plan:
 
@@ -164,7 +164,7 @@ git add docs/superpowers/plans/2026-07-23-macos-permission-faq.md
 git commit -m "docs: record macOS permission FAQ rollout"
 ```
 
-- [ ] **Step 5: Review final repository state**
+- [x] **Step 5: Review final repository state**
 
 Run: `git status --short --branch && git log -5 --oneline`
 
