@@ -209,16 +209,42 @@ test('copy contains no extra hero lead-in or unsupplied Chinese slogans', () => 
   assert.doesNotMatch(html, /data-copy="hero\.eyebrow"|Anti-scam companion/);
 });
 
-test('homepage includes the LINE window warning and four independent localized FAQs', () => {
+test('homepage includes the LINE window warning and five independent localized FAQs', () => {
+  const permissionFaqZh = homepage.copy['zh-TW'].faq.items[4];
+  const permissionFaqEn = homepage.copy.en.faq.items[4];
+
   assert.equal(homepage.copy['zh-TW'].notice.windowPosition, 'Line 桌面 App 視窗位置請勿超過螢幕左側或右側邊緣，否則將造成 Sweety 辨識失敗');
-  assert.equal(homepage.copy['zh-TW'].faq.items.length, 4);
-  assert.equal(homepage.copy.en.faq.items.length, 4);
-  assert.equal((html.match(/<details\b/g) ?? []).length, 4);
-  assert.equal((html.match(/<summary\b/g) ?? []).length, 4);
+  assert.equal(homepage.copy['zh-TW'].faq.items.length, 5);
+  assert.equal(homepage.copy.en.faq.items.length, 5);
+  assert.deepEqual(permissionFaqZh, {
+    question: '為什麼按下開始後顯示「需要 Mac 權限」？',
+    answerPrefix: '因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的',
+    answerEmphasis: '「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。',
+  });
+  assert.deepEqual(permissionFaqEn, {
+    question: 'Why does Sweety show “macOS permissions required” after I press Start?',
+    answerPrefix: 'After an update, macOS may treat Sweety as a new app. In System Settings, ',
+    answerEmphasis: 'remove Sweety from Accessibility and Screen & System Audio Recording, then add it again.',
+  });
+  assert.equal((html.match(/<details\b/g) ?? []).length, 5);
+  assert.equal((html.match(/<summary\b/g) ?? []).length, 5);
   assert.doesNotMatch(html, /<details[^>]+\bname=/);
-  for (const hook of ['faq.title', 'faq.items.0.question', 'faq.items.0.answer', 'notice.windowPosition']) {
+  for (const hook of [
+    'faq.title',
+    'faq.items.0.question',
+    'faq.items.0.answer',
+    'faq.items.4.question',
+    'faq.items.4.answerPrefix',
+    'faq.items.4.answerEmphasis',
+    'notice.windowPosition',
+  ]) {
     assert.match(html, new RegExp(`data-copy="${hook.replaceAll('.', '\\.')}`));
   }
+  assert.match(html, /<span data-copy="faq\.items\.4\.answerPrefix">/);
+  assert.match(html, /<strong data-copy="faq\.items\.4\.answerEmphasis">/);
+  assert.match(html, /"name": "為什麼按下開始後顯示「需要 Mac 權限」？"/);
+  assert.match(html, /"text": "因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。"/);
+  assert.doesNotMatch(html, /\*\*「輔助使用」/);
   assert.match(css, /\.faq-item/);
   assert.match(css, /\.faq-item summary/);
 });

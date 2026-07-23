@@ -118,6 +118,11 @@ export const copy = {
         { question: '我可以一次設定多個對象嗎？', answer: '可以，但不要超過 Line 主視窗，聯絡人列表的可視範圍。' },
         { question: 'Sweety 可用來回覆非詐騙對象嗎？', answer: '可以，但不建議。' },
         { question: '為什麼叫 Sweety？', answer: '被詐騙的人太苦了，吃顆糖吧。' },
+        {
+          question: '為什麼按下開始後顯示「需要 Mac 權限」？',
+          answerPrefix: '因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的',
+          answerEmphasis: '「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。',
+        },
       ],
     },
     author: {
@@ -192,6 +197,11 @@ export const copy = {
         { question: 'Can I configure multiple targets at once?', answer: 'Yes, but keep them within the visible range of the contact list in the main LINE window.' },
         { question: 'Can Sweety reply to people who are not scammers?', answer: 'Yes, but it is not recommended.' },
         { question: 'Why is it called Sweety?', answer: 'Being scammed is bitter enough. Have a piece of candy.' },
+        {
+          question: 'Why does Sweety show “macOS permissions required” after I press Start?',
+          answerPrefix: 'After an update, macOS may treat Sweety as a new app. In System Settings, ',
+          answerEmphasis: 'remove Sweety from Accessibility and Screen & System Audio Recording, then add it again.',
+        },
       ],
     },
     author: {
