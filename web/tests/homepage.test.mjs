@@ -309,6 +309,70 @@ test('download configuration enables the published Windows installer and macOS D
   assert.doesNotMatch(html, /<div class="platform-icon"[^>]*>[●⊞]<\/div>/);
 });
 
+test('download totals are parsed, localized, fetched, and recorded safely', async () => {
+  assert.equal(homepage.parseDownloadTotal({ totalDownloads: 0 }), 0);
+  assert.equal(homepage.parseDownloadTotal({ totalDownloads: 42 }), 42);
+  for (const invalid of [
+    { totalDownloads: -1 },
+    { totalDownloads: '42' },
+    { totalDownloads: 1.5 },
+    {},
+    null,
+  ]) assert.equal(homepage.parseDownloadTotal(invalid), null);
+
+  assert.equal(homepage.formatDownloadCount('zh-TW', 42), '已下載 42 次');
+  assert.equal(homepage.formatDownloadCount('en', 42), 'Downloaded 42 times');
+  assert.equal(homepage.formatDownloadCount('zh-TW', null), '已下載 — 次');
+
+  const calls = [];
+  const fetcher = async (url, options = {}) => {
+    calls.push({ url, options });
+    return { ok: true, json: async () => ({ totalDownloads: 8 }) };
+  };
+  assert.equal(await homepage.fetchDownloadTotal(fetcher), 8);
+  assert.equal(calls[0].url, '/sweety-downloads.php');
+  assert.equal(calls[0].options.headers.Accept, 'application/json');
+  assert.equal(await homepage.recordDownload(fetcher), 8);
+  assert.deepEqual(calls[1], {
+    url: '/sweety-downloads.php',
+    options: {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      keepalive: true,
+    },
+  });
+  assert.equal(await homepage.fetchDownloadTotal(async () => ({ ok: false })), null);
+  assert.equal(await homepage.recordDownload(async () => { throw new Error('offline'); }), null);
+});
+
+test('platform tracking never blocks navigation and reports a successful total', async () => {
+  let clickHandler = null;
+  const link = {
+    addEventListener(type, handler) {
+      if (type === 'click') clickHandler = handler;
+    },
+  };
+  const totals = [];
+  homepage.attachDownloadTracking(
+    link,
+    (total) => totals.push(total),
+    async () => ({ ok: true, json: async () => ({ totalDownloads: 9 }) }),
+  );
+  assert.equal(typeof clickHandler, 'function');
+  assert.equal(clickHandler(), undefined);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(totals, [9]);
+});
+
+test('download count sits right on large screens and stacks left on mobile', () => {
+  assert.match(html, /class="section-heading download-heading"/);
+  assert.match(html, /class="download-count"[^>]+aria-live="polite"[^>]+data-download-count[^>]*>Downloaded — times</);
+  assert.match(css, /\.download-heading\s*\{[^}]*display:\s*flex[^}]*justify-content:\s*space-between/s);
+  assert.match(css, /\.download-count\s*\{[^}]*font-size:\s*\.9rem/s);
+  const mobile = css.match(/@media \(max-width:\s*768px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+  assert.match(mobile, /\.download-heading\s*\{[^}]*align-items:\s*flex-start[^}]*flex-direction:\s*column/s);
+});
+
 test('download section adds a third Git card with a safe new-tab repository link', () => {
   assert.equal((html.match(/class="download-card/g) ?? []).length, 3);
   assert.match(html, /class="download-card git-card"/);
@@ -500,7 +564,7 @@ test('header logo prefers a valid compressed WebP with a PNG fallback', async ()
 
 test('time content order and localization hooks match the DOM contract', () => {
   assert.ok(html.indexOf('data-copy="time.title"') < html.indexOf('data-copy="time.subtitle"'));
-  assert.match(html, /<script type="module" src="homepage\.js\?v=1\.0\.1-db112cf"><\/script>/);
+  assert.match(html, /<script type="module" src="homepage\.js\?v=1\.0\.1-download-counter"><\/script>/);
   for (const hook of ['skipLink', 'brandLabel', 'nav.label', 'nav.antiScam', 'nav.download', 'nav.instructions']) {
     assert.match(html, new RegExp(`data-(?:copy|aria-label)="${hook.replace('.', '\\.')}`));
   }

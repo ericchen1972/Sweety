@@ -12,6 +12,49 @@ export const downloadConfig = Object.freeze({
   macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2c2c458',
 });
 
+export function parseDownloadTotal(payload) {
+  return Number.isSafeInteger(payload?.totalDownloads) && payload.totalDownloads >= 0
+    ? payload.totalDownloads
+    : null;
+}
+
+export async function fetchDownloadTotal(fetchImpl = globalThis.fetch) {
+  try {
+    const response = await fetchImpl('/sweety-downloads.php', {
+      headers: { Accept: 'application/json' },
+    });
+    return response?.ok ? parseDownloadTotal(await response.json()) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function recordDownload(fetchImpl = globalThis.fetch) {
+  try {
+    const response = await fetchImpl('/sweety-downloads.php', {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      keepalive: true,
+    });
+    return response?.ok ? parseDownloadTotal(await response.json()) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function formatDownloadCount(locale, total) {
+  const value = Number.isSafeInteger(total) && total >= 0 ? String(total) : '—';
+  return locale === 'zh-TW' ? `已下載 ${value} 次` : `Downloaded ${value} times`;
+}
+
+export function attachDownloadTracking(link, onCount, fetchImpl = globalThis.fetch) {
+  link.addEventListener('click', () => {
+    void recordDownload(fetchImpl).then((total) => {
+      if (total !== null) onCount(total);
+    });
+  });
+}
+
 export function splitWholeHours(totalHours) {
   const value = Number.isInteger(totalHours) && totalHours >= 0 ? totalHours : 0;
   return { days: Math.floor(value / 24), hours: value % 24 };
@@ -284,7 +327,7 @@ function renderList(element, items) {
   }));
 }
 
-function renderDownloads(strings) {
+function renderDownloads(strings, onPlatformLink = () => {}) {
   document.querySelectorAll('[data-platform]').forEach((card) => {
     const platform = card.dataset.platform;
     const action = card.querySelector('.download-action');
@@ -297,6 +340,7 @@ function renderDownloads(strings) {
     link.rel = 'noopener';
     link.textContent = decision.label;
     action.replaceWith(link);
+    onPlatformLink(link);
   });
 }
 
@@ -371,7 +415,17 @@ function initializePage() {
   renderList(document.querySelector('[data-list="quick.steps"]'), strings.quick.steps);
   renderList(document.querySelector('[data-list="advanced.steps"]'), strings.advanced.steps);
   renderList(document.querySelector('[data-list="notice.permissions"]'), strings.notice.permissions);
-  renderDownloads(strings);
+  const downloadCount = document.querySelector('[data-download-count]');
+  const renderDownloadTotal = (total) => {
+    if (downloadCount) downloadCount.textContent = formatDownloadCount(locale, total);
+  };
+  renderDownloadTotal(null);
+  renderDownloads(strings, (link) => {
+    attachDownloadTracking(link, renderDownloadTotal);
+  });
+  void fetchDownloadTotal().then((total) => {
+    if (total !== null) renderDownloadTotal(total);
+  });
 
   const dayValue = document.querySelector('[data-flip-digits="days"]');
   const hourValue = document.querySelector('[data-flip-digits="hours"]');

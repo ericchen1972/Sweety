@@ -79,6 +79,8 @@ h3 { font-size: clamp(1.65rem, 2.4vw, 2.4rem); }
 .download { width: 100%; padding-inline: max(24px, calc((100% - 1200px) / 2)); background: var(--blue-pale); }
 .section-heading { max-width: 700px; margin-bottom: 48px; }
 .section-heading h2 { margin-bottom: 0; }
+.download-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; max-width: none; }
+.download-count { margin: 0 0 .35em; color: var(--muted); font-size: .9rem; font-weight: 750; white-space: nowrap; }
 .instruction-heading { max-width: 920px; }
 .instruction-intro { margin: 24px 0 0; color: var(--muted); font-size: 1.08rem; }
 .instruction-quote { margin: 28px 0 0; padding: 22px 26px; border-left: 5px solid var(--blue); border-radius: 0 16px 16px 0; color: var(--ink); background: var(--blue-pale); font-size: clamp(1.08rem, 1.8vw, 1.35rem); font-weight: 850; }
@@ -157,6 +159,8 @@ h3 { font-size: clamp(1.65rem, 2.4vw, 2.4rem); }
   .time-art { position: relative; aspect-ratio: 16 / 9; }
   .time-copy { grid-column: 1; padding: 34px 26px 42px; background: #fff; }
   .time-copy h2 { max-width: 13ch; }
+  .download-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .download-count { margin: 0; }
   .download-grid { grid-template-columns: 1fr; }
   .git-card { grid-column: auto; }
   .instruction-block, .advanced-block { grid-template-columns: 1fr; padding: 26px 20px; }
