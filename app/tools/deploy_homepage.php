@@ -99,6 +99,8 @@ $files = [
     'images/sweety-social-1200x630.png',
     'sweety-metrics.php',
     'sweety-metrics-lib.php',
+    'sweety-downloads.php',
+    'sweety-downloads-lib.php',
     'mysql.php',
 ];
 foreach (glob($root . '/web/images/home/*.{webp,png}', GLOB_BRACE) ?: [] as $image) {
@@ -170,4 +172,5 @@ if ($buildExit !== 0) {
 
 echo 'Uploaded homepage files and ' . count($files) . " verified assets/files.\n";
 echo 'Metrics schema verified; aggregate hours: ' . (string) $migration['aggregateHours'] . "\n";
+echo 'Download counter verified; total downloads: ' . (string) $migration['downloadTotal'] . "\n";
 echo "Rebuilt and signed app/desktop/dist/Sweety.app with dedicated metrics configuration.\n";

@@ -617,9 +617,9 @@ test('mobile keeps hero art as a background layer without legacy layout override
   assert.doesNotMatch(mobile, /\.hero\s*\{[^}]*grid-template-columns/);
 });
 
-test('homepage deployment manifest includes public pages, discovery files, and social assets', () => {
+test('homepage deployment manifest includes public pages, endpoints, discovery files, and social assets', () => {
   const manifest = deployHelper.match(/\$files\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
-  for (const file of ['images/logo.webp', 'images/logo.png', 'images/eric.png', 'images/sweety-social-1200x630.png', 'about_sweety.html', 'robots.txt', 'sitemap.xml', 'llms.txt']) {
+  for (const file of ['images/logo.webp', 'images/logo.png', 'images/eric.png', 'images/sweety-social-1200x630.png', 'about_sweety.html', 'robots.txt', 'sitemap.xml', 'llms.txt', 'sweety-downloads.php', 'sweety-downloads-lib.php']) {
     assert.match(manifest, new RegExp(`['"]${file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`));
   }
 });
