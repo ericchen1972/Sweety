@@ -30,6 +30,7 @@ try {
         'sweety_install_metrics',
         'sweety_metrics_totals',
         'sweety_metrics_daily_registrations',
+        'sweety_download_totals',
     ];
     foreach ($requiredTables as $table) {
         $result = $mysqli->query("SHOW TABLES LIKE '{$table}'");
@@ -58,8 +59,19 @@ try {
     $aggregate = (string) $result->fetch_assoc()['total_hours'];
     $result->free();
 
+    $result = $mysqli->query('SELECT total_downloads FROM sweety_download_totals WHERE id = 1');
+    if (!$result || $result->num_rows !== 1) {
+        throw new RuntimeException('Download aggregate singleton is unavailable.');
+    }
+    $downloadTotal = (string) $result->fetch_assoc()['total_downloads'];
+    $result->free();
+
     $mysqli->close();
-    $response = ['ok' => true, 'aggregateHours' => $aggregate];
+    $response = [
+        'ok' => true,
+        'aggregateHours' => $aggregate,
+        'downloadTotal' => $downloadTotal,
+    ];
 } catch (Throwable $error) {
     $response = ['ok' => false, 'error' => $error->getMessage()];
 } finally {
