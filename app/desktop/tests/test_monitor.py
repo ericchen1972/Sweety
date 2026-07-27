@@ -293,18 +293,58 @@ def test_stop_after_chat_capture_prevents_ai_and_paste(repo):
 def test_ai_failure_does_not_send_or_persist(repo):
     target = repo.create_target(target_payload("投資顧問"))
     line = FakeLine([UnreadContact(index=1, name="投資顧問")])
+    reports: list[bool] = []
 
     class FailingAi:
         def generate_reply(self, **_kwargs):
             raise AiError("AI returned an invalid reply")
 
-    controller = MonitorController(repo, line, FailingAi(), sleeper=lambda _seconds: None)
+    controller = MonitorController(
+        repo,
+        line,
+        FailingAi(),
+        sleeper=lambda _seconds: None,
+        on_exchange_committed=lambda: reports.append(True),
+    )
     controller.start(background=False)
 
     assert controller.run_cycle() is False
     assert line.sent == []
     assert repo.list_messages(target["id"]) == []
     assert repo.get_target(target["id"])["round_trips"] == 0
+    assert reports == []
+
+
+def test_capture_failure_does_not_call_ai_send_persist_or_report(repo):
+    target = repo.create_target(target_payload("投資顧問"))
+    reports: list[bool] = []
+    ai_calls: list[bool] = []
+
+    class CaptureFailureLine(FakeLine):
+        def capture_visible_chat(self, target_name: str) -> Path:
+            raise RuntimeError("screen capture denied")
+
+    class RecordingAi(FakeAi):
+        def generate_reply(self, **kwargs) -> ReplyDecision:
+            ai_calls.append(True)
+            return super().generate_reply(**kwargs)
+
+    line = CaptureFailureLine([UnreadContact(index=1, name="投資顧問")])
+    controller = MonitorController(
+        repo,
+        line,
+        RecordingAi(),
+        sleeper=lambda _seconds: None,
+        on_exchange_committed=lambda: reports.append(True),
+    )
+    controller.start(background=False)
+
+    assert controller.run_cycle() is False
+    assert ai_calls == []
+    assert line.sent == []
+    assert repo.list_messages(target["id"]) == []
+    assert repo.get_target(target["id"])["round_trips"] == 0
+    assert reports == []
 
 
 def test_missing_permissions_keep_monitor_stopped(repo):
