@@ -135,7 +135,7 @@ class LineMacAdapter:
         self.sleeper(1.5)
         return True
 
-    def read_visible_chat(self, target_name: str) -> str:
+    def capture_visible_chat(self, target_name: str) -> Path:
         windows = self._windows()
         chat = next((item for item in windows if item["name"] != "LINE" and self._same_window_name(item["name"], target_name)), None)
         if chat is None:
@@ -159,9 +159,7 @@ end tell'''
         self._mouse().scroll(-2000)
         self.sleeper(0.5)
         self._capture(chat, self.chat_path)
-        results = self._run_ocr(self.chat_path)
-        ordered = sorted(results, key=lambda item: min(point[1] for point in item.get("bbox", [[0, 0]])))
-        return "\n".join(str(item.get("text", "")).strip() for item in ordered if str(item.get("text", "")).strip())
+        return self.chat_path
 
     def send_message(self, target_name: str, reply: str) -> bool:
         chat = next((item for item in self._windows() if item["name"] == target_name), None)

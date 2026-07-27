@@ -75,6 +75,12 @@ class FakeMouse:
     def click(self, x, y):
         self.clicks.append((x, y))
 
+    def moveTo(self, x, y, duration=0):
+        self.clicks.append((x, y, duration))
+
+    def scroll(self, amount):
+        self.keys.append(("scroll", amount))
+
     def hotkey(self, *keys):
         self.keys.append(keys)
 
@@ -86,6 +92,23 @@ class Result:
     returncode = 0
     stdout = "name:LINE, position:20, 80, size:360, 800|name:投資顧問, position:100, 200, size:500, 700|"
     stderr = ""
+
+
+def test_capture_visible_chat_returns_screenshot_without_chat_ocr(tmp_path: Path):
+    mouse = FakeMouse()
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=mouse,
+        sleeper=lambda _seconds: None,
+    )
+    adapter._capture = lambda _window, path: path.write_bytes(b"\x89PNG\r\n\x1a\n")
+    adapter._run_ocr = lambda _path: (_ for _ in ()).throw(AssertionError("chat OCR must not run"))
+
+    screenshot = adapter.capture_visible_chat("投資顧問")
+
+    assert screenshot == tmp_path / "line-chat.png"
+    assert screenshot.read_bytes().startswith(b"\x89PNG")
 
 
 def test_send_message_clears_pastes_and_presses_enter_then_restores_clipboard(tmp_path: Path):

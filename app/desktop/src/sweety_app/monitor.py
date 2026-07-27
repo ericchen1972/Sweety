@@ -5,8 +5,10 @@ import re
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Protocol
 
+from .ai import ReplyDecision
 from .repositories import Repository
 
 
@@ -20,14 +22,14 @@ class LineAdapter(Protocol):
     def main_window_exists(self) -> bool: ...
     def unread_contacts(self) -> list[UnreadContact]: ...
     def open_chat(self, contact: UnreadContact) -> bool: ...
-    def read_visible_chat(self, target_name: str) -> str: ...
+    def capture_visible_chat(self, target_name: str) -> Path: ...
     def send_message(self, target_name: str, reply: str) -> bool: ...
     def close_chat(self, target_name: str) -> bool: ...
     def close_other_chat_windows(self) -> bool: ...
 
 
 class AiAdapter(Protocol):
-    def generate_reply(self, **kwargs: Any) -> str: ...
+    def generate_reply(self, **kwargs: Any) -> ReplyDecision: ...
 
 
 def _match_key(value: str) -> str:
@@ -179,27 +181,23 @@ class MonitorController:
                 if run_stop.is_set():
                     self.line.close_chat(str(target["name"]))
                     return False
-                visible_text = self.line.read_visible_chat(str(target["name"]))
+                screenshot_path = self.line.capture_visible_chat(str(target["name"]))
                 if run_stop.is_set():
                     self.line.close_chat(str(target["name"]))
                     return False
                 settings = self.repository.get_settings()
                 history = self.repository.list_messages(str(target["id"]), limit=20)
                 total_messages = len(self.repository.list_messages(str(target["id"])))
-                reply = self.ai.generate_reply(
+                decision = self.ai.generate_reply(
                     target=target,
-                    visible_text=visible_text,
+                    screenshot_path=screenshot_path,
                     history=history,
                     total_messages=total_messages,
                     settings=settings,
-                ).strip()
+                )
                 if run_stop.is_set():
                     self.line.close_chat(str(target["name"]))
                     return False
-                if not reply:
-                    self.line.close_chat(str(target["name"]))
-                    self._set_status("waiting", "empty_ai_reply")
-                    continue
 
                 delay = random.uniform(
                     float(settings["reply_delay_min_seconds"]),
@@ -208,12 +206,16 @@ class MonitorController:
                 if not self._interruptible_sleep(delay, run_stop):
                     self.line.close_chat(str(target["name"]))
                     return processed_any
-                if run_stop.is_set() or not self.line.send_message(str(target["name"]), reply):
+                if run_stop.is_set() or not self.line.send_message(str(target["name"]), decision.msg_reply):
                     self._set_status("error", "send_failed", str(target["name"]))
                     self.line.close_chat(str(target["name"]))
                     continue
 
-                self.repository.record_exchange(str(target["id"]), visible_text, reply)
+                self.repository.record_exchange(
+                    str(target["id"]),
+                    decision.incoming_for_history,
+                    decision.msg_reply,
+                )
                 processed_any = True
                 if self.on_exchange_committed is not None:
                     try:

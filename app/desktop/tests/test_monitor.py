@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
 
+from sweety_app.ai import AiError, ReplyDecision
 from sweety_app.database import Database
 from sweety_app.monitor import MonitorController, UnreadContact, match_unread_target
 from sweety_app.repositories import Repository
@@ -61,8 +63,10 @@ class FakeLine:
         self.opened.append(contact.name)
         return True
 
-    def read_visible_chat(self, target_name: str) -> str:
-        return f"{target_name}: 你還記得那個網站嗎？"
+    def capture_visible_chat(self, target_name: str) -> Path:
+        assert target_name in self.opened
+        self.events.append("capture")
+        return Path("/tmp/test-line-chat.png")
 
     def send_message(self, target_name: str, reply: str) -> bool:
         assert target_name in self.opened
@@ -76,10 +80,10 @@ class FakeLine:
 
 @dataclass
 class FakeAi:
-    reply: str = "我有點忘了，是哪個？"
+    decision: ReplyDecision = ReplyDecision("text", "你還記得那個網站嗎？", "我有點忘了，是哪個？")
 
-    def generate_reply(self, **_kwargs) -> str:
-        return self.reply
+    def generate_reply(self, **_kwargs) -> ReplyDecision:
+        return self.decision
 
 
 def test_unread_matching_prefers_exact_name_and_has_limited_ocr_fallback():
@@ -135,7 +139,7 @@ def test_live_mode_sends_and_persists_exchange_and_metrics(repo):
     assert line.sent == [("投資顧問✨", "我有點忘了，是哪個？")]
     assert line.closed == 1
     assert [(item["role"], item["content"]) for item in repo.list_messages(target["id"])] == [
-        ("scammer", "投資顧問✨: 你還記得那個網站嗎？"),
+        ("scammer", "你還記得那個網站嗎？"),
         ("assistant", "我有點忘了，是哪個？"),
     ]
     assert repo.get_target(target["id"])["round_trips"] == 1
@@ -152,6 +156,20 @@ def test_send_failure_does_not_persist_or_count(repo):
     assert controller.run_cycle() is False
     assert repo.list_messages(target["id"]) == []
     assert repo.get_target(target["id"])["round_trips"] == 0
+
+
+def test_photo_description_is_persisted_after_successful_send(repo):
+    target = repo.create_target(target_payload("投資顧問"))
+    line = FakeLine([UnreadContact(index=1, name="投資顧問")])
+    ai = FakeAi(ReplyDecision("image", "一張超商繳費單", "這是要我做什麼？"))
+    controller = MonitorController(repo, line, ai, sleeper=lambda _seconds: None)
+    controller.start(background=False)
+
+    assert controller.run_cycle() is True
+    assert [(item["role"], item["content"]) for item in repo.list_messages(target["id"])] == [
+        ("scammer", "[照片] 一張超商繳費單"),
+        ("assistant", "這是要我做什麼？"),
+    ]
 
 
 def test_successful_committed_exchange_triggers_metrics_report_once(repo):
@@ -248,28 +266,45 @@ def test_restart_does_not_clear_the_previous_run_stop_signal(repo):
     assert controller._stop_event is not previous_run_stop
 
 
-def test_stop_during_chat_read_prevents_ai_and_paste(repo):
+def test_stop_after_chat_capture_prevents_ai_and_paste(repo):
     repo.create_target(target_payload("投資顧問"))
     calls = []
     controller = None
 
-    class StopDuringReadLine(FakeLine):
-        def read_visible_chat(self, target_name: str) -> str:
+    class StopAfterCaptureLine(FakeLine):
+        def capture_visible_chat(self, target_name: str) -> Path:
             controller.stop()
-            return super().read_visible_chat(target_name)
+            return super().capture_visible_chat(target_name)
 
     class RecordingAi(FakeAi):
-        def generate_reply(self, **kwargs) -> str:
+        def generate_reply(self, **kwargs) -> ReplyDecision:
             calls.append(kwargs)
             return super().generate_reply(**kwargs)
 
-    line = StopDuringReadLine([UnreadContact(index=1, name="投資顧問")])
+    line = StopAfterCaptureLine([UnreadContact(index=1, name="投資顧問")])
     controller = MonitorController(repo, line, RecordingAi(), sleeper=lambda _seconds: None)
     controller.start(background=False)
 
     assert controller.run_cycle() is False
     assert calls == []
     assert line.sent == []
+
+
+def test_ai_failure_does_not_send_or_persist(repo):
+    target = repo.create_target(target_payload("投資顧問"))
+    line = FakeLine([UnreadContact(index=1, name="投資顧問")])
+
+    class FailingAi:
+        def generate_reply(self, **_kwargs):
+            raise AiError("AI returned an invalid reply")
+
+    controller = MonitorController(repo, line, FailingAi(), sleeper=lambda _seconds: None)
+    controller.start(background=False)
+
+    assert controller.run_cycle() is False
+    assert line.sent == []
+    assert repo.list_messages(target["id"]) == []
+    assert repo.get_target(target["id"])["round_trips"] == 0
 
 
 def test_missing_permissions_keep_monitor_stopped(repo):
