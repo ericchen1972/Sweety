@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from PIL import Image, ImageDraw
 
 from sweety_app.line_mac import (
@@ -113,6 +114,26 @@ def test_capture_visible_chat_returns_screenshot_without_chat_ocr(tmp_path: Path
     assert screenshot.read_bytes().startswith(b"\x89PNG")
 
 
+def test_capture_visible_chat_removes_partial_screenshot_when_capture_fails(tmp_path: Path):
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=FakeMouse(),
+        sleeper=lambda _seconds: None,
+    )
+
+    def fail_after_write(_window, path):
+        path.write_bytes(b"partial sensitive screenshot")
+        raise RuntimeError("screen capture failed")
+
+    adapter._capture = fail_after_write
+
+    with pytest.raises(RuntimeError, match="screen capture failed"):
+        adapter.capture_visible_chat("投資顧問")
+
+    assert adapter.chat_path.exists() is False
+
+
 def test_discard_chat_capture_removes_only_the_adapter_screenshot(tmp_path: Path):
     adapter = LineMacAdapter(cache_dir=tmp_path, runner=lambda *_args, **_kwargs: Result())
     adapter.chat_path.write_bytes(b"sensitive chat screenshot")
@@ -141,8 +162,10 @@ def test_send_message_clears_pastes_and_presses_enter_then_restores_clipboard(tm
     def capture(_window, path):
         nonlocal captures
         image = Image.new("RGB", (500, 700), "white")
-        if captures == 1:
-            ImageDraw.Draw(image).rectangle((350, 550, 470, 600), fill="black")
+        if captures == 0:
+            ImageDraw.Draw(image).rectangle((180, 650, 320, 665), fill="black")
+        else:
+            ImageDraw.Draw(image).rectangle((350, 500, 470, 550), fill="black")
         image.save(path)
         captures += 1
 
@@ -168,6 +191,30 @@ def test_send_message_returns_false_when_no_outgoing_bubble_appears(tmp_path: Pa
     assert adapter.send_message("投資顧問", "AI 回覆") is False
     assert (tmp_path / "line-send-before.png").exists() is False
     assert (tmp_path / "line-send-after.png").exists() is False
+
+
+def test_send_message_rejects_unrelated_right_side_motion_when_input_did_not_clear(tmp_path: Path):
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=FakeMouse(),
+        clipboard=FakeClipboard(),
+        sleeper=lambda _seconds: None,
+    )
+    captures = 0
+
+    def capture(_window, path):
+        nonlocal captures
+        image = Image.new("RGB", (500, 700), "white")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((180, 650, 320, 665), fill="black")
+        draw.rectangle((350 + (captures * 10), 500, 470, 550), fill="black")
+        image.save(path)
+        captures += 1
+
+    adapter._capture = capture
+
+    assert adapter.send_message("投資顧問", "AI 回覆") is False
 
 
 def test_send_message_refuses_a_different_chat_window(tmp_path: Path):

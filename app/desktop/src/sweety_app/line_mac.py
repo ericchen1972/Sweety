@@ -160,7 +160,11 @@ end tell'''
         self._mouse().scroll(-2000)
         self._mouse().scroll(-2000)
         self.sleeper(0.5)
-        self._capture(chat, self.chat_path)
+        try:
+            self._capture(chat, self.chat_path)
+        except Exception:
+            self.chat_path.unlink(missing_ok=True)
+            raise
         return self.chat_path
 
     def discard_chat_capture(self, screenshot_path: str | Path) -> None:
@@ -209,11 +213,25 @@ end tell'''
             if before.size != after.size:
                 return False
             width, height = before.size
-            region = (width // 2, 60, width, max(61, height - 90))
-            difference = ImageChops.difference(before.crop(region), after.crop(region))
-            changed_pixels = sum(1 for pixel in difference.get_flattened_data() if max(pixel) > 20)
-            minimum_changed = max(100, (difference.width * difference.height) // 500)
-            return changed_pixels >= minimum_changed
+            chat_region = (width // 2, max(60, int(height * 0.55)), width, max(61, height - 90))
+            input_region = (int(width * 0.15), max(0, height - 80), int(width * 0.85), max(1, height - 20))
+            return self._region_changed(before, after, chat_region) and self._region_changed(
+                before,
+                after,
+                input_region,
+            )
+
+    @staticmethod
+    def _region_changed(before: Image.Image, after: Image.Image, region: tuple[int, int, int, int]) -> bool:
+        difference = ImageChops.difference(before.crop(region), after.crop(region))
+        raw = difference.tobytes()
+        changed_pixels = sum(
+            1
+            for offset in range(0, len(raw), 3)
+            if max(raw[offset : offset + 3], default=0) > 20
+        )
+        minimum_changed = max(100, (difference.width * difference.height) // 500)
+        return changed_pixels >= minimum_changed
 
     def close_chat(self, target_name: str) -> bool:
         safe_name = self._safe_window_name(target_name)
