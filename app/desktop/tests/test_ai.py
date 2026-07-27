@@ -4,28 +4,75 @@ import json
 
 import pytest
 
+import sweety_app.ai as ai_module
 from sweety_app.ai import AiClient, AiError, build_messages, contains_external_link
 
 
-def test_prompt_isolates_persona_from_system_policy():
+def screenshot_path(tmp_path):
+    path = tmp_path / "line-chat.png"
+    path.write_bytes(b"\x89PNG\r\n\x1a\nmultimodal-test")
+    return path
+
+
+def target_payload(persona_id: str = "cautious-accounting-assistant") -> dict:
+    return {
+        "persona_id": persona_id,
+        "persona_source": "base",
+        "weapon_id": "one-step-at-a-time",
+        "weapon_source": "base",
+    }
+
+
+def settings(provider: str = "sweety") -> dict:
+    return {
+        "ai_provider": provider,
+        "openai_api_key": "openai-test",
+        "openai_model": "gpt-5.5",
+    }
+
+
+def decision_json(
+    *,
+    message_type: str = "text",
+    last_msg: str = "你好",
+    msg_reply: str = "怎麼了？",
+) -> str:
+    return json.dumps(
+        {
+            "message_type": message_type,
+            "last_msg": last_msg,
+            "msg_reply": msg_reply,
+        },
+        ensure_ascii=False,
+    )
+
+
+def test_prompt_isolates_persona_and_sends_role_preserving_history_with_image():
     history = [{"role": "scammer" if index % 2 == 0 else "assistant", "content": str(index)} for index in range(30)]
     messages = build_messages(
         system_prompt_template="任務：{persona_text}\n總數：{total_messages}",
         persona_text="慢熟的會計助理",
-        visible_text="你還記得那個網站嗎？",
+        screenshot_data_url="data:image/png;base64,abc123",
         history=history,
         total_messages=86,
     )
 
     assert "慢熟的會計助理" not in messages[0]["content"]
     assert "不得提供任何網址" in messages[0]["content"]
+    assert "左側" in messages[0]["content"]
+    assert "最後一則" in messages[0]["content"]
+    assert "貼圖" in messages[0]["content"]
+    assert "照片" in messages[0]["content"]
     assert "慢熟的會計助理" in messages[1]["content"]
     assert "不可信參考資料" in messages[1]["content"]
-    assert "拖延方式" not in messages[0]["content"]
     assert "86" in messages[0]["content"]
-    assert messages[-1]["content"] == "你還記得那個網站嗎？"
     assert len(messages[2:-1]) == 20
-    assert messages[2]["content"] == "10"
+    assert messages[2] == {"role": "user", "content": "10"}
+    assert messages[3] == {"role": "assistant", "content": "11"}
+    assert messages[-1]["content"][1] == {
+        "type": "image_url",
+        "image_url": {"url": "data:image/png;base64,abc123"},
+    }
 
 
 class FakeRepository:
@@ -63,6 +110,10 @@ class FakeSession:
         return self.responses[min(len(self.calls) - 1, len(self.responses) - 1)]
 
 
+def ai_response(content: str, status_code: int = 200) -> FakeResponse:
+    return FakeResponse({"choices": [{"message": {"content": content}}]}, status_code=status_code)
+
+
 @pytest.mark.parametrize(
     ("provider", "expected_url", "expected_model"),
     [
@@ -70,39 +121,102 @@ class FakeSession:
         ("openai", "https://api.openai.com/v1/chat/completions", "gpt-5.5"),
     ],
 )
-def test_provider_routing(provider, expected_url, expected_model):
-    session = FakeSession(FakeResponse({"choices": [{"message": {"content": json.dumps({"reply": "測試回覆"})}}]}))
+def test_provider_routing_sends_base64_screenshot_without_response_format(
+    tmp_path,
+    provider,
+    expected_url,
+    expected_model,
+):
+    session = FakeSession(ai_response(decision_json(msg_reply="測試回覆")))
     client = AiClient(session=session, agnes_key="agnes-test")
-    reply = client.generate_reply(
-        target={"persona_id": "cautious-accounting-assistant", "persona_source": "base", "weapon_id": "one-step-at-a-time", "weapon_source": "base"},
-        visible_text="你好",
+
+    decision = client.generate_reply(
+        target=target_payload(),
+        screenshot_path=screenshot_path(tmp_path),
         history=[],
         total_messages=0,
-        settings={"ai_provider": provider, "openai_api_key": "openai-test", "openai_model": "gpt-5.5"},
+        settings=settings(provider),
     )
 
-    assert reply == "測試回覆"
-    assert session.calls[0]["url"] == expected_url
-    assert session.calls[0]["json"]["model"] == expected_model
+    assert decision == ai_module.ReplyDecision("text", "你好", "測試回覆")
+    request = session.calls[0]
+    assert request["url"] == expected_url
+    assert request["json"]["model"] == expected_model
+    assert "response_format" not in request["json"]
+    image_url = request["json"]["messages"][-1]["content"][1]["image_url"]["url"]
+    assert image_url.startswith("data:image/png;base64,")
 
 
-def test_generate_reply_uses_cached_system_prompt_and_base_persona():
-    session = FakeSession(FakeResponse({"choices": [{"message": {"content": json.dumps({"reply": "遠端回覆"})}}]}))
+def test_generate_reply_uses_cached_system_prompt_and_base_persona(tmp_path):
+    session = FakeSession(ai_response(decision_json(msg_reply="遠端回覆")))
     client = AiClient(session=session, agnes_key="agnes-test", repository=FakeRepository())
 
-    reply = client.generate_reply(
-        target={"persona_id": "remote-persona", "persona_source": "base", "weapon_id": "persona-only", "weapon_source": "base"},
-        visible_text="你好",
+    decision = client.generate_reply(
+        target=target_payload("remote-persona"),
+        screenshot_path=screenshot_path(tmp_path),
         history=[],
         total_messages=12,
-        settings={"ai_provider": "sweety", "openai_api_key": "", "openai_model": "gpt-5.5"},
+        settings=settings(),
     )
 
-    assert reply == "遠端回覆"
+    assert decision.msg_reply == "遠端回覆"
     messages = session.calls[0]["json"]["messages"]
     assert "遠端人設文字" not in messages[0]["content"]
     assert "總數 12" in messages[0]["content"]
     assert "遠端人設文字" in messages[1]["content"]
+
+
+@pytest.mark.parametrize(
+    ("message_type", "last_msg", "expected"),
+    [
+        ("text", "  你在嗎？  ", "你在嗎？"),
+        ("sticker", "頭上冒著黑線的無奈卡通角色", "[貼圖] 頭上冒著黑線的無奈卡通角色"),
+        ("image", "一張超商繳費單", "[照片] 一張超商繳費單"),
+        ("emoji", "三個大笑表情符號", "[表情符號] 三個大笑表情符號"),
+    ],
+)
+def test_reply_decision_normalizes_incoming_history(message_type, last_msg, expected):
+    decision = ai_module.ReplyDecision(message_type, last_msg, "收到")
+
+    assert decision.incoming_for_history == expected
+
+
+def test_fenced_json_is_accepted(tmp_path):
+    response = ai_response(f"```json\n{decision_json(message_type='sticker', last_msg='無奈的卡通角色')}\n```")
+    client = AiClient(session=FakeSession(response), agnes_key="agnes-test")
+
+    decision = client.generate_reply(
+        target=target_payload(),
+        screenshot_path=screenshot_path(tmp_path),
+        history=[],
+        total_messages=0,
+        settings=settings(),
+    )
+
+    assert decision.incoming_for_history == "[貼圖] 無奈的卡通角色"
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "{}",
+        decision_json(message_type="video"),
+        decision_json(last_msg=" "),
+        decision_json(msg_reply=" "),
+        "not json",
+    ],
+)
+def test_invalid_decisions_are_rejected_after_one_retry(tmp_path, content):
+    client = AiClient(session=FakeSession([ai_response(content), ai_response(content)]), agnes_key="agnes-test")
+
+    with pytest.raises(AiError, match="invalid"):
+        client.generate_reply(
+            target=target_payload(),
+            screenshot_path=screenshot_path(tmp_path),
+            history=[],
+            total_messages=0,
+            settings=settings(),
+        )
 
 
 @pytest.mark.parametrize(
@@ -121,47 +235,46 @@ def test_external_link_detection(value):
     assert contains_external_link(value) is True
 
 
-def test_link_bearing_reply_is_regenerated_once():
-    session = FakeSession([
-        FakeResponse({"choices": [{"message": {"content": json.dumps({"reply": "請看 https://example.com"})}}]}),
-        FakeResponse({"choices": [{"message": {"content": json.dumps({"reply": "你可以先說明一下嗎？"})}}]}),
-    ])
+def test_link_bearing_reply_is_regenerated_once(tmp_path):
+    session = FakeSession(
+        [
+            ai_response(decision_json(msg_reply="請看 https://example.com")),
+            ai_response(decision_json(msg_reply="你可以先說明一下嗎？")),
+        ]
+    )
     client = AiClient(session=session, agnes_key="agnes-test")
 
-    reply = client.generate_reply(
-        target={"persona_id": "cautious-accounting-assistant", "persona_source": "base"},
-        visible_text="你好",
+    decision = client.generate_reply(
+        target=target_payload(),
+        screenshot_path=screenshot_path(tmp_path),
         history=[],
         total_messages=0,
-        settings={"ai_provider": "sweety", "openai_api_key": "", "openai_model": "gpt-5.5"},
+        settings=settings(),
     )
 
-    assert reply == "你可以先說明一下嗎？"
+    assert decision.msg_reply == "你可以先說明一下嗎？"
     assert len(session.calls) == 2
 
 
-def test_two_link_bearing_replies_are_rejected():
-    response = FakeResponse({"choices": [{"message": {"content": json.dumps({"reply": "請看 example.com"})}}]})
+def test_two_link_bearing_replies_are_rejected(tmp_path):
+    response = ai_response(decision_json(msg_reply="請看 example.com"))
     client = AiClient(session=FakeSession([response, response]), agnes_key="agnes-test")
 
     with pytest.raises(AiError, match="unsafe link"):
         client.generate_reply(
-            target={"persona_id": "cautious-accounting-assistant", "persona_source": "base"},
-            visible_text="你好",
+            target=target_payload(),
+            screenshot_path=screenshot_path(tmp_path),
             history=[],
             total_messages=0,
-            settings={"ai_provider": "sweety", "openai_api_key": "", "openai_model": "gpt-5.5"},
+            settings=settings(),
         )
 
 
 def test_ai_persona_classifier_uses_fixed_policy_and_structured_result():
-    session = FakeSession(FakeResponse({"choices": [{"message": {"content": "```json\n{\"allowed\": true}\n```"}}]}))
+    session = FakeSession(ai_response("```json\n{\"allowed\": true}\n```"))
     client = AiClient(session=session, agnes_key="agnes-test")
 
-    client.validate_persona(
-        "謹慎而慢熟的會計助理。",
-        {"ai_provider": "sweety", "openai_api_key": "", "openai_model": "gpt-5.5"},
-    )
+    client.validate_persona("謹慎而慢熟的會計助理。", settings())
 
     request = session.calls[0]["json"]
     assert request["temperature"] == 0
@@ -169,17 +282,17 @@ def test_ai_persona_classifier_uses_fixed_policy_and_structured_result():
     assert "謹慎而慢熟的會計助理" in request["messages"][1]["content"]
 
 
-def test_errors_do_not_include_api_keys():
+def test_errors_do_not_include_api_keys(tmp_path):
     session = FakeSession(FakeResponse({}, status_code=500))
     client = AiClient(session=session, agnes_key="super-secret-agnes")
 
     with pytest.raises(AiError) as error:
         client.generate_reply(
-            target={"persona_id": "cautious-accounting-assistant", "persona_source": "base", "weapon_id": "one-step-at-a-time", "weapon_source": "base"},
-            visible_text="你好",
+            target=target_payload(),
+            screenshot_path=screenshot_path(tmp_path),
             history=[],
             total_messages=0,
-            settings={"ai_provider": "sweety", "openai_api_key": "", "openai_model": "gpt-5.5"},
+            settings=settings(),
         )
 
     assert "super-secret-agnes" not in str(error.value)
