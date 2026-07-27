@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 from .monitor import UnreadContact
 
@@ -102,6 +102,8 @@ class LineMacAdapter:
         self._ocr_engine = ocr
         self.contact_list_path = self.cache_dir / "line-contacts.png"
         self.chat_path = self.cache_dir / "line-chat.png"
+        self.send_before_path = self.cache_dir / "line-send-before.png"
+        self.send_after_path = self.cache_dir / "line-send-after.png"
 
     def main_window_exists(self) -> bool:
         return self._main_window() is not None
@@ -161,6 +163,12 @@ end tell'''
         self._capture(chat, self.chat_path)
         return self.chat_path
 
+    def discard_chat_capture(self, screenshot_path: str | Path) -> None:
+        path = Path(screenshot_path)
+        if path != self.chat_path:
+            return
+        path.unlink(missing_ok=True)
+
     def send_message(self, target_name: str, reply: str) -> bool:
         chat = next((item for item in self._windows() if item["name"] == target_name), None)
         if chat is None:
@@ -184,11 +192,28 @@ end tell'''
             clipboard.copy(reply)
             mouse.hotkey("command", "v")
             self.sleeper(0.2)
+            self._capture(chat, self.send_before_path)
             mouse.press("enter")
-            self.sleeper(0.3)
-            return True
+            self.sleeper(0.5)
+            self._capture(chat, self.send_after_path)
+            return self._outgoing_bubble_appeared()
         finally:
+            self.send_before_path.unlink(missing_ok=True)
+            self.send_after_path.unlink(missing_ok=True)
             clipboard.copy(original)
+
+    def _outgoing_bubble_appeared(self) -> bool:
+        with Image.open(self.send_before_path) as before_image, Image.open(self.send_after_path) as after_image:
+            before = before_image.convert("RGB")
+            after = after_image.convert("RGB")
+            if before.size != after.size:
+                return False
+            width, height = before.size
+            region = (width // 2, 60, width, max(61, height - 90))
+            difference = ImageChops.difference(before.crop(region), after.crop(region))
+            changed_pixels = sum(1 for pixel in difference.get_flattened_data() if max(pixel) > 20)
+            minimum_changed = max(100, (difference.width * difference.height) // 500)
+            return changed_pixels >= minimum_changed
 
     def close_chat(self, target_name: str) -> bool:
         safe_name = self._safe_window_name(target_name)

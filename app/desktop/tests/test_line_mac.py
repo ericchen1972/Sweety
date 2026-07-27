@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+from PIL import Image, ImageDraw
+
 from sweety_app.line_mac import (
     LineMacAdapter,
     contact_click_point,
@@ -111,6 +113,19 @@ def test_capture_visible_chat_returns_screenshot_without_chat_ocr(tmp_path: Path
     assert screenshot.read_bytes().startswith(b"\x89PNG")
 
 
+def test_discard_chat_capture_removes_only_the_adapter_screenshot(tmp_path: Path):
+    adapter = LineMacAdapter(cache_dir=tmp_path, runner=lambda *_args, **_kwargs: Result())
+    adapter.chat_path.write_bytes(b"sensitive chat screenshot")
+    other = tmp_path / "other.png"
+    other.write_bytes(b"keep")
+
+    adapter.discard_chat_capture(adapter.chat_path)
+    adapter.discard_chat_capture(other)
+
+    assert adapter.chat_path.exists() is False
+    assert other.read_bytes() == b"keep"
+
+
 def test_send_message_clears_pastes_and_presses_enter_then_restores_clipboard(tmp_path: Path):
     clipboard = FakeClipboard()
     mouse = FakeMouse()
@@ -121,10 +136,38 @@ def test_send_message_clears_pastes_and_presses_enter_then_restores_clipboard(tm
         clipboard=clipboard,
         sleeper=lambda _seconds: None,
     )
+    captures = 0
+
+    def capture(_window, path):
+        nonlocal captures
+        image = Image.new("RGB", (500, 700), "white")
+        if captures == 1:
+            ImageDraw.Draw(image).rectangle((350, 550, 470, 600), fill="black")
+        image.save(path)
+        captures += 1
+
+    adapter._capture = capture
 
     assert adapter.send_message("投資顧問", "AI 回覆") is True
     assert mouse.keys == [("command", "a"), ("backspace",), ("command", "v"), ("enter",)]
     assert clipboard.value == "原本內容"
+    assert (tmp_path / "line-send-before.png").exists() is False
+    assert (tmp_path / "line-send-after.png").exists() is False
+
+
+def test_send_message_returns_false_when_no_outgoing_bubble_appears(tmp_path: Path):
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=FakeMouse(),
+        clipboard=FakeClipboard(),
+        sleeper=lambda _seconds: None,
+    )
+    adapter._capture = lambda _window, path: Image.new("RGB", (500, 700), "white").save(path)
+
+    assert adapter.send_message("投資顧問", "AI 回覆") is False
+    assert (tmp_path / "line-send-before.png").exists() is False
+    assert (tmp_path / "line-send-after.png").exists() is False
 
 
 def test_send_message_refuses_a_different_chat_window(tmp_path: Path):

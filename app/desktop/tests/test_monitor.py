@@ -47,6 +47,7 @@ class FakeLine:
         self.sent: list[tuple[str, str]] = []
         self.closed = 0
         self.events: list[str] = []
+        self.discarded: list[Path] = []
 
     def main_window_exists(self) -> bool:
         return self.main_window
@@ -68,8 +69,13 @@ class FakeLine:
         self.events.append("capture")
         return Path("/tmp/test-line-chat.png")
 
+    def discard_chat_capture(self, screenshot_path: Path) -> None:
+        self.events.append("discard")
+        self.discarded.append(screenshot_path)
+
     def send_message(self, target_name: str, reply: str) -> bool:
         assert target_name in self.opened
+        self.events.append("send")
         self.sent.append((target_name, reply))
         return self.send_success
 
@@ -138,6 +144,8 @@ def test_live_mode_sends_and_persists_exchange_and_metrics(repo):
     assert line.opened == ["投資顧問✨"]
     assert line.sent == [("投資顧問✨", "我有點忘了，是哪個？")]
     assert line.closed == 1
+    assert line.discarded == [Path("/tmp/test-line-chat.png")]
+    assert line.events.index("discard") < line.events.index("send")
     assert [(item["role"], item["content"]) for item in repo.list_messages(target["id"])] == [
         ("scammer", "你還記得那個網站嗎？"),
         ("assistant", "我有點忘了，是哪個？"),
@@ -156,6 +164,7 @@ def test_send_failure_does_not_persist_or_count(repo):
     assert controller.run_cycle() is False
     assert repo.list_messages(target["id"]) == []
     assert repo.get_target(target["id"])["round_trips"] == 0
+    assert line.discarded == [Path("/tmp/test-line-chat.png")]
 
 
 def test_photo_description_is_persisted_after_successful_send(repo):
@@ -288,6 +297,7 @@ def test_stop_after_chat_capture_prevents_ai_and_paste(repo):
     assert controller.run_cycle() is False
     assert calls == []
     assert line.sent == []
+    assert line.discarded == [Path("/tmp/test-line-chat.png")]
 
 
 def test_ai_failure_does_not_send_or_persist(repo):
@@ -313,6 +323,7 @@ def test_ai_failure_does_not_send_or_persist(repo):
     assert repo.list_messages(target["id"]) == []
     assert repo.get_target(target["id"])["round_trips"] == 0
     assert reports == []
+    assert line.discarded == [Path("/tmp/test-line-chat.png")]
 
 
 def test_capture_failure_does_not_call_ai_send_persist_or_report(repo):
@@ -345,6 +356,26 @@ def test_capture_failure_does_not_call_ai_send_persist_or_report(repo):
     assert repo.list_messages(target["id"]) == []
     assert repo.get_target(target["id"])["round_trips"] == 0
     assert reports == []
+
+
+def test_stop_after_delay_before_send_keeps_stopped_state_and_persists_nothing(repo):
+    target = repo.create_target(target_payload("投資顧問"))
+    line = FakeLine([UnreadContact(index=1, name="投資顧問")])
+    controller = MonitorController(repo, line, FakeAi(), sleeper=lambda _seconds: None)
+    controller.start(background=False)
+
+    def stop_after_delay(_seconds, _stop_event=None):
+        controller.stop()
+        return True
+
+    controller._interruptible_sleep = stop_after_delay
+
+    assert controller.run_cycle() is False
+    assert line.sent == []
+    assert repo.list_messages(target["id"]) == []
+    assert repo.get_target(target["id"])["round_trips"] == 0
+    assert line.discarded == [Path("/tmp/test-line-chat.png")]
+    assert controller.snapshot()["status"] == "stopped"
 
 
 def test_missing_permissions_keep_monitor_stopped(repo):

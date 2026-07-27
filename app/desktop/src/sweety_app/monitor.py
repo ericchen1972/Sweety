@@ -23,6 +23,7 @@ class LineAdapter(Protocol):
     def unread_contacts(self) -> list[UnreadContact]: ...
     def open_chat(self, contact: UnreadContact) -> bool: ...
     def capture_visible_chat(self, target_name: str) -> Path: ...
+    def discard_chat_capture(self, screenshot_path: Path) -> None: ...
     def send_message(self, target_name: str, reply: str) -> bool: ...
     def close_chat(self, target_name: str) -> bool: ...
     def close_other_chat_windows(self) -> bool: ...
@@ -182,19 +183,22 @@ class MonitorController:
                     self.line.close_chat(str(target["name"]))
                     return False
                 screenshot_path = self.line.capture_visible_chat(str(target["name"]))
-                if run_stop.is_set():
-                    self.line.close_chat(str(target["name"]))
-                    return False
-                settings = self.repository.get_settings()
-                history = self.repository.list_messages(str(target["id"]), limit=20)
-                total_messages = len(self.repository.list_messages(str(target["id"])))
-                decision = self.ai.generate_reply(
-                    target=target,
-                    screenshot_path=screenshot_path,
-                    history=history,
-                    total_messages=total_messages,
-                    settings=settings,
-                )
+                try:
+                    if run_stop.is_set():
+                        self.line.close_chat(str(target["name"]))
+                        return False
+                    settings = self.repository.get_settings()
+                    history = self.repository.list_messages(str(target["id"]), limit=20)
+                    total_messages = len(self.repository.list_messages(str(target["id"])))
+                    decision = self.ai.generate_reply(
+                        target=target,
+                        screenshot_path=screenshot_path,
+                        history=history,
+                        total_messages=total_messages,
+                        settings=settings,
+                    )
+                finally:
+                    self.line.discard_chat_capture(screenshot_path)
                 if run_stop.is_set():
                     self.line.close_chat(str(target["name"]))
                     return False
@@ -206,7 +210,10 @@ class MonitorController:
                 if not self._interruptible_sleep(delay, run_stop):
                     self.line.close_chat(str(target["name"]))
                     return processed_any
-                if run_stop.is_set() or not self.line.send_message(str(target["name"]), decision.msg_reply):
+                if run_stop.is_set():
+                    self.line.close_chat(str(target["name"]))
+                    return processed_any
+                if not self.line.send_message(str(target["name"]), decision.msg_reply):
                     self._set_status("error", "send_failed", str(target["name"]))
                     self.line.close_chat(str(target["name"]))
                     continue
