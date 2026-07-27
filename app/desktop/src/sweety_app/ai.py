@@ -29,10 +29,13 @@ IMMUTABLE_SAFETY_RULES = """
 SCREENSHOT_REPLY_CONTRACT = """
 LINE 截圖辨識與回覆規則：
 1. 截圖左側的文字氣泡、貼圖、照片或表情符號都是對方傳來的；右側是使用者自己傳出的。
-2. 依畫面由上到下找出對方最後傳來的一則內容。貼圖、照片和純表情符號也算一則訊息，不可因為沒有文字就改用前一則文字。
-3. 根據最近歷史、人設和最後一則對方內容，直接產生一則自然、簡短、能延續對話的回覆。
-4. 只輸出一個 JSON 物件，不要 Markdown 或其他文字：
-{"message_type":"text|sticker|image|emoji","last_msg":"最後一則對方內容；非文字用繁體中文客觀描述","msg_reply":"要貼回 LINE 的回覆"}
+2. 找出畫面中最下方的一則右側訊息，依畫面由上到下收集它下方所有可見的左側訊息。若畫面中沒有任何右側訊息，就收集畫面中所有可見的左側訊息。
+3. 文字、貼圖、照片與純表情符號都算訊息。把收集到的內容忠實濃縮成一筆繁體中文 incoming_summary，保留先後順序與非文字內容的客觀描述。
+4. 只能根據目前可見畫面判斷，不可向上捲動、推測或補入截圖上方看不到的內容。
+5. 有收集到新訊息時 action 使用 reply，並根據最近歷史、人設和完整 incoming_summary 產生一則自然、簡短、能延續對話的回覆。
+6. 沒有收集到任何新訊息時 action 使用 skip，incoming_summary 和 msg_reply 都必須是空字串。
+7. 只輸出一個 JSON 物件，不要 Markdown 或其他文字：
+{"action":"reply|skip","incoming_summary":"依順序濃縮的所有可見新訊息；skip 時為空字串","msg_reply":"要貼回 LINE 的回覆；skip 時為空字串"}
 """.strip()
 
 PERSONA_CLASSIFIER_PROMPT = """
@@ -51,26 +54,15 @@ class AiError(RuntimeError):
     pass
 
 
-MEDIA_HISTORY_LABELS = {
-    "sticker": "貼圖",
-    "image": "照片",
-    "emoji": "表情符號",
-}
-MESSAGE_TYPES = {"text", *MEDIA_HISTORY_LABELS}
-
-
 @dataclass(frozen=True)
 class ReplyDecision:
-    message_type: str
-    last_msg: str
+    action: str
+    incoming_summary: str
     msg_reply: str
 
     @property
-    def incoming_for_history(self) -> str:
-        content = self.last_msg.strip()
-        if self.message_type == "text":
-            return content
-        return f"[{MEDIA_HISTORY_LABELS[self.message_type]}] {content}"
+    def should_reply(self) -> bool:
+        return self.action == "reply"
 
 
 def build_messages(
@@ -110,14 +102,13 @@ def build_messages(
                 {
                     "type": "text",
                     "text": (
-                        "請先查看畫面最下方的左側項目，再判斷它是文字、貼圖、照片或純表情符號。"
-                        "該項目就是對方最後傳來的內容；若它沒有文字，也不可退回上方較早的文字。"
-                        "message_type 是該畫面項目的類型，不是 last_msg 欄位文字的資料型別；"
-                        "貼圖必須使用 sticker、照片使用 image、純表情符號使用 emoji，只有文字氣泡使用 text。"
-                        "以下只示意貼圖時的欄位格式，內容與回覆不可照抄，必須依實際截圖和歷史重新產生："
-                        '{"message_type":"sticker","last_msg":"揮手的卡通兔子",'
-                        '"msg_reply":"你這張是在跟我打招呼嗎"}。'
-                        "只輸出指定 JSON，不可合併上方其他訊息。"
+                        "請找出畫面中最下方的右側訊息，依畫面由上到下收集它下方所有可見的左側訊息。"
+                        "若畫面沒有任何右側訊息，就收集畫面中所有可見的左側訊息。"
+                        "文字、貼圖、照片與純表情符號都要依順序濃縮進同一個 incoming_summary。"
+                        "只處理這張截圖目前看得到的內容，不可向上捲動、推測或補入畫面外的訊息。"
+                        "若沒有任何可見的新左側訊息，只輸出"
+                        '{"action":"skip","incoming_summary":"","msg_reply":""}；'
+                        "否則輸出 action 為 reply 的指定 JSON。"
                     ),
                 },
                 {"type": "image_url", "image_url": {"url": screenshot_data_url}},
@@ -274,7 +265,7 @@ class AiClient:
             "你正在 LINE 上代替一名真實用戶回覆可疑對象。\n\n"
             "人設：\n{persona_text}\n\n"
             "目前完整歷史共有 {total_messages} 筆，下面最多只提供最近 20 筆。\n"
-            "請只輸出 JSON：{\"reply\":\"要貼到 LINE 的回覆\"}。"
+            "請只輸出符合下方 LINE 截圖辨識與回覆規則的 JSON。"
         )
 
     @staticmethod
@@ -292,21 +283,23 @@ class AiClient:
             raise AiError("AI returned an invalid reply") from exc
         if not isinstance(payload, dict):
             raise AiError("AI returned an invalid reply")
-        message_type = payload.get("message_type")
-        last_msg = payload.get("last_msg")
+        action = payload.get("action")
+        incoming_summary = payload.get("incoming_summary")
         msg_reply = payload.get("msg_reply")
-        if (
-            message_type not in MESSAGE_TYPES
-            or not isinstance(last_msg, str)
-            or not last_msg.strip()
-            or not isinstance(msg_reply, str)
-            or not msg_reply.strip()
-        ):
+        if action not in {"reply", "skip"}:
+            raise AiError("AI returned an invalid reply")
+        if not isinstance(incoming_summary, str) or not isinstance(msg_reply, str):
+            raise AiError("AI returned an invalid reply")
+        incoming_summary = incoming_summary.strip()
+        msg_reply = msg_reply.strip()
+        if action == "reply" and (not incoming_summary or not msg_reply):
+            raise AiError("AI returned an invalid reply")
+        if action == "skip" and (incoming_summary or msg_reply):
             raise AiError("AI returned an invalid reply")
         return ReplyDecision(
-            message_type=str(message_type),
-            last_msg=last_msg.strip(),
-            msg_reply=msg_reply.strip(),
+            action=str(action),
+            incoming_summary=incoming_summary,
+            msg_reply=msg_reply,
         )
 
     @staticmethod
