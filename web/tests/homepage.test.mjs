@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
@@ -16,8 +17,7 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2c2c458';
-const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-cec623ac';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-9ff118bd';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -58,12 +58,17 @@ test('production update manifest is safe for current 1.0.1 installations and dep
   assert.deepEqual(updateManifest, {
     latestVersion: '1.0.1',
     downloads: {
-      windows: expectedWindowsDownload,
       macos: expectedMacDownload,
     },
   });
   const manifest = deployHelper.match(/\$files\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
   assert.match(manifest, /['"]sweety-update\.json['"]/);
+});
+
+test('machine-readable homepage copy marks Windows as coming later', () => {
+  assert.match(llms, /目前下載：macOS/);
+  assert.match(llms, /Windows：稍後提供/);
+  assert.doesNotMatch(llms, /支援平台：Windows、macOS/);
 });
 
 test('resolveLocale follows browser language preference order and fallback', () => {
@@ -193,6 +198,7 @@ test('Chinese copy preserves every supplied block and step verbatim', () => {
     title: '使用說明',
     intro: 'Sweety 使用你閒置的電腦並操作 Line 桌面 App ，透過人物設定，讓 AI 不斷消耗詐騙的時間，請注意 - AI 不會主動與詐騙聯繫，只會被動回覆，你可以透過修改人設，讓 AI 發揮更大的拖延效果。',
     quote: '「你拖延對方越多的時間、代表他們要付出更多的時間與人力成本、而你挽救了更多人免於被騙。」',
+    openSourceNote: '＊Sweety 是一款完全免費且開源的程式，如果您對以編譯完成的執行檔有安全疑慮，歡迎透過 Git 重新編譯',
   });
   assert.equal(copy['zh-TW'].quick.title, '快速上手');
   assert.deepEqual(copy['zh-TW'].quick.steps, [
@@ -222,6 +228,7 @@ test('copy contains no extra hero lead-in or unsupplied Chinese slogans', () => 
   assert.equal('eyebrow' in copy['zh-TW'].hero, false);
   assert.equal('eyebrow' in copy.en.hero, false);
   assert.equal(typeof copy['zh-TW'].instructions.intro, 'string');
+  assert.equal(typeof copy['zh-TW'].instructions.openSourceNote, 'string');
   assert.equal(copy['zh-TW'].footer, 'Sweety');
   assert.doesNotMatch(JSON.stringify(copy['zh-TW']), /Sweety · 主動反詐|從建立對象到啟動，只需要幾個步驟。|Anti-scam companion/);
   assert.doesNotMatch(html, /data-copy="hero\.eyebrow"|Anti-scam companion/);
@@ -254,6 +261,7 @@ test('homepage includes the LINE window warning and five independent localized F
     'faq.items.4.question',
     'faq.items.4.answerPrefix',
     'faq.items.4.answerEmphasis',
+    'instructions.openSourceNote',
     'notice.windowPosition',
   ]) {
     assert.match(html, new RegExp(`data-copy="${hook.replaceAll('.', '\\.')}`));
@@ -288,9 +296,9 @@ test('homepage author card uses the public portrait and safe new-tab project lin
   assert.match(css, /\.author-avatar[^}]*border-radius:\s*50%/s);
 });
 
-test('download configuration enables the published Windows installer and macOS DMG', () => {
+test('download configuration enables macOS and keeps Windows unavailable', () => {
   assert.deepEqual(homepage.downloadConfig, {
-    windows: expectedWindowsDownload,
+    windows: null,
     macos: expectedMacDownload,
   });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
@@ -299,9 +307,14 @@ test('download configuration enables the published Windows installer and macOS D
     label: '下載 macOS 版',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'zh-TW'), {
-    enabled: true,
-    href: expectedWindowsDownload,
-    label: '下載 Windows 版',
+    enabled: false,
+    href: null,
+    label: '稍後提供',
+  });
+  assert.deepEqual(homepage.getDownloadDecision('windows', 'en'), {
+    enabled: false,
+    href: null,
+    label: 'Coming soon',
   });
   assert.equal((html.match(/data-platform="(?:windows|macos)"/g) ?? []).length, 2);
   assert.equal((html.match(/class="platform-icon[^"]*"[^>]*aria-hidden="true"/g) ?? []).length, 3);
@@ -418,8 +431,8 @@ test('robots, sitemap, and llms discovery files identify the canonical public si
   assert.match(llms, /^# Sweety/m);
   assert.match(llms, /主動式反詐騙 App/);
   assert.match(llms, /https:\/\/github\.com\/ericchen1972\/Sweety/);
-  assert.match(llms, /支援平台：Windows、macOS/);
-  assert.doesNotMatch(llms, /Windows 版即將推出/);
+  assert.match(llms, /目前下載：macOS/);
+  assert.match(llms, /Windows：稍後提供/);
 });
 
 test('future download decisions allow HTTPS or safe relative paths and use action copy', () => {
@@ -471,8 +484,10 @@ test('landing page has semantic sections, required assets, and no dead download 
 test('homepage stylesheet and module script share an explicit cache-busting version', () => {
   const stylesheetVersion = html.match(/<link[^>]+href="homepage\.css\?v=([^"&]+)"/)?.[1] ?? '';
   const scriptVersion = html.match(/<script[^>]+src="homepage\.js\?v=([^"&]+)"/)?.[1] ?? '';
+  const assetVersion = createHash('sha256').update(css).update('\0').update(javascript).digest('hex').slice(0, 12);
   assert.ok(stylesheetVersion, 'homepage.css URL should include a non-empty version query');
   assert.equal(scriptVersion, stylesheetVersion, 'homepage.js should use the same version query');
+  assert.equal(scriptVersion, assetVersion, 'homepage asset version should match the CSS and JavaScript content hash');
 });
 
 test('static HTML is a complete default-English document without JavaScript', () => {
@@ -564,7 +579,7 @@ test('header logo prefers a valid compressed WebP with a PNG fallback', async ()
 
 test('time content order and localization hooks match the DOM contract', () => {
   assert.ok(html.indexOf('data-copy="time.title"') < html.indexOf('data-copy="time.subtitle"'));
-  assert.match(html, /<script type="module" src="homepage\.js\?v=1\.0\.1-download-counter"><\/script>/);
+  assert.match(html, /<script type="module" src="homepage\.js\?v=[a-f0-9]{12}"><\/script>/);
   for (const hook of ['skipLink', 'brandLabel', 'nav.label', 'nav.antiScam', 'nav.download', 'nav.instructions']) {
     assert.match(html, new RegExp(`data-(?:copy|aria-label)="${hook.replace('.', '\\.')}`));
   }
