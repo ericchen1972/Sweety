@@ -29,12 +29,13 @@ IMMUTABLE_SAFETY_RULES = """
 SCREENSHOT_REPLY_CONTRACT = """
 LINE 截圖辨識與回覆規則：
 1. 截圖左側的文字氣泡、貼圖、照片或表情符號都是對方傳來的；右側是使用者自己傳出的。
-2. 找出畫面中最下方的一則右側訊息，依畫面由上到下收集它下方所有可見的左側訊息。若畫面中沒有任何右側訊息，就收集畫面中所有可見的左側訊息。
-3. 文字、貼圖、照片與純表情符號都算訊息。把收集到的內容忠實濃縮成一筆繁體中文 incoming_summary，保留先後順序與非文字內容的客觀描述。
-4. 只能根據目前可見畫面判斷，不可向上捲動、推測或補入截圖上方看不到的內容。
-5. 有收集到新訊息時 action 使用 reply，並根據最近歷史、人設和完整 incoming_summary 產生一則自然、簡短、能延續對話的回覆。
-6. 沒有收集到任何新訊息時 action 使用 skip，incoming_summary 和 msg_reply 都必須是空字串。
-7. 只輸出一個 JSON 物件，不要 Markdown 或其他文字：
+2. 先查看畫面最下方，也就是最底下一則可見訊息，判斷它位於左側或右側。最底下一則可見訊息位於左側時，action 必須使用 reply，不得使用 skip；即使它只有貼圖、照片或純表情符號也一樣。
+3. 最底下一則可見訊息位於左側時，再找出它上方最接近的一則右側訊息，依畫面由上到下收集該右側訊息下方所有可見的左側訊息。若畫面中沒有任何右側訊息，就收集畫面中所有可見的左側訊息。
+4. 文字、貼圖、照片與純表情符號都算訊息。把收集到的內容忠實濃縮成一筆繁體中文 incoming_summary，保留先後順序與非文字內容的客觀描述。
+5. 只能根據目前可見畫面判斷，不可向上捲動、推測或補入截圖上方看不到的內容。
+6. 有收集到新訊息時 action 使用 reply，並根據最近歷史、人設和完整 incoming_summary 產生一則自然、簡短、能延續對話的回覆。
+7. 只有最底下一則可見訊息位於右側，亦即沒有待回覆的左側訊息時，action 才能使用 skip；incoming_summary 和 msg_reply 都必須是空字串。
+8. 只輸出一個 JSON 物件，不要 Markdown 或其他文字：
 {"action":"reply|skip","incoming_summary":"依順序濃縮的所有可見新訊息；skip 時為空字串","msg_reply":"要貼回 LINE 的回覆；skip 時為空字串"}
 """.strip()
 
@@ -102,11 +103,14 @@ def build_messages(
                 {
                     "type": "text",
                     "text": (
-                        "請找出畫面中最下方的右側訊息，依畫面由上到下收集它下方所有可見的左側訊息。"
+                        "請先判斷畫面最底下一則可見訊息位於左側或右側。"
+                        "若最底下一則位於左側，必須 action=reply，不得 skip；照片、貼圖與純表情符號也算左側訊息。"
+                        "接著找出它上方最接近的一則右側訊息，也就是畫面中最下方的右側訊息，"
+                        "依畫面由上到下收集它下方所有可見的左側訊息。"
                         "若畫面沒有任何右側訊息，就收集畫面中所有可見的左側訊息。"
                         "文字、貼圖、照片與純表情符號都要依順序濃縮進同一個 incoming_summary。"
                         "只處理這張截圖目前看得到的內容，不可向上捲動、推測或補入畫面外的訊息。"
-                        "若沒有任何可見的新左側訊息，只輸出"
+                        "只有最底下一則可見訊息位於右側時，才輸出"
                         '{"action":"skip","incoming_summary":"","msg_reply":""}；'
                         "否則輸出 action 為 reply 的指定 JSON。"
                     ),
@@ -275,8 +279,10 @@ class AiClient:
         text = content.strip()
         if text.startswith("```"):
             text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-            if text.startswith("json"):
-                text = text[4:].lstrip()
+        if text.startswith("json"):
+            text = text[4:].lstrip()
+        for key in ("action", "incoming_summary", "msg_reply"):
+            text = text.replace(f'"{key}"：', f'"{key}":')
         try:
             payload = json.loads(text)
         except (json.JSONDecodeError, TypeError) as exc:
