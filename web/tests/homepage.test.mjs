@@ -17,7 +17,8 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-f1ab09fc';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-28e69419';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-e255e85d';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -58,6 +59,7 @@ test('production update manifest is safe for current 1.0.1 installations and dep
   assert.deepEqual(updateManifest, {
     latestVersion: '1.0.1',
     downloads: {
+      windows: expectedWindowsDownload,
       macos: expectedMacDownload,
     },
   });
@@ -65,10 +67,9 @@ test('production update manifest is safe for current 1.0.1 installations and dep
   assert.match(manifest, /['"]sweety-update\.json['"]/);
 });
 
-test('machine-readable homepage copy marks Windows as coming later', () => {
-  assert.match(llms, /目前下載：macOS/);
-  assert.match(llms, /Windows：稍後提供/);
-  assert.doesNotMatch(llms, /支援平台：Windows、macOS/);
+test('machine-readable homepage copy lists both downloadable platforms', () => {
+  assert.match(llms, /目前下載：Windows、macOS/);
+  assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
 
 test('resolveLocale follows browser language preference order and fallback', () => {
@@ -296,9 +297,9 @@ test('homepage author card uses the public portrait and safe new-tab project lin
   assert.match(css, /\.author-avatar[^}]*border-radius:\s*50%/s);
 });
 
-test('download configuration enables macOS and keeps Windows unavailable', () => {
+test('download configuration enables macOS and Windows', () => {
   assert.deepEqual(homepage.downloadConfig, {
-    windows: null,
+    windows: expectedWindowsDownload,
     macos: expectedMacDownload,
   });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
@@ -307,14 +308,14 @@ test('download configuration enables macOS and keeps Windows unavailable', () =>
     label: '下載 macOS 版',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'zh-TW'), {
-    enabled: false,
-    href: null,
-    label: '稍後提供',
+    enabled: true,
+    href: expectedWindowsDownload,
+    label: '下載 Windows 版',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'en'), {
-    enabled: false,
-    href: null,
-    label: 'Coming soon',
+    enabled: true,
+    href: expectedWindowsDownload,
+    label: 'Download for Windows',
   });
   assert.equal((html.match(/data-platform="(?:windows|macos)"/g) ?? []).length, 2);
   assert.equal((html.match(/class="platform-icon[^"]*"[^>]*aria-hidden="true"/g) ?? []).length, 3);
@@ -431,8 +432,8 @@ test('robots, sitemap, and llms discovery files identify the canonical public si
   assert.match(llms, /^# Sweety/m);
   assert.match(llms, /主動式反詐騙 App/);
   assert.match(llms, /https:\/\/github\.com\/ericchen1972\/Sweety/);
-  assert.match(llms, /目前下載：macOS/);
-  assert.match(llms, /Windows：稍後提供/);
+  assert.match(llms, /目前下載：Windows、macOS/);
+  assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
 
 test('future download decisions allow HTTPS or safe relative paths and use action copy', () => {
