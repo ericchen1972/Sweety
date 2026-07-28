@@ -202,10 +202,6 @@ class MonitorController:
                 if run_stop.is_set():
                     self.line.close_chat(str(target["name"]))
                     return False
-                if not decision.should_reply:
-                    self.line.close_chat(str(target["name"]))
-                    continue
-
                 delay = random.uniform(
                     float(settings["reply_delay_min_seconds"]),
                     float(settings["reply_delay_max_seconds"]),

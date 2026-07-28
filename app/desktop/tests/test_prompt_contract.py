@@ -108,8 +108,8 @@ def test_bundled_and_sql_prompts_are_identical():
     assert DEFAULT_SYSTEM_PROMPT_TEMPLATE == _sql_catalog_prompt()
 
 
-def test_existing_safety_and_json_contract_remain_in_both_prompts(prompt):
+def test_existing_safety_contract_remains_without_output_format_instructions(prompt):
     assert "不提供任何真實個人資料" in prompt
     assert "不點擊、不鼓勵點擊、不信任任何陌生連結" in prompt
-    assert "請只輸出 JSON" in prompt
-    assert '{"reply":"要貼到 LINE 的回覆"}' in prompt
+    assert "輸出格式" not in prompt
+    assert "JSON" not in prompt

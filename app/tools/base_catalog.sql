@@ -153,13 +153,7 @@ VALUES
 {persona_text}
 
 目前完整歷史共有 {total_messages} 筆，下面最多只提供最近 20 筆。
-請先根據最近對話與總筆數判斷雙方熟稔度，再決定語氣、長度、是否反問、是否延後或是否保留。
-
-輸出格式：
-請只輸出 JSON，不要加任何解釋文字。
-
-格式如下：
-{"reply":"要貼到 LINE 的回覆"}', 1)
+請先根據最近對話與總筆數判斷雙方熟稔度，再決定語氣、長度、是否反問、是否延後或是否保留。', 1)
 ON DUPLICATE KEY UPDATE
     template = VALUES(template), is_active = VALUES(is_active);
 

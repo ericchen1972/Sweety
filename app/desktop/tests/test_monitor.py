@@ -86,7 +86,10 @@ class FakeLine:
 
 @dataclass
 class FakeAi:
-    decision: ReplyDecision = ReplyDecision("reply", "你還記得那個網站嗎？", "我有點忘了，是哪個？")
+    decision: ReplyDecision = ReplyDecision(
+        incoming_summary="你還記得那個網站嗎？",
+        msg_reply="我有點忘了，是哪個？",
+    )
 
     def generate_reply(self, **_kwargs) -> ReplyDecision:
         return self.decision
@@ -172,9 +175,8 @@ def test_mixed_visible_batch_is_persisted_as_one_exchange_after_successful_send(
     line = FakeLine([UnreadContact(index=1, name="投資顧問")])
     ai = FakeAi(
         ReplyDecision(
-            "reply",
-            "對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖",
-            "有看到，我先照截圖調整版面，再跟你回報。",
+            incoming_summary="對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖",
+            msg_reply="有看到，我先照截圖調整版面，再跟你回報。",
         )
     )
     controller = MonitorController(repo, line, ai, sleeper=lambda _seconds: None)
@@ -185,30 +187,6 @@ def test_mixed_visible_batch_is_persisted_as_one_exchange_after_successful_send(
         ("scammer", "對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖"),
         ("assistant", "有看到，我先照截圖調整版面，再跟你回報。"),
     ]
-
-
-def test_skip_discards_capture_and_does_not_delay_send_persist_count_or_report(repo):
-    target = repo.create_target(target_payload("投資顧問"))
-    line = FakeLine([UnreadContact(index=1, name="投資顧問")])
-    delays: list[float] = []
-    reports: list[bool] = []
-    controller = MonitorController(
-        repo,
-        line,
-        FakeAi(ReplyDecision("skip", "", "")),
-        sleeper=lambda seconds: delays.append(seconds),
-        on_exchange_committed=lambda: reports.append(True),
-    )
-    controller.start(background=False)
-
-    assert controller.run_cycle() is False
-    assert line.discarded == [Path("/tmp/test-line-chat.png")]
-    assert line.closed == 1
-    assert delays == []
-    assert line.sent == []
-    assert repo.list_messages(target["id"]) == []
-    assert repo.get_target(target["id"])["round_trips"] == 0
-    assert reports == []
 
 
 def test_successful_committed_exchange_triggers_metrics_report_once(repo):
