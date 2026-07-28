@@ -39,9 +39,13 @@ describe("detectLocale", () => {
 });
 
 describe("target validation", () => {
-  it("requires the exact non-empty LINE name", () => {
-    expect(validateTargetName("  ")).toBe(false);
-    expect(validateTargetName("王小明✨")).toBe(true);
+  it("accepts only non-empty ASCII letters and digits", () => {
+    for (const valid of ["Fraud1", "fraud2", "ABC123xyz"]) {
+      expect(validateTargetName(valid)).toBe(true);
+    }
+    for (const invalid of ["", "  ", "Fraud 1", "詐騙1", "Fraud-1", "Fraud_1", "Fraud1😀"]) {
+      expect(validateTargetName(invalid)).toBe(false);
+    }
   });
 
   it("requires a valid reply delay range", () => {

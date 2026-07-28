@@ -13,7 +13,8 @@ describe("custom persona copy", () => {
     expect(copy.aboutLoadError).toBe("無法載入關於 Sweety 的內容。");
     expect(copy.basePersonaEditHint).toBe("＊如果你希望能修改基礎人設，增加其他細節，請點擊「增加到自訂人設」後，在自訂人設頁面進行修改");
     expect(copy.targetNameWarning).toBe(
-      "名稱設定後將不能修改，強烈建議在 LINE 上修改對方名稱，以避免對方更名。\n名稱不可包含特殊字元與表情符號，否則 Sweety 將無法正確辨識。",
+      "名稱設定後將不能修改，強烈建議在 LINE 上修改對方名稱，以避免對方更名。 名稱不可包含特殊字元與表情符號，必須使用英文字母或數字，否則 Sweety 將無法正確辨識。\n範例：Fraud1, Fraud2....",
     );
+    expect(copy.targetNameError).toBe("名稱只能使用英文字母或數字。");
   });
 });
