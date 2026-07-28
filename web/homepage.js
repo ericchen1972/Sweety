@@ -8,8 +8,8 @@ export function resolveLocale(locales, fallbackLocale) {
 }
 
 export const downloadConfig = Object.freeze({
-  windows: 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-cec623ac',
-  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2c2c458',
+  windows: null,
+  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-9ff118bd',
 });
 
 export function parseDownloadTotal(payload) {
@@ -121,11 +121,12 @@ export const copy = {
       artAlt: '藍色水彩時鐘',
     },
     counter: { intro: '目前 Sweety 已經消耗了詐騙總計', days: '天', hours: '小時' },
-    download: { title: '下載 Sweety', windows: 'Windows', macOS: 'macOS', soon: '即將推出', actions: { windows: '下載 Windows 版', macos: '下載 macOS 版' } },
+    download: { title: '下載 Sweety', windows: 'Windows', macOS: 'macOS', soon: '稍後提供', actions: { windows: '下載 Windows 版', macos: '下載 macOS 版' } },
     instructions: {
       title: '使用說明',
       intro: 'Sweety 使用你閒置的電腦並操作 Line 桌面 App ，透過人物設定，讓 AI 不斷消耗詐騙的時間，請注意 - AI 不會主動與詐騙聯繫，只會被動回覆，你可以透過修改人設，讓 AI 發揮更大的拖延效果。',
       quote: '「你拖延對方越多的時間、代表他們要付出更多的時間與人力成本、而你挽救了更多人免於被騙。」',
+      openSourceNote: '＊Sweety 是一款完全免費且開源的程式，如果您對以編譯完成的執行檔有安全疑慮，歡迎透過 Git 重新編譯',
     },
     quick: {
       title: '快速上手',
@@ -205,6 +206,7 @@ export const copy = {
       title: 'Instructions',
       intro: 'Sweety uses an idle computer to operate the LINE desktop app. Through a selected persona, AI keeps consuming a scammer’s time. Please note: AI never contacts scammers first and only replies passively. Editing the persona can make the delay more effective.',
       quote: '“The more of their time you delay, the more time and labor they must spend—and the more people you help protect from being scammed.”',
+      openSourceNote: '* Sweety is completely free and open source. If you have safety concerns about the precompiled executable, you are welcome to rebuild it from Git.',
     },
     quick: {
       title: 'Quick start',
