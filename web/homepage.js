@@ -127,27 +127,44 @@ export const copy = {
       intro: 'Sweety 使用你閒置的電腦並操作 Line 桌面 App ，透過人物設定，讓 AI 不斷消耗詐騙的時間，請注意 - AI 不會主動與詐騙聯繫，只會被動回覆，你可以透過修改人設，讓 AI 發揮更大的拖延效果。',
       quote: '「你拖延對方越多的時間、代表他們要付出更多的時間與人力成本、而你挽救了更多人免於被騙。」',
       openSourceNote: '＊Sweety 是一款完全免費且開源的程式，如果您對以編譯完成的執行檔有安全疑慮，歡迎透過 Git 重新編譯',
-    },
-    quick: {
-      title: '快速上手',
-      imageAlt: 'Sweety 操作面板快速上手畫面',
-      imageCaption: 'Sweety 操作面板',
-      createImageAlt: 'Sweety 新增對象與選擇人設畫面',
-      createImageCaption: '新增對象與選擇人設',
-      panelImageAlt: 'Sweety 已停止狀態與開始按鈕',
-      panelImageCaption: '已停止時的開始控制',
-      steps: ['在騙子列表內建立對象，輸入對方的 Line 名稱', '選擇要使用的人設（建議選擇與您自身類似的人設）', '勾選要回覆的對象', '在面板上案開始', '如果你想親自接手交談，可隨時按停止', '睡覺去'],
-    },
-    advanced: {
-      title: '進階設定',
-      intro: '如果您覺得預設人物不夠精準，您可以自訂人設，或者用基礎人設做延伸',
-      imageAlt: 'Sweety 自訂人設設定畫面',
-      imageCaption: '增加到自訂人設',
-      editImageAlt: 'Sweety 建立自訂人設的編輯畫面',
-      editImageCaption: '建立或編輯自訂人設',
-      applyImageAlt: 'Sweety 將人設套用到監控對象的畫面',
-      applyImageCaption: '在監控對象上選擇人設',
-      steps: ['選擇基礎人設', '點擊「增加到自訂人設」', '進入自訂人設修改', '在監控對象上套用自訂人設'],
+      guide: {
+        controlPanel: {
+          title: '控制面板',
+          body: '執行 Sweety 前請先開啟 LINE 主視窗，點擊開啟管理介面編輯要回覆的對象，點擊開始後 Sweety 將會針對 LINE 聯絡人視窗進行辨識，當監控對象發送訊息來時 Sweety 將自動點開對話匡並交由 AI 進行回覆。',
+          imageAlt: 'Sweety 控制面板，包含開始、開啟管理介面與結束 App 按鈕',
+        },
+        dashboard: {
+          title: '儀表板',
+          body: '儀表板顯示對象人數、總花費時間、總來回次數與已結束數量，下方可查看最近對象與各自的來回次數，右上角則顯示目前執行狀態及已勾選對象數。',
+          imageAlt: 'Sweety 儀表板，顯示統計數字、最近對象與執行狀態',
+        },
+        basicSettings: {
+          title: '基本設定',
+          body: '在 AI 設定選擇 Sweety 預設或 OpenAI；若選擇 OpenAI，請輸入 API Key 並指定模型。對話設定可調整檢查新訊息的間隔，以及開啟視窗後等待多久才送出回覆，完成後點擊儲存設定。',
+          imageAlt: 'Sweety 基本設定，包含 AI 選擇、檢查間隔與回覆等待時間',
+        },
+        targetList: {
+          title: '騙子列表',
+          body: '在騙子列表新增或管理監控對象。只有勾選「回覆」的對象會由 Sweety 監控與回覆；你也可以編輯、結束或匯出個別對象的對話。LINE 名稱請輸入聯絡人畫面顯示的完整名稱。',
+          imageAlt: 'Sweety 騙子列表，顯示監控勾選、對象、人設與操作按鈕',
+        },
+        basePersonas: {
+          title: '基礎人設',
+          body: '在人設編輯的「基礎人設」頁面，可依年齡與性別篩選預設人設。先閱讀卡片摘要，再點擊顯示全文查看完整設定；若希望修改內容，可將基礎人設增加到自訂人設。',
+          imageAlt: 'Sweety 基礎人設頁面，顯示年齡、性別篩選與人設卡片',
+        },
+        personaDetails: {
+          title: '人設詳細內容',
+          body: '點擊「顯示全文」可查看人設的完整人物資料、說話方式、個性與常用語。確認內容適合後，可直接點擊「增加到自訂人設」，再依需求調整。',
+          imageAlt: 'Sweety 人設詳情視窗，顯示完整人物資料與增加到自訂人設按鈕',
+        },
+        customPersonas: {
+          title: '自訂人設',
+          body: '在「自訂人設」頁面建立或管理自己的角色設定。你可以從空白建立人設，也可以從基礎人設複製後修改；完成的人設可套用到騙子列表中的監控對象。',
+          imageAlt: 'Sweety 自訂人設頁面，包含建立人設按鈕',
+        },
+      },
+      triggerNotice: 'Sweety 不會主動傳送訊息給對方，只有當對方傳訊息來時才會進行回覆，也就是視窗內必須有來自監控對象的未讀訊息才會觸發 Sweety',
     },
     notice: {
       title: '注意事項',
@@ -207,27 +224,44 @@ export const copy = {
       intro: 'Sweety uses an idle computer to operate the LINE desktop app. Through a selected persona, AI keeps consuming a scammer’s time. Please note: AI never contacts scammers first and only replies passively. Editing the persona can make the delay more effective.',
       quote: '“The more of their time you delay, the more time and labor they must spend—and the more people you help protect from being scammed.”',
       openSourceNote: '* Sweety is completely free and open source. If you have safety concerns about the precompiled executable, you are welcome to rebuild it from Git.',
-    },
-    quick: {
-      title: 'Quick start',
-      imageAlt: 'Sweety dashboard quick-start screen',
-      imageCaption: 'Sweety dashboard',
-      createImageAlt: 'Sweety add-target and persona-selection screen',
-      createImageCaption: 'Add a target and choose a persona',
-      panelImageAlt: 'Sweety stopped state and Start button',
-      panelImageCaption: 'Start control while stopped',
-      steps: ['Create a contact in the scammer list and enter their LINE name', 'Choose a persona to use (we recommend one similar to yourself)', 'Select the contacts Sweety should reply to', 'Press Start on the dashboard', 'If you want to take over the conversation yourself, press Stop at any time', 'Go to sleep'],
-    },
-    advanced: {
-      title: 'Advanced settings',
-      intro: 'If the default personas are not precise enough, you can create your own or extend a base persona.',
-      imageAlt: 'Sweety custom persona settings screen',
-      imageCaption: 'Add to custom personas',
-      editImageAlt: 'Sweety custom persona editor screen',
-      editImageCaption: 'Create or edit a custom persona',
-      applyImageAlt: 'Sweety monitored-target persona assignment screen',
-      applyImageCaption: 'Choose a persona for a monitored target',
-      steps: ['Choose a base persona', 'Click “Add to custom personas”', 'Open the custom persona and edit it', 'Apply the custom persona to a monitored contact'],
+      guide: {
+        controlPanel: {
+          title: 'Control panel',
+          body: 'Before running Sweety, open the main LINE window. Select Open management interface to edit the contacts to reply to. After you select Start, Sweety scans the LINE contact window. When a monitored contact sends a message, Sweety opens that conversation and asks AI to reply.',
+          imageAlt: 'Sweety control panel with Start, Open management interface, and Quit App buttons',
+        },
+        dashboard: {
+          title: 'Dashboard',
+          body: 'The dashboard shows the number of contacts, total time consumed, total exchanges, and completed conversations. Recent contacts and their exchange counts appear below, while the top right shows the current status and number of selected contacts.',
+          imageAlt: 'Sweety dashboard showing totals, recent contacts, and monitoring status',
+        },
+        basicSettings: {
+          title: 'Basic settings',
+          body: 'Choose Sweety default or OpenAI under AI settings. When using OpenAI, enter an API key and choose a model. Conversation settings control how often Sweety checks for new messages and how long it waits after opening a chat before sending a reply. Select Save settings when finished.',
+          imageAlt: 'Sweety basic settings for AI provider, scan interval, and reply delay',
+        },
+        targetList: {
+          title: 'Scammer list',
+          body: 'Add and manage monitored contacts in the scammer list. Sweety monitors and replies only to contacts whose Reply checkbox is selected. You can also edit, end, or export an individual conversation. Enter the full LINE name exactly as it appears in the contact list.',
+          imageAlt: 'Sweety scammer list with reply checkboxes, contacts, personas, and actions',
+        },
+        basePersonas: {
+          title: 'Base personas',
+          body: 'On the Base personas tab, filter built-in personas by age and gender. Read the card summary, then select Show full text to review the complete persona. To customize it, add the base persona to Custom personas.',
+          imageAlt: 'Sweety base personas with age and gender filters and persona cards',
+        },
+        personaDetails: {
+          title: 'Persona details',
+          body: 'Select Show full text to review the persona’s full background, speaking style, personality, and common phrases. If it fits your needs, select Add to custom personas and adjust it further.',
+          imageAlt: 'Sweety persona details dialog with full profile and Add to custom personas button',
+        },
+        customPersonas: {
+          title: 'Custom personas',
+          body: 'Create and manage your own character settings on the Custom personas tab. Start from a blank persona or copy and edit a base persona. You can then apply the completed persona to a monitored contact in the scammer list.',
+          imageAlt: 'Sweety custom personas tab with a Create persona button',
+        },
+      },
+      triggerNotice: 'Sweety never initiates messages. It replies only after the other person sends a message, which means the chat window must contain an unread message from a monitored contact before Sweety is triggered.',
     },
     notice: {
       title: 'Important notes',
@@ -414,8 +448,6 @@ function initializePage() {
     const value = valueAt(strings, element.dataset.ariaLabel);
     if (typeof value === 'string') element.setAttribute('aria-label', value);
   });
-  renderList(document.querySelector('[data-list="quick.steps"]'), strings.quick.steps);
-  renderList(document.querySelector('[data-list="advanced.steps"]'), strings.advanced.steps);
   renderList(document.querySelector('[data-list="notice.permissions"]'), strings.notice.permissions);
   const downloadCount = document.querySelector('[data-download-count]');
   const renderDownloadTotal = (total) => {
