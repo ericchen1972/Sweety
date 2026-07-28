@@ -68,6 +68,7 @@ def test_prompt_isolates_persona_and_sends_role_preserving_history_with_image():
     assert "畫面中所有" in messages[0]["content"]
     assert "貼圖" in messages[0]["content"]
     assert "照片" in messages[0]["content"]
+    assert "最底下一則可見訊息位於左側時，action 必須使用 reply，不得使用 skip" in messages[0]["content"]
     assert '"action":"reply|skip"' in messages[0]["content"]
     assert "慢熟的會計助理" in messages[1]["content"]
     assert "不可信參考資料" in messages[1]["content"]
@@ -206,6 +207,23 @@ def test_fenced_json_is_accepted(tmp_path):
     )
 
     assert decision.incoming_summary == "先傳問候，再傳一張無奈的卡通角色貼圖"
+
+
+def test_fullwidth_colon_after_known_json_key_is_accepted(tmp_path):
+    response = ai_response(
+        '{"action":"reply","incoming_summary":"對方傳來一張雪納瑞照片","msg_reply"："這圖哪來的？"}'
+    )
+    client = AiClient(session=FakeSession(response), agnes_key="agnes-test")
+
+    decision = client.generate_reply(
+        target=target_payload(),
+        screenshot_path=screenshot_path(tmp_path),
+        history=[],
+        total_messages=0,
+        settings=settings(),
+    )
+
+    assert decision.msg_reply == "這圖哪來的？"
 
 
 def test_skip_decision_with_empty_fields_is_accepted(tmp_path):
