@@ -610,7 +610,7 @@ function TargetModal({ mode, existing, state, locale, copy, onClose, onSave }: {
   function submit(event: FormEvent) {
     event.preventDefault();
     if (mode === "create" && !validateTargetName(name)) {
-      setError(copy.targetNameHint);
+      setError(copy.targetNameError);
       return;
     }
     if (!personaId) {

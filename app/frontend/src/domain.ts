@@ -64,7 +64,7 @@ export function detectLocale(language: string | null | undefined): Locale {
 }
 
 export function validateTargetName(name: string): boolean {
-  return name.trim().length > 0;
+  return /^[A-Za-z0-9]+$/.test(name);
 }
 
 export function validateReplyDelay(minimum: number, maximum: number): boolean {
