@@ -183,7 +183,6 @@ class AiClient:
                     key,
                     model,
                     messages,
-                    temperature=0,
                 )
             except AiError as exc:
                 last_error = exc
@@ -211,7 +210,6 @@ class AiClient:
                     },
                 ],
                 response_format=PersonaClassification,
-                temperature=0,
             )
             classification = completion.choices[0].message.parsed
             if classification is None:
@@ -226,7 +224,6 @@ class AiClient:
         key: str,
         model: str,
         messages: list[dict[str, Any]],
-        temperature: float,
     ) -> ReplyDecision:
         try:
             client = self.client_factory(api_key=key, base_url=base_url, timeout=45)
@@ -234,7 +231,6 @@ class AiClient:
                 model=model,
                 messages=messages,
                 response_format=ReplyDecision,
-                temperature=temperature,
             )
             decision = completion.choices[0].message.parsed
             if decision is None:

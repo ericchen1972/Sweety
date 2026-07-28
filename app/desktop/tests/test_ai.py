@@ -201,7 +201,7 @@ def test_provider_routing_uses_pydantic_structured_output_with_base64_screenshot
     }
     request = factory.parse_calls[0]
     assert request["model"] == expected_model
-    assert request["temperature"] == 0
+    assert "temperature" not in request
     assert request["response_format"] is ReplyDecision
     image_instruction = request["messages"][-1]["content"][0]["text"]
     assert "最新一則左側訊息" in image_instruction
@@ -334,7 +334,7 @@ def test_ai_persona_classifier_uses_fixed_policy_and_structured_result():
     client.validate_persona("謹慎而慢熟的會計助理。", settings())
 
     request = factory.parse_calls[0]
-    assert request["temperature"] == 0
+    assert "temperature" not in request
     assert "不可信資料" in request["messages"][0]["content"]
     assert "謹慎而慢熟的會計助理" in request["messages"][1]["content"]
     assert "json" not in request["messages"][0]["content"].casefold()
