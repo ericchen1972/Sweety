@@ -5,6 +5,7 @@ import pytest
 
 from sweety_app.api import create_app
 from sweety_app.database import Database
+from sweety_app.schemas import TargetPayload
 
 
 class FakeAboutLoader:
@@ -44,7 +45,7 @@ def client(tmp_path):
     return TestClient(create_app(database))
 
 
-def target_payload(name: str = "LINE 完整名稱") -> dict:
+def target_payload(name: str = "Fraud1") -> dict:
     return {
         "name": name,
         "ageGroup": "20-35",
@@ -132,6 +133,49 @@ def test_target_lifecycle_and_duplicate_error(client):
     assert revived["replyEnabled"] is False
 
 
+@pytest.mark.parametrize("name", ["Fraud 1", "詐騙1", "Fraud-1", "Fraud1😀"])
+def test_new_target_rejects_non_alphanumeric_name(client, name):
+    response = client.post("/api/targets", json=target_payload(name))
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_target_name"
+    assert client.get("/api/state").json()["targets"] == []
+
+
+def test_state_snapshot_rejects_new_non_alphanumeric_target(client):
+    state = client.get("/api/state").json()
+    state["targets"] = [{
+        "id": "target-invalid",
+        **target_payload("Fraud 1"),
+        "status": "active",
+        "roundTrips": 0,
+        "firstReplyAt": None,
+        "lastReplyAt": None,
+        "endedAt": None,
+    }]
+
+    response = client.put("/api/state", json=state)
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_target_name"
+    assert client.get("/api/state").json()["targets"] == []
+
+
+def test_state_snapshot_allows_unchanged_legacy_target_name(tmp_path):
+    database = Database(tmp_path / "legacy-target.sqlite3")
+    client = TestClient(create_app(database))
+    parsed = TargetPayload.model_validate(target_payload("舊名稱😀"))
+    client.app.state.repository.create_target({**parsed.model_dump(), "id": "target-legacy"})
+    state = client.get("/api/state").json()
+    state["targets"][0]["replyEnabled"] = False
+
+    response = client.put("/api/state", json=state)
+
+    assert response.status_code == 200
+    assert response.json()["targets"][0]["name"] == "舊名稱😀"
+    assert response.json()["targets"][0]["replyEnabled"] is False
+
+
 def test_target_payload_can_omit_weapon_assignment(client):
     payload = target_payload()
     payload.pop("weaponId")
@@ -212,7 +256,7 @@ def test_export_is_json_and_dashboard_uses_persisted_data(client):
     exported = client.get(f"/api/targets/{created['id']}/export").json()
     metrics = client.get("/api/dashboard").json()
 
-    assert exported["target"]["name"] == "LINE 完整名稱"
+    assert exported["target"]["name"] == "Fraud1"
     assert exported["messages"] == []
     assert metrics["targetCount"] == 1
 
@@ -226,7 +270,7 @@ def test_client_state_can_be_persisted_as_one_snapshot(client):
     state = client.get("/api/state").json()
     state["targets"] = [{
         "id": "target-client",
-        **target_payload("從前端建立"),
+        **target_payload("Fraud2"),
         "status": "active",
         "roundTrips": 0,
         "firstReplyAt": None,
@@ -239,7 +283,7 @@ def test_client_state_can_be_persisted_as_one_snapshot(client):
 
     assert saved.status_code == 200
     assert reloaded["targets"][0]["id"] == "target-client"
-    assert reloaded["targets"][0]["name"] == "從前端建立"
+    assert reloaded["targets"][0]["name"] == "Fraud2"
 
     state["targets"][0]["status"] = "ended"
     client.put("/api/state", json=state)
@@ -255,8 +299,8 @@ def test_state_snapshot_rolls_back_every_change_when_a_later_write_fails(client)
     original_interval = state["settings"]["checkIntervalSeconds"]
     state["settings"]["checkIntervalSeconds"] = 99
     state["targets"] = [
-        {"id": "target-one", **target_payload("重複名稱")},
-        {"id": "target-two", **target_payload("重複名稱")},
+        {"id": "target-one", **target_payload("Duplicate1")},
+        {"id": "target-two", **target_payload("Duplicate1")},
     ]
 
     response = client.put("/api/state", json=state)

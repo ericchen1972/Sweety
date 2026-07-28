@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -31,6 +32,11 @@ class PersonaValidator(Protocol):
 
 class AboutLoader(Protocol):
     def load(self) -> str: ...
+
+
+def _validate_new_target_name(name: str) -> None:
+    if re.fullmatch(r"[A-Za-z0-9]+", name) is None:
+        raise RepositoryError("invalid_target_name")
 
 
 def _target_for_api(target: dict[str, Any]) -> dict[str, Any]:
@@ -180,6 +186,7 @@ def create_app(
                 if target_id in existing_targets:
                     repository.update_target(target_id, parsed.model_dump())
                 else:
+                    _validate_new_target_name(parsed.name)
                     repository.create_target({**parsed.model_dump(), "id": target_id})
                 if item.get("status") == "ended":
                     repository.end_target(target_id)
@@ -208,6 +215,7 @@ def create_app(
 
     @app.post("/api/targets", status_code=201)
     def create_target(payload: TargetPayload) -> dict[str, Any]:
+        _validate_new_target_name(payload.name)
         return _target_for_api(repository.create_target(payload.model_dump()))
 
     @app.put("/api/targets/{target_id}")
