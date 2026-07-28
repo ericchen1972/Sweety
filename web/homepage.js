@@ -9,7 +9,7 @@ export function resolveLocale(locales, fallbackLocale) {
 
 export const downloadConfig = Object.freeze({
   windows: null,
-  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-9ff118bd',
+  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-f1ab09fc',
 });
 
 export function parseDownloadTotal(payload) {
