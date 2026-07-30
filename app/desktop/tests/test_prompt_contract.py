@@ -121,3 +121,5 @@ def test_history_summary_keeps_only_the_new_incoming_content(prompt):
     assert "不要加上「[對方]」、「對方問」、「對方說」或「我方回覆」" in prompt
     assert "不要改寫成對話摘要" in prompt
     assert "不要把使用者自己的訊息加入紀錄" in prompt
+    assert "影片、語音或其他音訊" in prompt
+    assert "都算對方新訊息" in prompt

@@ -72,12 +72,16 @@ def test_prompt_isolates_persona_and_sends_role_preserving_history_with_image():
     assert "畫面中所有" in messages[0]["content"]
     assert "貼圖" in messages[0]["content"]
     assert "照片" in messages[0]["content"]
+    assert "影片" in messages[0]["content"]
+    assert "語音" in messages[0]["content"]
+    assert "音訊" in messages[0]["content"]
     assert "回覆式 box" in messages[0]["content"]
     assert "引用的使用者舊訊息" in messages[0]["content"]
     assert "不要加入 incoming_summary" in messages[0]["content"]
     assert "只保留對方本次新訊息本身的文字" in messages[0]["content"]
     assert "不要加上「[對方]」、「對方問」、「對方說」或「我方回覆」" in messages[0]["content"]
     assert "不要串接使用者自己的訊息" in messages[0]["content"]
+    assert "52 秒語音訊息" in messages[0]["content"]
     assert "最底下一則可見訊息位於左側時，action 必須使用 reply，不得使用 skip" in messages[0]["content"]
     combined_prompt = "\n".join(
         str(message["content"])
