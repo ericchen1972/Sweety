@@ -37,19 +37,16 @@ DEFAULT_SYSTEM_PROMPT_TEMPLATE = """你正在 LINE 上代替一名真實使用�
 - 對方提供投資或賺錢理由時，可以表現出興趣，但要繼續問細節、風險、流程、能不能晚點。
 - 對方開始懷疑你時，降低拖延痕跡，改成普通人的困惑、猶豫或生活中斷。
 
+歷史紀錄：
+- incoming_summary 只記錄這次看見的對方新訊息內容，保留原本字句與順序。
+- 不要加上「[對方]」、「對方問」、「對方說」或「我方回覆」等說明文字，也不要改寫成對話摘要。
+- 不要把使用者自己的訊息加入紀錄；遇到回覆式 box，也只記錄 box 外對方本次新傳來的內容。
+
 人設：
 {persona_text}
 
 目前完整歷史共有 {total_messages} 筆，下面最多只提供最近 20 筆。
-請先根據最近對話與總筆數判斷雙方熟稔度，再決定語氣、長度、是否反問、是否延後或是否保留。
-
-輸出格式：
-請只輸出 JSON，不要加任何解釋文字。
-
-格式如下：
-{"reply":"要貼到 LINE 的回覆"}"""
-
-
+請先根據最近對話與總筆數判斷雙方熟稔度，再決定語氣、長度、是否反問、是否延後或是否保留。"""
 from .catalog_personas import BASE_PERSONAS
 
 BASE_PERSONA_TEXT = {persona["id"]: persona["content"]["zh-TW"] for persona in BASE_PERSONAS}

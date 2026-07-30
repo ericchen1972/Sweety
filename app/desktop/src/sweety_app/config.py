@@ -34,12 +34,16 @@ LOGO_PATH = (
 if sys.platform == "darwin":
     DATA_DIR = Path.home() / "Library" / "Application Support" / APP_NAME
     CACHE_DIR = Path.home() / "Library" / "Caches" / APP_NAME
+    LOG_DIR = Path.home() / "Library" / "Logs" / APP_NAME
 else:
     DATA_DIR = Path.home() / f".{APP_NAME.lower()}"
     CACHE_DIR = DATA_DIR / "cache"
+    LOG_DIR = DATA_DIR / "logs"
 
 DATABASE_PATH = DATA_DIR / "sweety.sqlite3"
+LOG_PATH = LOG_DIR / "sweety.log"
 BUNDLED_AGNES_KEY = os.getenv("SWEETY_AGNES_KEY", "").strip()
+LOG_ENABLED = os.getenv("SWEETY_LOG_ENABLED", "0").strip() == "1"
 
 
 def normalize_locale(identifier: str | None) -> str:

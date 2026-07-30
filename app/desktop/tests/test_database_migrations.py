@@ -121,11 +121,11 @@ def test_v4_database_upgrades_the_prior_official_prompt_to_schema_v5(tmp_path):
 
     database.migrate()
 
-    assert _schema_version(database) == 5
+    assert _schema_version(database) == CURRENT_SCHEMA_VERSION
     assert Repository(database).get_system_prompt_template() == DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
-def test_v4_database_preserves_an_unrelated_remote_prompt_during_schema_v5_upgrade(tmp_path):
+def test_v4_database_preserves_an_unrelated_remote_prompt_during_upgrade(tmp_path):
     database = Database(tmp_path / "remote-v4.sqlite3")
     database.migrate()
     remote_prompt = "遠端自訂 prompt {persona_text} {total_messages}"
@@ -138,5 +138,5 @@ def test_v4_database_preserves_an_unrelated_remote_prompt_during_schema_v5_upgra
 
     database.migrate()
 
-    assert _schema_version(database) == 5
+    assert _schema_version(database) == CURRENT_SCHEMA_VERSION
     assert Repository(database).get_system_prompt_template() == remote_prompt

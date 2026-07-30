@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import locale as system_locale
+import logging
 import signal
 import threading
 
@@ -17,8 +18,9 @@ from Foundation import NSObject
 from .ai import AiClient
 from .about import AboutContentClient
 from .api import create_app
-from .config import ABOUT_SWEETY_URL, API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, FRONTEND_DIST, LOGO_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, preferred_locale
+from .config import ABOUT_SWEETY_URL, API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, FRONTEND_DIST, LOG_ENABLED, LOGO_PATH, LOG_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, preferred_locale
 from .database import Database
+from .diagnostics import configure_diagnostics, log_event
 from .line_mac import LineMacAdapter
 from .monitor import MonitorController
 from .metrics_reporter import start_metrics_reporting
@@ -90,11 +92,14 @@ class SweetyAppDelegate(NSObject):
         return False
 
     def applicationWillTerminate_(self, _notification) -> None:
+        log_event(logging.getLogger("sweety.app"), "app_stopping")
         self.monitor.stop()
         self.runtime.stop()
 
 
 def main() -> None:
+    configure_diagnostics(LOG_PATH, enabled=LOG_ENABLED)
+    log_event(logging.getLogger("sweety.app"), "app_started", version=APP_VERSION)
     application = NSApplication.sharedApplication()
     application.setActivationPolicy_(NSApplicationActivationPolicyRegular)
 

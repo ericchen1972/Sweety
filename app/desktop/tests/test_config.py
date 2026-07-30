@@ -27,5 +27,21 @@ def test_agnes_key_comes_only_from_environment(monkeypatch):
     importlib.reload(config)
 
 
+def test_diagnostics_switch_defaults_off_without_build_environment(monkeypatch):
+    with monkeypatch.context() as patch:
+        patch.delenv("SWEETY_LOG_ENABLED", raising=False)
+        config = importlib.reload(importlib.import_module("sweety_app.config"))
+        assert config.LOG_ENABLED is False
+    importlib.reload(config)
+
+
+def test_diagnostics_switch_reads_enabled_build_environment(monkeypatch):
+    with monkeypatch.context() as patch:
+        patch.setenv("SWEETY_LOG_ENABLED", "1")
+        config = importlib.reload(importlib.import_module("sweety_app.config"))
+        assert config.LOG_ENABLED is True
+    importlib.reload(config)
+
+
 def test_logo_uses_public_web_asset():
     assert LOGO_PATH == PROJECT_DIR / "web" / "images" / "logo.png"

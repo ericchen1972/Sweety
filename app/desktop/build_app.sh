@@ -5,6 +5,12 @@ DESKTOP_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$DESKTOP_DIR/../.." && pwd)"
 ICONSET="$DESKTOP_DIR/build/Sweety.iconset"
 BASE_ICON="$DESKTOP_DIR/build/Sweety-base.png"
+export SWEETY_LOG_ENABLED="${SWEETY_LOG_ENABLED:-1}"
+
+if [[ "$SWEETY_LOG_ENABLED" != "0" && "$SWEETY_LOG_ENABLED" != "1" ]]; then
+  echo "SWEETY_LOG_ENABLED must be 0 or 1." >&2
+  exit 1
+fi
 
 cd "$PROJECT_DIR/app/frontend"
 npm run build

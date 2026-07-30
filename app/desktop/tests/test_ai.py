@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
+from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 import sweety_app.ai as ai_module
 from sweety_app.ai import AiClient, AiError, build_messages, contains_external_link
+from sweety_app.diagnostics import configure_diagnostics
 
 
 def screenshot_path(tmp_path):
@@ -71,8 +75,18 @@ def test_prompt_isolates_persona_and_sends_role_preserving_history_with_image():
     assert "回覆式 box" in messages[0]["content"]
     assert "引用的使用者舊訊息" in messages[0]["content"]
     assert "不要加入 incoming_summary" in messages[0]["content"]
+    assert "只保留對方本次新訊息本身的文字" in messages[0]["content"]
+    assert "不要加上「[對方]」、「對方問」、「對方說」或「我方回覆」" in messages[0]["content"]
+    assert "不要串接使用者自己的訊息" in messages[0]["content"]
     assert "最底下一則可見訊息位於左側時，action 必須使用 reply，不得使用 skip" in messages[0]["content"]
-    assert '"action":"reply|skip"' in messages[0]["content"]
+    combined_prompt = "\n".join(
+        str(message["content"])
+        for message in messages
+        if isinstance(message["content"], str)
+    ) + str(messages[-1]["content"][0]["text"])
+    assert "JSON" not in combined_prompt
+    assert "Markdown" not in combined_prompt
+    assert '{"action"' not in combined_prompt
     assert "慢熟的會計助理" in messages[1]["content"]
     assert "不可信參考資料" in messages[1]["content"]
     assert "86" in messages[0]["content"]
@@ -97,48 +111,63 @@ class FakeRepository:
         raise AssertionError("custom item should not be used")
 
 
-class FakeResponse:
-    def __init__(self, payload: dict, status_code: int = 200) -> None:
-        self._payload = payload
-        self.status_code = status_code
+class FakeStructuredClientFactory:
+    def __init__(self, results, raw_contents: str | list[str] | None = None) -> None:
+        self.results = results if isinstance(results, list) else [results]
+        if isinstance(raw_contents, list):
+            self.raw_contents = raw_contents
+        elif raw_contents is None:
+            self.raw_contents = []
+        else:
+            self.raw_contents = [raw_contents]
+        self.client_calls: list[dict] = []
+        self.parse_calls: list[dict] = []
 
-    def raise_for_status(self) -> None:
-        if self.status_code >= 400:
-            raise RuntimeError(f"HTTP {self.status_code}")
+    def __call__(self, **kwargs):
+        self.client_calls.append(kwargs)
+        factory = self
 
-    def json(self) -> dict:
-        return self._payload
+        def parse(**parse_kwargs):
+            factory.parse_calls.append(parse_kwargs)
+            index = min(len(factory.parse_calls) - 1, len(factory.results) - 1)
+            result = factory.results[index]
+            if isinstance(result, Exception):
+                raise result
+            if factory.raw_contents:
+                content = factory.raw_contents[min(index, len(factory.raw_contents) - 1)]
+            elif hasattr(result, "model_dump_json"):
+                content = result.model_dump_json()
+            else:
+                content = None
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(parsed=result, content=content))]
+            )
 
-
-class FakeSession:
-    def __init__(self, response: FakeResponse | list[FakeResponse]) -> None:
-        self.responses = response if isinstance(response, list) else [response]
-        self.calls: list[dict] = []
-
-    def post(self, url: str, **kwargs):
-        self.calls.append({"url": url, **kwargs})
-        return self.responses[min(len(self.calls) - 1, len(self.responses) - 1)]
-
-
-def ai_response(content: str, status_code: int = 200) -> FakeResponse:
-    return FakeResponse({"choices": [{"message": {"content": content}}]}, status_code=status_code)
+        return SimpleNamespace(
+            beta=SimpleNamespace(
+                chat=SimpleNamespace(
+                    completions=SimpleNamespace(parse=parse),
+                )
+            )
+        )
 
 
 @pytest.mark.parametrize(
-    ("provider", "expected_url", "expected_model"),
+    ("provider", "expected_base_url", "expected_model"),
     [
-        ("sweety", "https://apihub.agnes-ai.com/v1/chat/completions", "agnes-2.0-flash"),
-        ("openai", "https://api.openai.com/v1/chat/completions", "gpt-5.5"),
+        ("sweety", "https://apihub.agnes-ai.com/v1", "agnes-2.0-flash"),
+        ("openai", "https://api.openai.com/v1", "gpt-5.5"),
     ],
 )
-def test_provider_routing_sends_base64_screenshot_without_response_format(
+def test_provider_routing_uses_strict_schema_with_base64_screenshot(
     tmp_path,
     provider,
-    expected_url,
+    expected_base_url,
     expected_model,
 ):
-    session = FakeSession(ai_response(decision_json(msg_reply="測試回覆")))
-    client = AiClient(session=session, agnes_key="agnes-test")
+    result = ai_module.ReplyDecision(action="reply", incoming_summary="你好", msg_reply="測試回覆")
+    factory = FakeStructuredClientFactory(result)
+    client = AiClient(client_factory=factory, agnes_key="agnes-test")
 
     decision = client.generate_reply(
         target=target_payload(),
@@ -148,13 +177,19 @@ def test_provider_routing_sends_base64_screenshot_without_response_format(
         settings=settings(provider),
     )
 
-    assert decision == ai_module.ReplyDecision("reply", "你好", "測試回覆")
-    request = session.calls[0]
-    assert request["url"] == expected_url
-    assert request["json"]["model"] == expected_model
-    assert request["json"]["temperature"] == 0
-    assert "response_format" not in request["json"]
-    image_instruction = request["json"]["messages"][-1]["content"][0]["text"]
+    assert decision == result
+    assert factory.client_calls[0] == {
+        "api_key": "agnes-test" if provider == "sweety" else "openai-test",
+        "base_url": expected_base_url,
+        "timeout": 45,
+    }
+    request = factory.parse_calls[0]
+    assert request["model"] == expected_model
+    assert "temperature" not in request
+    assert request["response_format"] is ai_module.ReplyDecision
+    schema = request["response_format"].model_json_schema()
+    assert set(schema["required"]) == {"action", "incoming_summary", "msg_reply"}
+    image_instruction = request["messages"][-1]["content"][0]["text"]
     assert "畫面中最下方的右側訊息" in image_instruction
     assert "下方所有可見的左側訊息" in image_instruction
     assert "若畫面沒有任何右側訊息" in image_instruction
@@ -162,14 +197,52 @@ def test_provider_routing_sends_base64_screenshot_without_response_format(
     assert "回覆式 box" in image_instruction
     assert "只收集 box 外對方本次實際傳來的內容" in image_instruction
     assert "不可向上捲動" in image_instruction
-    assert '{"action":"skip","incoming_summary":"","msg_reply":""}' in image_instruction
-    image_url = request["json"]["messages"][-1]["content"][1]["image_url"]["url"]
+    assert "action=skip" in image_instruction
+    assert "incoming_summary 與 msg_reply 保持空白" in image_instruction
+    image_url = request["messages"][-1]["content"][1]["image_url"]["url"]
     assert image_url.startswith("data:image/png;base64,")
 
 
+def test_ai_raw_response_is_logged_when_diagnostics_are_enabled(tmp_path):
+    log_path = tmp_path / "sweety.log"
+    configure_diagnostics(log_path, enabled=True)
+    raw_content = decision_json(
+        incoming_summary="對方說 **test5 附近**",
+        msg_reply="我知道了",
+    )
+    result = ai_module.ReplyDecision(
+        action="reply",
+        incoming_summary="對方說 **test5 附近**",
+        msg_reply="我知道了",
+    )
+    client = AiClient(
+        client_factory=FakeStructuredClientFactory(result, raw_contents=raw_content),
+        agnes_key="agnes-test",
+    )
+
+    client.generate_reply(
+        target=target_payload(),
+        screenshot_path=screenshot_path(tmp_path),
+        history=[],
+        total_messages=0,
+        settings=settings(),
+    )
+
+    for handler in logging.getLogger("sweety").handlers:
+        handler.flush()
+    events = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+    raw_event = next(event for event in events if event["event"] == "ai_raw_response")
+    assert raw_event["content"] == raw_content
+    assert raw_event["model"] == "agnes-2.0-flash"
+
+    configure_diagnostics(log_path, enabled=False)
+
+
 def test_generate_reply_uses_cached_system_prompt_and_base_persona(tmp_path):
-    session = FakeSession(ai_response(decision_json(msg_reply="遠端回覆")))
-    client = AiClient(session=session, agnes_key="agnes-test", repository=FakeRepository())
+    factory = FakeStructuredClientFactory(
+        ai_module.ReplyDecision(action="reply", incoming_summary="你好", msg_reply="遠端回覆")
+    )
+    client = AiClient(client_factory=factory, agnes_key="agnes-test", repository=FakeRepository())
 
     decision = client.generate_reply(
         target=target_payload("remote-persona"),
@@ -180,7 +253,7 @@ def test_generate_reply_uses_cached_system_prompt_and_base_persona(tmp_path):
     )
 
     assert decision.msg_reply == "遠端回覆"
-    messages = session.calls[0]["json"]["messages"]
+    messages = factory.parse_calls[0]["messages"]
     assert "遠端人設文字" not in messages[0]["content"]
     assert "總數 12" in messages[0]["content"]
     assert "遠端人設文字" in messages[1]["content"]
@@ -188,52 +261,18 @@ def test_generate_reply_uses_cached_system_prompt_and_base_persona(tmp_path):
 
 def test_reply_decision_preserves_one_condensed_visible_batch():
     decision = ai_module.ReplyDecision(
-        "reply",
-        "  對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖  ",
-        "收到",
+        action="reply",
+        incoming_summary="  對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖  ",
+        msg_reply="收到",
     )
 
-    assert decision.incoming_summary.strip() == "對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖"
+    assert decision.incoming_summary == "對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖"
     assert decision.should_reply is True
 
 
-def test_fenced_json_is_accepted(tmp_path):
-    response = ai_response(
-        f"```json\n{decision_json(incoming_summary='先傳問候，再傳一張無奈的卡通角色貼圖')}\n```"
-    )
-    client = AiClient(session=FakeSession(response), agnes_key="agnes-test")
-
-    decision = client.generate_reply(
-        target=target_payload(),
-        screenshot_path=screenshot_path(tmp_path),
-        history=[],
-        total_messages=0,
-        settings=settings(),
-    )
-
-    assert decision.incoming_summary == "先傳問候，再傳一張無奈的卡通角色貼圖"
-
-
-def test_fullwidth_colon_after_known_json_key_is_accepted(tmp_path):
-    response = ai_response(
-        '{"action":"reply","incoming_summary":"對方傳來一張雪納瑞照片","msg_reply"："這圖哪來的？"}'
-    )
-    client = AiClient(session=FakeSession(response), agnes_key="agnes-test")
-
-    decision = client.generate_reply(
-        target=target_payload(),
-        screenshot_path=screenshot_path(tmp_path),
-        history=[],
-        total_messages=0,
-        settings=settings(),
-    )
-
-    assert decision.msg_reply == "這圖哪來的？"
-
-
 def test_skip_decision_with_empty_fields_is_accepted(tmp_path):
-    response = ai_response(decision_json(action="skip", incoming_summary="", msg_reply=""))
-    client = AiClient(session=FakeSession(response), agnes_key="agnes-test")
+    result = ai_module.ReplyDecision(action="skip", incoming_summary="", msg_reply="")
+    client = AiClient(client_factory=FakeStructuredClientFactory(result), agnes_key="agnes-test")
 
     decision = client.generate_reply(
         target=target_payload(),
@@ -243,24 +282,29 @@ def test_skip_decision_with_empty_fields_is_accepted(tmp_path):
         settings=settings(),
     )
 
-    assert decision == ai_module.ReplyDecision("skip", "", "")
+    assert decision == result
     assert decision.should_reply is False
 
 
 @pytest.mark.parametrize(
-    "content",
+    "payload",
     [
         "{}",
-        decision_json(action="wait"),
-        decision_json(incoming_summary=" "),
-        decision_json(msg_reply=" "),
-        decision_json(action="skip", incoming_summary="不應保留", msg_reply=""),
-        decision_json(action="skip", incoming_summary="", msg_reply="不應回覆"),
-        "not json",
+        {"action": "wait", "incoming_summary": "你好", "msg_reply": "收到"},
+        {"action": "reply", "incoming_summary": " ", "msg_reply": "收到"},
+        {"action": "reply", "incoming_summary": "你好", "msg_reply": " "},
+        {"action": "skip", "incoming_summary": "不應保留", "msg_reply": ""},
+        {"action": "skip", "incoming_summary": "", "msg_reply": "不應回覆"},
     ],
 )
-def test_invalid_decisions_are_rejected_after_one_retry(tmp_path, content):
-    client = AiClient(session=FakeSession([ai_response(content), ai_response(content)]), agnes_key="agnes-test")
+def test_reply_decision_schema_rejects_invalid_payloads(payload):
+    with pytest.raises(ValidationError):
+        ai_module.ReplyDecision.model_validate(payload)
+
+
+def test_missing_structured_result_is_rejected_after_one_retry(tmp_path):
+    factory = FakeStructuredClientFactory([None, None])
+    client = AiClient(client_factory=factory, agnes_key="agnes-test")
 
     with pytest.raises(AiError, match="invalid"):
         client.generate_reply(
@@ -270,6 +314,7 @@ def test_invalid_decisions_are_rejected_after_one_retry(tmp_path, content):
             total_messages=0,
             settings=settings(),
         )
+    assert len(factory.parse_calls) == 2
 
 
 @pytest.mark.parametrize(
@@ -289,13 +334,13 @@ def test_external_link_detection(value):
 
 
 def test_link_bearing_reply_is_regenerated_once(tmp_path):
-    session = FakeSession(
+    factory = FakeStructuredClientFactory(
         [
-            ai_response(decision_json(msg_reply="請看 https://example.com")),
-            ai_response(decision_json(msg_reply="你可以先說明一下嗎？")),
+            ai_module.ReplyDecision(action="reply", incoming_summary="你好", msg_reply="請看 https://example.com"),
+            ai_module.ReplyDecision(action="reply", incoming_summary="你好", msg_reply="你可以先說明一下嗎？"),
         ]
     )
-    client = AiClient(session=session, agnes_key="agnes-test")
+    client = AiClient(client_factory=factory, agnes_key="agnes-test")
 
     decision = client.generate_reply(
         target=target_payload(),
@@ -306,12 +351,12 @@ def test_link_bearing_reply_is_regenerated_once(tmp_path):
     )
 
     assert decision.msg_reply == "你可以先說明一下嗎？"
-    assert len(session.calls) == 2
+    assert len(factory.parse_calls) == 2
 
 
 def test_two_link_bearing_replies_are_rejected(tmp_path):
-    response = ai_response(decision_json(msg_reply="請看 example.com"))
-    client = AiClient(session=FakeSession([response, response]), agnes_key="agnes-test")
+    result = ai_module.ReplyDecision(action="reply", incoming_summary="你好", msg_reply="請看 example.com")
+    client = AiClient(client_factory=FakeStructuredClientFactory([result, result]), agnes_key="agnes-test")
 
     with pytest.raises(AiError, match="unsafe link"):
         client.generate_reply(
@@ -324,20 +369,26 @@ def test_two_link_bearing_replies_are_rejected(tmp_path):
 
 
 def test_ai_persona_classifier_uses_fixed_policy_and_structured_result():
-    session = FakeSession(ai_response("```json\n{\"allowed\": true}\n```"))
-    client = AiClient(session=session, agnes_key="agnes-test")
+    factory = FakeStructuredClientFactory(
+        ai_module.PersonaClassification(allowed=True),
+        raw_contents='{"allowed":true}',
+    )
+    client = AiClient(client_factory=factory, agnes_key="agnes-test")
 
     client.validate_persona("謹慎而慢熟的會計助理。", settings())
 
-    request = session.calls[0]["json"]
-    assert request["temperature"] == 0
+    request = factory.parse_calls[0]
+    assert "temperature" not in request
     assert "不可信資料" in request["messages"][0]["content"]
     assert "謹慎而慢熟的會計助理" in request["messages"][1]["content"]
+    assert request["response_format"] is ai_module.PersonaClassification
 
 
 def test_errors_do_not_include_api_keys(tmp_path):
-    session = FakeSession(FakeResponse({}, status_code=500))
-    client = AiClient(session=session, agnes_key="super-secret-agnes")
+    client = AiClient(
+        client_factory=FakeStructuredClientFactory(RuntimeError("provider failed")),
+        agnes_key="super-secret-agnes",
+    )
 
     with pytest.raises(AiError) as error:
         client.generate_reply(

@@ -4,10 +4,7 @@ set -euo pipefail
 DESKTOP_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DESKTOP_DIR"
 
-if [[ ! -d dist/Sweety.app ]]; then
-  echo "dist/Sweety.app is missing; build the release app first." >&2
-  exit 1
-fi
+SWEETY_LOG_ENABLED=0 "$DESKTOP_DIR/build_app.sh"
 
 codesign --verify --deep --strict dist/Sweety.app
 

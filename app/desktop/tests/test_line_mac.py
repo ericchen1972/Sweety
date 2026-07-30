@@ -11,6 +11,7 @@ from sweety_app.line_mac import (
     contacts_from_ocr,
     parse_line_windows,
 )
+from sweety_app.monitor import UnreadContact
 
 
 def test_parse_line_windows_keeps_names_with_symbols():
@@ -47,6 +48,19 @@ def test_contact_click_point_uses_whomai_geometry():
     assert contact_click_point({"x": 23, "y": 87, "width": 364, "height": 870}, 3) == (173, 379)
 
 
+def test_prepare_next_chat_waits_then_reuses_line_activation(tmp_path: Path):
+    events = []
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        sleeper=lambda seconds: events.append(("sleep", seconds)),
+    )
+    adapter._activate_line = lambda: events.append(("activate", None))
+
+    assert adapter.prepare_next_chat() is True
+    assert events == [("sleep", 1.0), ("activate", None)]
+
+
 def test_contacts_from_ocr_requires_green_badge_and_filters_times():
     ocr = [
         {"text": "Lilian", "bbox": [[10, 10], [60, 10], [60, 30], [10, 30]]},
@@ -73,9 +87,13 @@ class FakeMouse:
     def __init__(self) -> None:
         self.clicks = []
         self.keys = []
+        self.double_clicks = 0
 
     def click(self, x, y):
         self.clicks.append((x, y))
+
+    def doubleClick(self):
+        self.double_clicks += 1
 
     def moveTo(self, x, y, duration=0):
         self.clicks.append((x, y, duration))
@@ -94,6 +112,34 @@ class Result:
     returncode = 0
     stdout = "name:LINE, position:20, 80, size:360, 800|name:投資顧問, position:100, 200, size:500, 700|"
     stderr = ""
+
+
+def test_open_chat_waits_until_target_window_is_visible(tmp_path: Path):
+    mouse = FakeMouse()
+    sleeps = []
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=mouse,
+        sleeper=sleeps.append,
+    )
+    adapter._activate_line = lambda: None
+    scans = iter(
+        [
+            [{"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}],
+            [{"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}],
+            [{"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}],
+            [
+                {"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800},
+                {"name": "eva", "x": 100, "y": 200, "width": 500, "height": 700},
+            ],
+        ]
+    )
+    adapter._windows = lambda: next(scans)
+
+    assert adapter.open_chat(UnreadContact(index=1, name="eva")) is True
+    assert mouse.double_clicks == 1
+    assert sleeps == [0.25, 0.25]
 
 
 def test_capture_visible_chat_returns_screenshot_without_chat_ocr(tmp_path: Path):

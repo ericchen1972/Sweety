@@ -11,6 +11,7 @@ app_environment = {
     for key, value in {
         "SWEETY_AGNES_KEY": os.getenv("SWEETY_AGNES_KEY", "").strip(),
         "SWEETY_METRICS_APP_TOKEN": os.getenv("SWEETY_METRICS_APP_TOKEN", "").strip(),
+        "SWEETY_LOG_ENABLED": os.getenv("SWEETY_LOG_ENABLED", "0").strip(),
     }.items()
     if value
 }

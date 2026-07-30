@@ -108,8 +108,16 @@ def test_bundled_and_sql_prompts_are_identical():
     assert DEFAULT_SYSTEM_PROMPT_TEMPLATE == _sql_catalog_prompt()
 
 
-def test_existing_safety_and_json_contract_remain_in_both_prompts(prompt):
+def test_existing_safety_remains_without_json_output_instructions(prompt):
     assert "不提供任何真實個人資料" in prompt
     assert "不點擊、不鼓勵點擊、不信任任何陌生連結" in prompt
-    assert "請只輸出 JSON" in prompt
-    assert '{"reply":"要貼到 LINE 的回覆"}' in prompt
+    assert "JSON" not in prompt
+    assert "輸出格式" not in prompt
+    assert '{"reply"' not in prompt
+
+
+def test_history_summary_keeps_only_the_new_incoming_content(prompt):
+    assert "只記錄這次看見的對方新訊息內容" in prompt
+    assert "不要加上「[對方]」、「對方問」、「對方說」或「我方回覆」" in prompt
+    assert "不要改寫成對話摘要" in prompt
+    assert "不要把使用者自己的訊息加入紀錄" in prompt

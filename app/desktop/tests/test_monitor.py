@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -7,6 +9,7 @@ import pytest
 
 from sweety_app.ai import AiError, ReplyDecision
 from sweety_app.database import Database
+from sweety_app.diagnostics import configure_diagnostics
 from sweety_app.monitor import MonitorController, UnreadContact, match_unread_target
 from sweety_app.repositories import Repository
 
@@ -16,6 +19,13 @@ def repo(tmp_path):
     database = Database(tmp_path / "monitor.sqlite3")
     database.migrate()
     return Repository(database)
+
+
+@pytest.fixture
+def diagnostics_enabled(tmp_path):
+    configure_diagnostics(tmp_path / "sweety.log", enabled=True)
+    yield
+    configure_diagnostics(tmp_path / "sweety.log", enabled=False)
 
 
 def target_payload(name: str, reply_enabled: bool = True) -> dict:
@@ -62,6 +72,11 @@ class FakeLine:
 
     def open_chat(self, contact: UnreadContact) -> bool:
         self.opened.append(contact.name)
+        self.events.append(f"open:{contact.name}")
+        return True
+
+    def prepare_next_chat(self) -> bool:
+        self.events.append("prepare_next_chat")
         return True
 
     def capture_visible_chat(self, target_name: str) -> Path:
@@ -86,7 +101,11 @@ class FakeLine:
 
 @dataclass
 class FakeAi:
-    decision: ReplyDecision = ReplyDecision("reply", "你還記得那個網站嗎？", "我有點忘了，是哪個？")
+    decision: ReplyDecision = ReplyDecision(
+        action="reply",
+        incoming_summary="你還記得那個網站嗎？",
+        msg_reply="我有點忘了，是哪個？",
+    )
 
     def generate_reply(self, **_kwargs) -> ReplyDecision:
         return self.decision
@@ -132,6 +151,24 @@ def test_cycle_continues_unread_scan_when_pre_scan_cleanup_fails(repo):
     assert line.events == ["cleanup", "unread_contacts"]
 
 
+def test_cycle_prepares_line_main_window_before_opening_second_contact(repo):
+    repo.create_target(target_payload("Eva"))
+    repo.create_target(target_payload("Rose"))
+    line = FakeLine(
+        [
+            UnreadContact(index=1, name="Eva"),
+            UnreadContact(index=2, name="Rose"),
+        ]
+    )
+    controller = MonitorController(repo, line, FakeAi(), sleeper=lambda _seconds: None)
+    controller.start(background=False)
+
+    assert controller.run_cycle() is True
+    assert line.events.index("open:Eva") < line.events.index("prepare_next_chat")
+    assert line.events.index("prepare_next_chat") < line.events.index("open:Rose")
+    assert line.events.count("prepare_next_chat") == 1
+
+
 def test_live_mode_sends_and_persists_exchange_and_metrics(repo):
     target = repo.create_target(target_payload("投資顧問✨"))
     line = FakeLine([UnreadContact(index=0, name="投資顧問✨")])
@@ -172,9 +209,9 @@ def test_mixed_visible_batch_is_persisted_as_one_exchange_after_successful_send(
     line = FakeLine([UnreadContact(index=1, name="投資顧問")])
     ai = FakeAi(
         ReplyDecision(
-            "reply",
-            "對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖",
-            "有看到，我先照截圖調整版面，再跟你回報。",
+            action="reply",
+            incoming_summary="對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖",
+            msg_reply="有看到，我先照截圖調整版面，再跟你回報。",
         )
     )
     controller = MonitorController(repo, line, ai, sleeper=lambda _seconds: None)
@@ -195,7 +232,7 @@ def test_skip_discards_capture_and_does_not_delay_send_persist_count_or_report(r
     controller = MonitorController(
         repo,
         line,
-        FakeAi(ReplyDecision("skip", "", "")),
+        FakeAi(ReplyDecision(action="skip", incoming_summary="", msg_reply="")),
         sleeper=lambda seconds: delays.append(seconds),
         on_exchange_committed=lambda: reports.append(True),
     )
@@ -209,6 +246,33 @@ def test_skip_discards_capture_and_does_not_delay_send_persist_count_or_report(r
     assert repo.list_messages(target["id"]) == []
     assert repo.get_target(target["id"])["round_trips"] == 0
     assert reports == []
+
+
+def test_skip_logs_ai_decision_and_close_reason(repo, caplog, diagnostics_enabled):
+    repo.create_target(target_payload("Rose"))
+    logger = logging.getLogger("test.sweety.monitor.skip")
+    controller = MonitorController(
+        repo,
+        FakeLine([UnreadContact(index=1, name="Rose")]),
+        FakeAi(ReplyDecision(action="skip", incoming_summary="", msg_reply="")),
+        sleeper=lambda _seconds: None,
+        logger=logger,
+    )
+    controller.start(background=False)
+
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        assert controller.run_cycle() is False
+
+    events = [json.loads(record.message) for record in caplog.records if record.name == logger.name]
+    ai_event = next(event for event in events if event["event"] == "ai_request_succeeded")
+    assert ai_event["target"] == "Rose"
+    assert ai_event["action"] == "skip"
+    assert ai_event["incoming_summary"] == ""
+    assert ai_event["msg_reply"] == ""
+    assert any(
+        event["event"] == "chat_close_started" and event["reason"] == "ai_decision_skip"
+        for event in events
+    )
 
 
 def test_successful_committed_exchange_triggers_metrics_report_once(repo):
@@ -226,6 +290,60 @@ def test_successful_committed_exchange_triggers_metrics_report_once(repo):
 
     assert controller.run_cycle() is True
     assert reports == [2]
+
+
+def test_successful_cycle_logs_stage_events_and_ai_decision(repo, caplog, diagnostics_enabled):
+    target = repo.create_target(target_payload("Rose"))
+    line = FakeLine([UnreadContact(index=1, name="Rose")])
+    logger = logging.getLogger("test.sweety.monitor.success")
+    controller = MonitorController(
+        repo,
+        line,
+        FakeAi(ReplyDecision(action="reply", incoming_summary="對方最後一則訊息", msg_reply="這是我的回覆")),
+        sleeper=lambda _seconds: None,
+        logger=logger,
+    )
+    controller.start(background=False)
+
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        assert controller.run_cycle() is True
+
+    events = [json.loads(record.message) for record in caplog.records if record.name == logger.name]
+    names = [event["event"] for event in events]
+    assert names == [
+        "cycle_started",
+        "chat_cleanup_started",
+        "chat_cleanup_succeeded",
+        "unread_scan_started",
+        "unread_scan_succeeded",
+        "target_processing_started",
+        "chat_open_started",
+        "chat_open_succeeded",
+        "screenshot_capture_started",
+        "screenshot_capture_succeeded",
+        "ai_request_started",
+        "ai_request_succeeded",
+        "screenshot_discarded",
+        "reply_delay_started",
+        "reply_delay_completed",
+        "message_send_started",
+        "message_send_succeeded",
+        "exchange_persist_started",
+        "exchange_persist_succeeded",
+        "chat_close_started",
+        "chat_close_succeeded",
+        "cycle_completed",
+    ]
+    ai_event = next(event for event in events if event["event"] == "ai_request_succeeded")
+    assert {key: ai_event[key] for key in ("event", "target", "action", "incoming_summary", "msg_reply")} == {
+        "event": "ai_request_succeeded",
+        "target": "Rose",
+        "action": "reply",
+        "incoming_summary": "對方最後一則訊息",
+        "msg_reply": "這是我的回覆",
+    }
+    assert ai_event["timestamp"].endswith("+00:00")
+    assert repo.get_target(target["id"])["round_trips"] == 1
 
 
 def test_failed_send_does_not_trigger_metrics_report(repo):
@@ -330,7 +448,7 @@ def test_stop_after_chat_capture_prevents_ai_and_paste(repo):
     assert line.discarded == [Path("/tmp/test-line-chat.png")]
 
 
-def test_ai_failure_does_not_send_or_persist(repo):
+def test_ai_failure_does_not_send_or_persist(repo, caplog, diagnostics_enabled):
     target = repo.create_target(target_payload("投資顧問"))
     line = FakeLine([UnreadContact(index=1, name="投資顧問")])
     reports: list[bool] = []
@@ -339,21 +457,30 @@ def test_ai_failure_does_not_send_or_persist(repo):
         def generate_reply(self, **_kwargs):
             raise AiError("AI returned an invalid reply")
 
+    logger = logging.getLogger("test.sweety.monitor.ai_failure")
     controller = MonitorController(
         repo,
         line,
         FailingAi(),
         sleeper=lambda _seconds: None,
         on_exchange_committed=lambda: reports.append(True),
+        logger=logger,
     )
     controller.start(background=False)
 
-    assert controller.run_cycle() is False
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        assert controller.run_cycle() is False
     assert line.sent == []
     assert repo.list_messages(target["id"]) == []
     assert repo.get_target(target["id"])["round_trips"] == 0
     assert reports == []
     assert line.discarded == [Path("/tmp/test-line-chat.png")]
+    events = [json.loads(record.message) for record in caplog.records if record.name == logger.name]
+    failure = next(event for event in events if event["event"] == "target_processing_failed")
+    assert failure["target"] == "投資顧問"
+    assert failure["stage"] == "ai_request"
+    assert failure["error_type"] == "AiError"
+    assert failure["error"] == "AI returned an invalid reply"
 
 
 def test_capture_failure_does_not_call_ai_send_persist_or_report(repo):

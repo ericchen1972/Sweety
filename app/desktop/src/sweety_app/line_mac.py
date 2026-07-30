@@ -14,6 +14,8 @@ from .monitor import UnreadContact
 CONTACT_HEIGHT = 72
 CONTACT_TOP_OFFSET = 112
 CONTACT_CLICK_X_OFFSET = 150
+CHAT_OPEN_CHECK_ATTEMPTS = 20
+CHAT_OPEN_CHECK_INTERVAL_SECONDS = 0.25
 
 
 def parse_line_windows(raw: str) -> list[dict[str, Any]]:
@@ -123,6 +125,14 @@ class LineMacAdapter:
             has_badge=lambda index: self._has_green_badge(self.contact_list_path, index),
         )
 
+    def prepare_next_chat(self) -> bool:
+        self.sleeper(1.0)
+        try:
+            self._activate_line()
+        except Exception:
+            return False
+        return True
+
     def open_chat(self, contact: UnreadContact) -> bool:
         main = self._main_window()
         if main is None:
@@ -132,8 +142,15 @@ class LineMacAdapter:
         mouse = self._mouse()
         mouse.moveTo(x, y, duration=0.3)
         mouse.doubleClick()
-        self.sleeper(1.5)
-        return True
+        for attempt in range(CHAT_OPEN_CHECK_ATTEMPTS):
+            if any(
+                item["name"] != "LINE" and self._same_window_name(item["name"], contact.name)
+                for item in self._windows()
+            ):
+                return True
+            if attempt < CHAT_OPEN_CHECK_ATTEMPTS - 1:
+                self.sleeper(CHAT_OPEN_CHECK_INTERVAL_SECONDS)
+        return False
 
     def capture_visible_chat(self, target_name: str) -> Path:
         windows = self._windows()
