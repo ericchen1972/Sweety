@@ -4,7 +4,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from PIL import Image, ImageDraw
 
 from sweety_app.line_mac import (
     LineMacAdapter,
@@ -157,64 +156,13 @@ def test_send_message_clears_pastes_and_presses_enter_then_restores_clipboard(tm
         clipboard=clipboard,
         sleeper=lambda _seconds: None,
     )
-    captures = 0
-
-    def capture(_window, path):
-        nonlocal captures
-        image = Image.new("RGB", (500, 700), "white")
-        if captures == 0:
-            ImageDraw.Draw(image).rectangle((180, 650, 320, 665), fill="black")
-        else:
-            ImageDraw.Draw(image).rectangle((350, 500, 470, 550), fill="black")
-        image.save(path)
-        captures += 1
-
-    adapter._capture = capture
+    adapter._capture = lambda *_args: (_ for _ in ()).throw(
+        AssertionError("send_message must not capture after pressing Enter")
+    )
 
     assert adapter.send_message("投資顧問", "AI 回覆") is True
     assert mouse.keys == [("command", "a"), ("backspace",), ("command", "v"), ("enter",)]
     assert clipboard.value == "原本內容"
-    assert (tmp_path / "line-send-before.png").exists() is False
-    assert (tmp_path / "line-send-after.png").exists() is False
-
-
-def test_send_message_returns_false_when_no_outgoing_bubble_appears(tmp_path: Path):
-    adapter = LineMacAdapter(
-        cache_dir=tmp_path,
-        runner=lambda *_args, **_kwargs: Result(),
-        mouse=FakeMouse(),
-        clipboard=FakeClipboard(),
-        sleeper=lambda _seconds: None,
-    )
-    adapter._capture = lambda _window, path: Image.new("RGB", (500, 700), "white").save(path)
-
-    assert adapter.send_message("投資顧問", "AI 回覆") is False
-    assert (tmp_path / "line-send-before.png").exists() is False
-    assert (tmp_path / "line-send-after.png").exists() is False
-
-
-def test_send_message_rejects_unrelated_right_side_motion_when_input_did_not_clear(tmp_path: Path):
-    adapter = LineMacAdapter(
-        cache_dir=tmp_path,
-        runner=lambda *_args, **_kwargs: Result(),
-        mouse=FakeMouse(),
-        clipboard=FakeClipboard(),
-        sleeper=lambda _seconds: None,
-    )
-    captures = 0
-
-    def capture(_window, path):
-        nonlocal captures
-        image = Image.new("RGB", (500, 700), "white")
-        draw = ImageDraw.Draw(image)
-        draw.rectangle((180, 650, 320, 665), fill="black")
-        draw.rectangle((350 + (captures * 10), 500, 470, 550), fill="black")
-        image.save(path)
-        captures += 1
-
-    adapter._capture = capture
-
-    assert adapter.send_message("投資顧問", "AI 回覆") is False
 
 
 def test_send_message_refuses_a_different_chat_window(tmp_path: Path):
