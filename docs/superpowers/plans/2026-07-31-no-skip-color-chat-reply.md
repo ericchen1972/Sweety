@@ -359,7 +359,7 @@ rtk git commit -m "docs: complete color-based reply rollout"
 rtk git push origin main
 ```
 
-- [ ] **Step 6: Confirm the final canonical state**
+- [x] **Step 6: Confirm the final canonical state**
 
 ```bash
 rtk git diff --check
