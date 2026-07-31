@@ -60,6 +60,15 @@ STATUS_COPY = {
     },
 }
 
+AI_TIMEOUT_ALERT_COPY = {
+    "zh-TW": "AI 目前沒有回應，請切換 AI 模型或稍後再試。",
+    "en": "AI is not responding. Switch AI models or try again later.",
+}
+
+
+def ai_timeout_alert_copy(locale: str) -> str:
+    return AI_TIMEOUT_ALERT_COPY["zh-TW" if locale == "zh-TW" else "en"]
+
 
 def status_text(locale: str, snapshot: dict[str, Any]) -> str:
     language = "zh-TW" if locale == "zh-TW" else "en"
@@ -267,11 +276,29 @@ class PanelWindowController(NSObject):
         content.addSubview_(self.version_label)
 
         selected_title = "已勾選對象" if self.locale == "zh-TW" else "Selected targets"
-        content.addSubview_(_label(selected_title, (32, 344, 180, 20), 13))
-        self.count_label = _label("0", (32, 292, 180, 52), 42, True)
+        content.addSubview_(_label(selected_title, (32, 356, 180, 20), 13))
+        self.count_label = _label("0", (32, 304, 180, 52), 42, True)
         content.addSubview_(self.count_label)
-        self.status_label = _label("", (32, 244, 356, 28), 13)
+        self.status_label = _label("", (32, 270, 356, 28), 13)
         content.addSubview_(self.status_label)
+
+        self.ai_timeout_alert = NSView.alloc().initWithFrame_(NSMakeRect(32, 220, 356, 44))
+        self.ai_timeout_alert.setWantsLayer_(True)
+        self.ai_timeout_alert.layer().setCornerRadius_(8.0)
+        self.ai_timeout_alert.layer().setBorderWidth_(1.0)
+        warning_color = NSColor.systemOrangeColor()
+        self.ai_timeout_alert.layer().setBorderColor_(
+            warning_color.colorWithAlphaComponent_(0.65).CGColor()
+        )
+        self.ai_timeout_alert.layer().setBackgroundColor_(
+            warning_color.colorWithAlphaComponent_(0.14).CGColor()
+        )
+        warning_label = _label(ai_timeout_alert_copy(self.locale), (12, 4, 332, 36), 12, True)
+        warning_label.setLineBreakMode_(NSLineBreakByWordWrapping)
+        warning_label.setMaximumNumberOfLines_(2)
+        self.ai_timeout_alert.addSubview_(warning_label)
+        self.ai_timeout_alert.setHidden_(True)
+        content.addSubview_(self.ai_timeout_alert)
 
         self.toggle_button = _panel_button("", self, "toggleMonitor:", 174, primary=True, symbol_name="play.fill")
         self.toggle_button.setKeyEquivalent_("\r")
@@ -384,6 +411,7 @@ class PanelWindowController(NSObject):
         self.toggle_button.setImage_(
             _system_symbol("stop.fill" if enabled else "play.fill", self.toggle_button.title())
         )
+        self.ai_timeout_alert.setHidden_(not bool(snapshot.get("aiTimeoutAlert")))
 
     def windowShouldClose_(self, _sender) -> bool:
         self.window.orderOut_(None)

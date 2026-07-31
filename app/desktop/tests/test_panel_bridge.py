@@ -8,6 +8,7 @@ from sweety_app.panel import (
     PanelWindowController,
     _panel_button,
     _update_note_label,
+    ai_timeout_alert_copy,
     panel_update_copy,
     panel_update_downloads,
     status_text,
@@ -19,6 +20,7 @@ from sweety_app.updates import UpdateState
 class FakeMonitor:
     def __init__(self) -> None:
         self.enabled = False
+        self.ai_timeout_alert = False
 
     def start(self) -> bool:
         changed = not self.enabled
@@ -31,7 +33,15 @@ class FakeMonitor:
         return changed
 
     def snapshot(self):
-        return {"enabled": self.enabled, "testMode": False, "status": "monitoring" if self.enabled else "stopped", "message": "", "currentTarget": None, "selectedTargetCount": 0}
+        return {
+            "enabled": self.enabled,
+            "testMode": False,
+            "status": "monitoring" if self.enabled else "stopped",
+            "message": "",
+            "currentTarget": None,
+            "aiTimeoutAlert": self.ai_timeout_alert,
+            "selectedTargetCount": 0,
+        }
 
 
 def test_bridge_reports_count_and_controls_monitor(tmp_path):
@@ -60,6 +70,23 @@ def test_bridge_reports_count_and_controls_monitor(tmp_path):
 def test_status_text_is_localized():
     assert status_text("zh-TW", {"status": "target_required"}) == "請先勾選至少一個對象"
     assert status_text("en", {"status": "line_window_required"}) == "Open the LINE main window first"
+
+
+def test_ai_timeout_alert_copy_is_localized():
+    assert ai_timeout_alert_copy("zh-TW") == "AI 目前沒有回應，請切換 AI 模型或稍後再試。"
+    assert ai_timeout_alert_copy("en") == "AI is not responding. Switch AI models or try again later."
+    assert ai_timeout_alert_copy("unsupported") == "AI is not responding. Switch AI models or try again later."
+
+
+def test_bridge_preserves_monitor_timeout_alert_snapshot(tmp_path):
+    database = Database(tmp_path / "panel-timeout.sqlite3")
+    database.migrate()
+    repo = Repository(database)
+    monitor = FakeMonitor()
+    monitor.ai_timeout_alert = True
+    bridge = PanelBridge(repo, monitor, quit_callback=lambda: None)
+
+    assert bridge.snapshot()["aiTimeoutAlert"] is True
 
 
 def test_panel_button_uses_requested_system_symbol():
@@ -169,9 +196,10 @@ def test_native_panel_keeps_base_size_without_an_update_and_expands_only_once(tm
     database.migrate()
     repo = Repository(database)
     state = UpdateState()
+    monitor = FakeMonitor()
     bridge = PanelBridge(
         repo,
-        FakeMonitor(),
+        monitor,
         update_state=state,
         quit_callback=lambda: None,
     )
@@ -180,6 +208,13 @@ def test_native_panel_keeps_base_size_without_an_update_and_expands_only_once(tm
 
     try:
         assert tuple(controller.window.frame().size) == (420.0, 500.0)
+        assert controller.ai_timeout_alert.isHidden() is True
+        monitor.ai_timeout_alert = True
+        controller.refresh_(None)
+        assert controller.ai_timeout_alert.isHidden() is False
+        monitor.ai_timeout_alert = False
+        controller.refresh_(None)
+        assert controller.ai_timeout_alert.isHidden() is True
         original_header_y = controller.logo_view.frame().origin.y
         state.finish({
             "checked": True,
