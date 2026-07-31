@@ -151,14 +151,14 @@ rtk git status --short
 
 Expected: every homepage test passes, `git diff --check` emits no errors, and `videos/` remains untracked and untouched.
 
-- [ ] **Step 2: Commit only the planned restoration files**
+- [x] **Step 2: Commit only the planned restoration files**
 
 ```bash
 rtk git add web/homepage.js web/index.html web/homepage.css web/tests/homepage.test.mjs docs/superpowers/plans/2026-07-31-homepage-tutorial-restoration.md
 rtk git commit -m "fix: restore homepage tutorial video"
 ```
 
-- [ ] **Step 3: Publish through the website-only helper**
+- [x] **Step 3: Publish through the website-only helper**
 
 Run:
 
@@ -168,7 +168,7 @@ rtk php app/tools/deploy_homepage.php
 
 Expected: homepage assets upload successfully; the helper does not invoke desktop App build or release scripts.
 
-- [ ] **Step 4: Verify the live homepage**
+- [x] **Step 4: Verify the live homepage**
 
 Open `https://sweety.tw/?verify=<asset-version>` and verify:
 
