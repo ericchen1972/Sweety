@@ -8,6 +8,14 @@ DESKTOP_DIR = Path(__file__).resolve().parents[1]
 SOURCE_DIR = DESKTOP_DIR / "src" / "sweety_app"
 
 
+def test_monitor_has_no_ai_skip_branch():
+    monitor_source = (SOURCE_DIR / "monitor.py").read_text()
+
+    assert "decision.should_reply" not in monitor_source
+    assert "ai_decision_skipped" not in monitor_source
+    assert "ai_decision_skip" not in monitor_source
+
+
 def test_startup_schedules_catalog_sync_before_metrics_report():
     module = ast.parse((SOURCE_DIR / "__main__.py").read_text())
     main = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "main")

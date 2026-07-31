@@ -273,7 +273,6 @@ class MonitorController:
                     self._log(
                         "ai_request_succeeded",
                         target=target_name,
-                        action=decision.action,
                         incoming_summary=decision.incoming_summary,
                         msg_reply=decision.msg_reply,
                     )
@@ -287,11 +286,6 @@ class MonitorController:
                     self._log("target_interrupted", target=target_name, stage="after_ai_request")
                     self._close_chat(target_name, "stop_after_ai_request")
                     return False
-                if not decision.should_reply:
-                    self._log("ai_decision_skipped", target=target_name, action=decision.action)
-                    self._close_chat(target_name, "ai_decision_skip")
-                    continue
-
                 delay = random.uniform(
                     float(settings["reply_delay_min_seconds"]),
                     float(settings["reply_delay_max_seconds"]),

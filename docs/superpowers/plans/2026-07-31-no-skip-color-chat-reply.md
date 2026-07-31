@@ -26,7 +26,7 @@ The generic diagnostics serializer test may continue using an arbitrary field na
 **Files:**
 - Modify: `app/desktop/tests/test_ai.py`
 
-- [ ] **Step 1: Rewrite the reply fixture and raw JSON helper without `action`**
+- [x] **Step 1: Rewrite the reply fixture and raw JSON helper without `action`**
 
 Use this helper shape:
 
@@ -56,7 +56,7 @@ ai_module.ReplyDecision(
 
 Do not leave any valid `ReplyDecision(action="reply", ...)` fixture.
 
-- [ ] **Step 2: Replace left/right and skip prompt assertions with the color contract**
+- [x] **Step 2: Replace left/right and skip prompt assertions with the color contract**
 
 In `test_prompt_isolates_persona_and_sends_role_preserving_history_with_image`, assert both the system contract and image instruction include:
 
@@ -81,7 +81,7 @@ for prompt in (system_prompt, image_instruction):
 
 Keep the existing assertions for stickers, photos, videos, voice/audio messages, emoji-only content, reply-style quoted boxes, visible-only extraction, persona isolation, bounded history, and the image data URL.
 
-- [ ] **Step 3: Require exactly two non-empty response fields**
+- [x] **Step 3: Require exactly two non-empty response fields**
 
 Change the provider/schema assertion to:
 
@@ -113,7 +113,7 @@ def test_reply_decision_schema_rejects_invalid_or_extra_fields(payload):
 
 Update `test_reply_decision_preserves_one_condensed_visible_batch` to assert trimmed values and remove the `should_reply` assertion.
 
-- [ ] **Step 4: Run the AI tests and confirm RED**
+- [x] **Step 4: Run the AI tests and confirm RED**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_ai.py
@@ -127,7 +127,7 @@ Expected: failures show that the current schema still requires/accepts `action`,
 - Modify: `app/desktop/src/sweety_app/ai.py`
 - Test: `app/desktop/tests/test_ai.py`
 
-- [ ] **Step 1: Simplify `ReplyDecision` to two required non-empty fields**
+- [x] **Step 1: Simplify `ReplyDecision` to two required non-empty fields**
 
 Remove `Literal` and `model_validator` from the imports. Replace the model with:
 
@@ -149,7 +149,7 @@ class ReplyDecision(BaseModel):
 
 Do not add a replacement action flag or a `should_reply` property.
 
-- [ ] **Step 2: Replace `SCREENSHOT_REPLY_CONTRACT` with the approved communication-screen rules**
+- [x] **Step 2: Replace `SCREENSHOT_REPLY_CONTRACT` with the approved communication-screen rules**
 
 Use a contract with these exact semantics:
 
@@ -167,7 +167,7 @@ LINE 通訊 App 截圖辨識與回覆規則：
 """.strip()
 ```
 
-- [ ] **Step 3: Align the image-specific instruction with the same contract**
+- [x] **Step 3: Align the image-specific instruction with the same contract**
 
 Replace the text item in the final multimodal user message with:
 
@@ -186,7 +186,7 @@ Replace the text item in the final multimodal user message with:
 )
 ```
 
-- [ ] **Step 4: Run focused AI tests and confirm GREEN**
+- [x] **Step 4: Run focused AI tests and confirm GREEN**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_ai.py
@@ -202,7 +202,7 @@ Expected: every AI test passes, including structured-output retry, raw-response 
 - Modify: `app/desktop/src/sweety_app/monitor.py`
 - Test: `app/desktop/tests/test_ai.py`
 
-- [ ] **Step 1: Update monitor fixtures and successful-flow expectations**
+- [x] **Step 1: Update monitor fixtures and successful-flow expectations**
 
 Change every valid monitor fixture to omit `action`, including the default:
 
@@ -229,7 +229,7 @@ assert "action" not in ai_event
 
 Change the retained-screenshot test to use a valid reply, expect `run_cycle()` to be `True`, and assert that the reply was sent while `screenshot_retained` contains `/tmp/test-line-chat.png`.
 
-- [ ] **Step 2: Add a source-level regression guard against skip returning**
+- [x] **Step 2: Add a source-level regression guard against skip returning**
 
 Add to `test_metrics_integration_contract.py`:
 
@@ -242,7 +242,7 @@ def test_monitor_has_no_ai_skip_branch():
     assert "ai_decision_skip" not in monitor_source
 ```
 
-- [ ] **Step 3: Run focused tests and confirm RED**
+- [x] **Step 3: Run focused tests and confirm RED**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q \
@@ -253,7 +253,7 @@ rtk app/desktop/.venv/bin/python -m pytest -q \
 
 Expected: monitor tests fail because production logging still accesses `decision.action`, and the source contract finds the old skip branch.
 
-- [ ] **Step 4: Remove action logging and the skip branch from the monitor**
+- [x] **Step 4: Remove action logging and the skip branch from the monitor**
 
 Change the successful AI event to:
 
@@ -277,7 +277,7 @@ if not decision.should_reply:
 
 Do not alter delay, send verification, persistence, callback, screenshot cleanup, stop interruption, or exception recovery behavior.
 
-- [ ] **Step 5: Run focused tests and confirm GREEN**
+- [x] **Step 5: Run focused tests and confirm GREEN**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q \
@@ -288,7 +288,7 @@ rtk app/desktop/.venv/bin/python -m pytest -q \
 
 Expected: all focused tests pass and no product code or reply-contract test accepts `skip`.
 
-- [ ] **Step 6: Commit the implementation**
+- [x] **Step 6: Commit the implementation**
 
 ```bash
 rtk git add \

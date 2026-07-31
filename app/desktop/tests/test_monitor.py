@@ -105,7 +105,6 @@ class FakeLine:
 @dataclass
 class FakeAi:
     decision: ReplyDecision = ReplyDecision(
-        action="reply",
         incoming_summary="你還記得那個網站嗎？",
         msg_reply="我有點忘了，是哪個？",
     )
@@ -212,7 +211,6 @@ def test_mixed_visible_batch_is_persisted_as_one_exchange_after_successful_send(
     line = FakeLine([UnreadContact(index=1, name="投資顧問")])
     ai = FakeAi(
         ReplyDecision(
-            action="reply",
             incoming_summary="對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖",
             msg_reply="有看到，我先照截圖調整版面，再跟你回報。",
         )
@@ -225,57 +223,6 @@ def test_mixed_visible_batch_is_persisted_as_one_exchange_after_successful_send(
         ("scammer", "對方先問網站進度，接著傳了一張貼圖，最後補上一張版面截圖"),
         ("assistant", "有看到，我先照截圖調整版面，再跟你回報。"),
     ]
-
-
-def test_skip_discards_capture_and_does_not_delay_send_persist_count_or_report(repo):
-    target = repo.create_target(target_payload("投資顧問"))
-    line = FakeLine([UnreadContact(index=1, name="投資顧問")])
-    delays: list[float] = []
-    reports: list[bool] = []
-    controller = MonitorController(
-        repo,
-        line,
-        FakeAi(ReplyDecision(action="skip", incoming_summary="", msg_reply="")),
-        sleeper=lambda seconds: delays.append(seconds),
-        on_exchange_committed=lambda: reports.append(True),
-    )
-    controller.start(background=False)
-
-    assert controller.run_cycle() is False
-    assert line.discarded == [Path("/tmp/test-line-chat.png")]
-    assert line.closed == 1
-    assert delays == []
-    assert line.sent == []
-    assert repo.list_messages(target["id"]) == []
-    assert repo.get_target(target["id"])["round_trips"] == 0
-    assert reports == []
-
-
-def test_skip_logs_ai_decision_and_close_reason(repo, caplog, diagnostics_enabled):
-    repo.create_target(target_payload("Rose"))
-    logger = logging.getLogger("test.sweety.monitor.skip")
-    controller = MonitorController(
-        repo,
-        FakeLine([UnreadContact(index=1, name="Rose")]),
-        FakeAi(ReplyDecision(action="skip", incoming_summary="", msg_reply="")),
-        sleeper=lambda _seconds: None,
-        logger=logger,
-    )
-    controller.start(background=False)
-
-    with caplog.at_level(logging.INFO, logger=logger.name):
-        assert controller.run_cycle() is False
-
-    events = [json.loads(record.message) for record in caplog.records if record.name == logger.name]
-    ai_event = next(event for event in events if event["event"] == "ai_request_succeeded")
-    assert ai_event["target"] == "Rose"
-    assert ai_event["action"] == "skip"
-    assert ai_event["incoming_summary"] == ""
-    assert ai_event["msg_reply"] == ""
-    assert any(
-        event["event"] == "chat_close_started" and event["reason"] == "ai_decision_skip"
-        for event in events
-    )
 
 
 def test_successful_committed_exchange_triggers_metrics_report_once(repo):
@@ -302,7 +249,7 @@ def test_successful_cycle_logs_stage_events_and_ai_decision(repo, caplog, diagno
     controller = MonitorController(
         repo,
         line,
-        FakeAi(ReplyDecision(action="reply", incoming_summary="對方最後一則訊息", msg_reply="這是我的回覆")),
+        FakeAi(ReplyDecision(incoming_summary="對方最後一則訊息", msg_reply="這是我的回覆")),
         sleeper=lambda _seconds: None,
         logger=logger,
     )
@@ -338,13 +285,13 @@ def test_successful_cycle_logs_stage_events_and_ai_decision(repo, caplog, diagno
         "cycle_completed",
     ]
     ai_event = next(event for event in events if event["event"] == "ai_request_succeeded")
-    assert {key: ai_event[key] for key in ("event", "target", "action", "incoming_summary", "msg_reply")} == {
+    assert {key: ai_event[key] for key in ("event", "target", "incoming_summary", "msg_reply")} == {
         "event": "ai_request_succeeded",
         "target": "Rose",
-        "action": "reply",
         "incoming_summary": "對方最後一則訊息",
         "msg_reply": "這是我的回覆",
     }
+    assert "action" not in ai_event
     assert ai_event["timestamp"].endswith("+00:00")
     assert repo.get_target(target["id"])["round_trips"] == 1
 
@@ -359,20 +306,21 @@ def test_diagnostic_cycle_logs_retained_screenshot_path(repo, caplog, diagnostic
     controller = MonitorController(
         repo,
         line,
-        FakeAi(ReplyDecision(action="skip", incoming_summary="", msg_reply="")),
+        FakeAi(ReplyDecision(incoming_summary="對方的新訊息", msg_reply="這是我的回覆")),
         sleeper=lambda _seconds: None,
         logger=logger,
     )
     controller.start(background=False)
 
     with caplog.at_level(logging.INFO, logger=logger.name):
-        assert controller.run_cycle() is False
+        assert controller.run_cycle() is True
 
     events = [json.loads(record.message) for record in caplog.records if record.name == logger.name]
     retained = next(event for event in events if event["event"] == "screenshot_retained")
     assert retained["target"] == "Rose"
     assert retained["path"] == "/tmp/test-line-chat.png"
     assert all(event["event"] != "screenshot_discarded" for event in events)
+    assert line.sent == [("Rose", "這是我的回覆")]
 
 
 def test_failed_send_does_not_trigger_metrics_report(repo):

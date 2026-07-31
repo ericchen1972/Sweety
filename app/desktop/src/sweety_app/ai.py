@@ -5,10 +5,10 @@ import json
 import logging
 import mimetypes
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from openai import OpenAI
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from .catalog import BASE_PERSONA_TEXT
 from .diagnostics import log_event
@@ -29,15 +29,15 @@ IMMUTABLE_SAFETY_RULES = """
 """.strip()
 
 SCREENSHOT_REPLY_CONTRACT = """
-LINE 截圖辨識與回覆規則：
-1. 截圖左側的文字氣泡、貼圖、照片、影片、語音訊息、其他音訊或表情符號都是對方傳來的；右側是使用者自己傳出的。
-2. 先查看畫面最下方，也就是最底下一則可見訊息，判斷它位於左側或右側。最底下一則可見訊息位於左側時，action 必須使用 reply，不得使用 skip；即使它只有貼圖、照片、影片、語音、其他音訊或純表情符號也一樣。
-3. 最底下一則可見訊息位於左側時，再找出它上方最接近的一則右側訊息，依畫面由上到下收集該右側訊息下方所有可見的左側訊息。若畫面中沒有任何右側訊息，就收集畫面中所有可見的左側訊息。
-4. 「回覆式 box」是 LINE 顯示在新訊息內的引用預覽，box 內可能是引用的使用者舊訊息。它不是對方本次新傳來的內容；遇到這種訊息時，只收集 box 外對方本次實際傳來的文字、貼圖、照片、影片、語音、其他音訊或表情符號；box 內引用的使用者舊訊息請不要加入 incoming_summary。
-5. 文字、貼圖、照片、影片、語音訊息、其他音訊與純表情符號都算訊息。incoming_summary 只保留對方本次新訊息本身的文字，依原本先後順序記錄；非文字內容使用簡短客觀描述，畫面看得到長度時一併保留，例如「對方傳來一則影片」或「對方傳來一則 52 秒語音訊息」。不要加上「[對方]」、「對方問」、「對方說」或「我方回覆」等標籤，不要改寫成對話摘要，也不要串接使用者自己的訊息。
-6. 只能根據目前可見畫面判斷，不可向上捲動、推測或補入截圖上方看不到的內容。
-7. 有收集到新訊息時 action 使用 reply，並根據最近歷史、人設和完整 incoming_summary 產生一則自然、簡短、能延續對話的回覆。
-8. 只有最底下一則可見訊息位於右側，亦即沒有待回覆的左側訊息時，action 才能使用 skip；incoming_summary 和 msg_reply 都必須是空字串。
+LINE 通訊 App 截圖辨識與回覆規則：
+1. 這是一張 LINE 通訊 App 的對話畫面。綠色背景的文字氣泡或內容是使用者自己傳出的；灰色背景的文字氣泡或內容是對方傳來的。不要使用左右位置判斷訊息屬於誰。
+2. 系統只會在偵測到已監控聯絡人有新訊息後開啟對話，因此每次都必須整理新訊息並產生回覆，不存在略過或不回覆的選項。
+3. 找出畫面中最下方的綠色背景訊息，依畫面由上到下收集它之後所有可見的灰色背景訊息。若畫面中沒有綠色背景訊息，就收集畫面中所有可見的灰色背景訊息。
+4. 「回覆式 box」是 LINE 顯示在新訊息內的引用預覽，box 內可能是引用的使用者舊訊息。它不是對方本次新傳來的內容；只收集 box 外對方本次實際傳來的內容，box 內引用內容不要加入 incoming_summary。
+5. 文字、貼圖、照片、影片、語音訊息、其他音訊與純表情符號都算訊息。incoming_summary 只保留本次收集到的灰色內容，依原本先後順序記錄；非文字內容使用簡短客觀描述，畫面看得到長度時一併保留，例如「對方傳來一則影片」或「對方傳來一則 52 秒語音訊息」。
+6. incoming_summary 不要加上「[對方]」、「對方問」、「對方說」或「我方回覆」等標籤，不要改寫成對話敘事，也不要加入任何綠色內容。
+7. 只能根據目前可見畫面判斷，不可向上捲動、推測或補入截圖上方看不到的內容。
+8. 根據最近歷史、人設和完整 incoming_summary，產生一則自然、簡短、能延續對話的 msg_reply。incoming_summary 與 msg_reply 都不可為空。
 """.strip()
 
 PERSONA_CLASSIFIER_PROMPT = """
@@ -54,26 +54,16 @@ class AiError(RuntimeError):
 class ReplyDecision(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    action: Literal["reply", "skip"]
     incoming_summary: str
     msg_reply: str
 
     @field_validator("incoming_summary", "msg_reply")
     @classmethod
-    def strip_text(cls, value: str) -> str:
-        return value.strip()
-
-    @model_validator(mode="after")
-    def validate_action_fields(self) -> ReplyDecision:
-        if self.action == "reply" and (not self.incoming_summary or not self.msg_reply):
-            raise ValueError("reply requires incoming_summary and msg_reply")
-        if self.action == "skip" and (self.incoming_summary or self.msg_reply):
-            raise ValueError("skip requires empty incoming_summary and msg_reply")
-        return self
-
-    @property
-    def should_reply(self) -> bool:
-        return self.action == "reply"
+    def normalize_required_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("reply fields must not be blank")
+        return normalized
 
 
 class PersonaClassification(BaseModel):
@@ -119,18 +109,17 @@ def build_messages(
                 {
                     "type": "text",
                     "text": (
-                        "請先判斷畫面最底下一則可見訊息位於左側或右側。"
-                        "若最底下一則位於左側，必須 action=reply，不得 skip；照片、貼圖、影片、語音、其他音訊與純表情符號也算左側訊息。"
-                        "接著找出它上方最接近的一則右側訊息，也就是畫面中最下方的右側訊息，"
-                        "依畫面由上到下收集它下方所有可見的左側訊息。"
-                        "若畫面沒有任何右側訊息，就收集畫面中所有可見的左側訊息。"
-                        "若左側訊息含有「回覆式 box」引用預覽，只收集 box 外對方本次實際傳來的內容，"
-                        "不要把 box 內引用的使用者舊訊息重複加入 incoming_summary。"
+                        "這是一張 LINE 通訊 App 的對話畫面。綠色背景代表使用者自己傳出的內容，"
+                        "灰色背景代表對方傳來的內容；不要使用左右位置判斷訊息屬於誰。"
+                        "系統已確認這個對話有新訊息，因此必須產生回覆。"
+                        "請找出畫面中最下方的綠色背景訊息，依畫面由上到下收集它之後所有可見的灰色背景訊息；"
+                        "若畫面沒有綠色背景訊息，就收集所有可見的灰色背景訊息。"
+                        "若灰色訊息含有「回覆式 box」引用預覽，只收集 box 外對方本次實際傳來的內容，"
+                        "不要把 box 內引用內容重複加入 incoming_summary。"
                         "文字、貼圖、照片、影片、語音、其他音訊與純表情符號都要依順序記錄進同一個 incoming_summary；"
                         "非文字內容使用簡短客觀描述，並保留畫面上看得到的長度。"
                         "只處理這張截圖目前看得到的內容，不可向上捲動、推測或補入畫面外的訊息。"
-                        "只有最底下一則可見訊息位於右側時，才使用 action=skip，"
-                        "並讓 incoming_summary 與 msg_reply 保持空白；否則使用 action=reply。"
+                        "請回傳非空的 incoming_summary 與 msg_reply。"
                     ),
                 },
                 {"type": "image_url", "image_url": {"url": screenshot_data_url}},
