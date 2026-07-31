@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sweety_app.ai import AiError, ReplyDecision
+from sweety_app.ai import AiError, AiTimeoutError, ReplyDecision
 from sweety_app.database import Database
 from sweety_app.diagnostics import configure_diagnostics
 from sweety_app.monitor import MonitorController, UnreadContact, match_unread_target
@@ -458,6 +458,81 @@ def test_ai_failure_does_not_send_or_persist(repo, caplog, diagnostics_enabled):
     assert failure["stage"] == "ai_request"
     assert failure["error_type"] == "AiError"
     assert failure["error"] == "AI returned an invalid reply"
+
+
+def test_ai_timeout_shows_alert_closes_chat_and_persists_nothing(repo):
+    target = repo.create_target(target_payload("Rose"))
+    line = FakeLine([UnreadContact(index=1, name="Rose")])
+
+    class TimeoutAi:
+        def generate_reply(self, **_kwargs):
+            raise AiTimeoutError("AI request timed out")
+
+    controller = MonitorController(repo, line, TimeoutAi(), sleeper=lambda _seconds: None)
+    controller.start(background=False)
+
+    assert controller.run_cycle() is False
+    assert controller.snapshot()["aiTimeoutAlert"] is True
+    assert line.closed == 1
+    assert line.sent == []
+    assert repo.list_messages(target["id"]) == []
+
+
+def test_non_timeout_ai_failure_does_not_show_alert(repo):
+    repo.create_target(target_payload("Rose"))
+    line = FakeLine([UnreadContact(index=1, name="Rose")])
+
+    class FailingAi:
+        def generate_reply(self, **_kwargs):
+            raise AiError("AI returned an invalid reply")
+
+    controller = MonitorController(repo, line, FailingAi(), sleeper=lambda _seconds: None)
+    controller.start(background=False)
+    controller.run_cycle()
+
+    assert controller.snapshot()["aiTimeoutAlert"] is False
+
+
+def test_stop_and_next_ai_execution_hide_previous_timeout_alert(repo):
+    repo.create_target(target_payload("Rose"))
+    line = FakeLine([UnreadContact(index=1, name="Rose")])
+    states_at_request: list[bool] = []
+
+    class TimeoutAi:
+        def generate_reply(self, **_kwargs):
+            states_at_request.append(controller.snapshot()["aiTimeoutAlert"])
+            raise AiTimeoutError("AI request timed out")
+
+    controller = MonitorController(repo, line, TimeoutAi(), sleeper=lambda _seconds: None)
+    controller.start(background=False)
+    controller.run_cycle()
+    assert controller.snapshot()["aiTimeoutAlert"] is True
+
+    controller.run_cycle()
+    assert states_at_request == [False, False]
+    assert controller.snapshot()["aiTimeoutAlert"] is True
+
+    controller.stop()
+    assert controller.snapshot()["aiTimeoutAlert"] is False
+
+
+def test_unread_scan_without_ai_execution_keeps_timeout_alert(repo):
+    repo.create_target(target_payload("Rose"))
+    line = FakeLine([UnreadContact(index=1, name="Rose")])
+
+    class TimeoutAi:
+        def generate_reply(self, **_kwargs):
+            raise AiTimeoutError("AI request timed out")
+
+    controller = MonitorController(repo, line, TimeoutAi(), sleeper=lambda _seconds: None)
+    controller.start(background=False)
+    controller.run_cycle()
+    assert controller.snapshot()["aiTimeoutAlert"] is True
+
+    line.contacts = []
+    controller.run_cycle()
+
+    assert controller.snapshot()["aiTimeoutAlert"] is True
 
 
 def test_capture_failure_does_not_call_ai_send_persist_or_report(repo):

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
-from .ai import ReplyDecision
+from .ai import AiTimeoutError, ReplyDecision
 from .diagnostics import log_event
 from .repositories import Repository
 
@@ -84,6 +84,7 @@ class MonitorController:
         self._status = "stopped"
         self._message = ""
         self._current_target: str | None = None
+        self._ai_timeout_alert = False
 
     def start(self, background: bool = True) -> bool:
         self._log("monitor_start_requested", background=background)
@@ -151,6 +152,7 @@ class MonitorController:
             was_enabled = self._enabled
             self._enabled = False
             self._stop_event.set()
+            self._ai_timeout_alert = False
             if was_enabled:
                 self._status = "stopped"
                 self._message = ""
@@ -166,6 +168,7 @@ class MonitorController:
                 "status": self._status,
                 "message": self._message,
                 "currentTarget": self._current_target,
+                "aiTimeoutAlert": self._ai_timeout_alert,
                 "selectedTargetCount": len(self.repository.list_monitor_targets()),
             }
 
@@ -263,6 +266,8 @@ class MonitorController:
                         history_count=len(history),
                         total_messages=total_messages,
                     )
+                    with self._lock:
+                        self._ai_timeout_alert = False
                     decision = self.ai.generate_reply(
                         target=target,
                         screenshot_path=screenshot_path,
@@ -333,6 +338,9 @@ class MonitorController:
                 stage = "chat_close"
                 self._close_chat(target_name, "exchange_completed")
             except Exception as exc:
+                if isinstance(exc, AiTimeoutError):
+                    with self._lock:
+                        self._ai_timeout_alert = True
                 self._set_status("error", f"processing_failed: {exc}", target_name)
                 self._log(
                     "target_processing_failed",
