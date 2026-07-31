@@ -180,7 +180,7 @@ Open `https://sweety.tw/?verify=<asset-version>` and verify:
 - there is no horizontal overflow or browser console error;
 - live CSS and JavaScript use the new cache version.
 
-- [ ] **Step 5: Push canonical `main` and confirm repository state**
+- [x] **Step 5: Push canonical `main` and confirm repository state**
 
 ```bash
 rtk git push origin main
