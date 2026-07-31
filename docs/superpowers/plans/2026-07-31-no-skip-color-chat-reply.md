@@ -349,7 +349,7 @@ codesign --verify --deep --strict app/desktop/dist/Sweety.app
 
 Expected: `PlistBuddy` prints `1` and `codesign` exits successfully. Leave the App stopped.
 
-- [ ] **Step 5: Record rollout completion, commit, and push `main`**
+- [x] **Step 5: Record rollout completion, commit, and push `main`**
 
 Mark completed checkboxes in this plan, then run:
 
