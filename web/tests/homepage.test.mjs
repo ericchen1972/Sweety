@@ -93,6 +93,27 @@ test('resolveLocale follows browser language preference order and fallback', () 
   assert.equal(resolveLocale([], 'zh-HK'), 'zh-TW');
 });
 
+test('tutorial video follows the resolved locale and appears immediately before FAQ', () => {
+  assert.deepEqual(homepage.getTutorialVideo('zh-TW'), {
+    id: 'w2w5HGmXxwo',
+    src: 'https://www.youtube-nocookie.com/embed/w2w5HGmXxwo',
+    title: 'Sweety 中文使用教學',
+  });
+  assert.deepEqual(homepage.getTutorialVideo('en'), {
+    id: '-qS4MGvnsa4',
+    src: 'https://www.youtube-nocookie.com/embed/-qS4MGvnsa4',
+    title: 'Sweety English tutorial',
+  });
+
+  const videoIndex = html.indexOf('class="tutorial-video-section"');
+  const faqIndex = html.indexOf('class="faq-section"');
+  assert.ok(videoIndex >= 0, 'tutorial video section should exist');
+  assert.ok(videoIndex < faqIndex, 'tutorial video should appear before FAQ');
+  assert.equal((html.match(/data-tutorial-video/g) ?? []).length, 1);
+  assert.match(html, /<iframe[^>]+data-tutorial-video[^>]+loading="lazy"[^>]+allowfullscreen/);
+  assert.match(css, /\.tutorial-video-frame\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9/s);
+});
+
 test('splitWholeHours converts non-negative whole hours to days and hours', () => {
   const { splitWholeHours } = homepage;
   assert.deepEqual(splitWholeHours(0), { days: 0, hours: 0 });

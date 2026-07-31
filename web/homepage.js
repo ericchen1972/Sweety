@@ -12,6 +12,23 @@ export const downloadConfig = Object.freeze({
   macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2441e922',
 });
 
+export const tutorialVideos = Object.freeze({
+  'zh-TW': Object.freeze({
+    id: 'w2w5HGmXxwo',
+    src: 'https://www.youtube-nocookie.com/embed/w2w5HGmXxwo',
+    title: 'Sweety 中文使用教學',
+  }),
+  en: Object.freeze({
+    id: '-qS4MGvnsa4',
+    src: 'https://www.youtube-nocookie.com/embed/-qS4MGvnsa4',
+    title: 'Sweety English tutorial',
+  }),
+});
+
+export function getTutorialVideo(locale) {
+  return tutorialVideos[locale] ?? tutorialVideos.en;
+}
+
 export function parseDownloadTotal(payload) {
   return Number.isSafeInteger(payload?.totalDownloads) && payload.totalDownloads >= 0
     ? payload.totalDownloads
@@ -172,6 +189,7 @@ export const copy = {
       permissions: ['輔助使用', '螢幕與系統錄音', '自動化'],
       windowPosition: 'Line 桌面 App 視窗位置請勿超過螢幕左側或右側邊緣，否則將造成 Sweety 辨識失敗',
     },
+    tutorialVideo: { eyebrow: 'VIDEO', title: '使用教學影片' },
     faq: {
       title: '常見問題',
       items: [
@@ -269,6 +287,7 @@ export const copy = {
       permissions: ['Accessibility', 'Screen & System Audio Recording', 'Automation'],
       windowPosition: 'Keep the LINE desktop app window fully within the left and right edges of the display, or Sweety may fail to recognize it.',
     },
+    tutorialVideo: { eyebrow: 'VIDEO', title: 'Video tutorial' },
     faq: {
       title: 'Frequently asked questions',
       items: [
@@ -448,6 +467,12 @@ function initializePage() {
     const value = valueAt(strings, element.dataset.ariaLabel);
     if (typeof value === 'string') element.setAttribute('aria-label', value);
   });
+  const tutorialVideo = document.querySelector('[data-tutorial-video]');
+  if (tutorialVideo) {
+    const video = getTutorialVideo(locale);
+    tutorialVideo.setAttribute('src', video.src);
+    tutorialVideo.setAttribute('title', video.title);
+  }
   renderList(document.querySelector('[data-list="notice.permissions"]'), strings.notice.permissions);
   const downloadCount = document.querySelector('[data-download-count]');
   const renderDownloadTotal = (total) => {

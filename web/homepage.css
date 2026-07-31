@@ -111,6 +111,10 @@ h3 { font-size: clamp(1.65rem, 2.4vw, 2.4rem); }
 .permission-list { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; list-style: none; }
 .permission-list li { padding: 8px 14px; border: 1px solid #efcfcc; border-radius: 999px; background: #fff; font-weight: 750; }
 .window-position-warning { max-width: 800px; margin: 20px 0 0; padding-top: 18px; border-top: 1px solid #efcfcc; color: #7f1d1d; font-weight: 780; }
+.tutorial-video-section { padding-top: clamp(72px, 9vw, 126px); }
+.tutorial-video-section .section-heading { margin-bottom: 28px; }
+.tutorial-video-shell { overflow: hidden; border: 1px solid var(--line); border-radius: 24px; background: #0f172a; box-shadow: 0 24px 70px rgba(35,104,169,.16); }
+.tutorial-video-frame { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
 .faq-section, .author-section { padding-block: clamp(72px, 9vw, 126px); }
 .faq-section .section-heading { margin-bottom: 28px; }
 .faq-list { display: grid; gap: 14px; }

@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `web/tests/homepage.test.mjs`
 
-- [ ] **Step 1: Add the failing regression test**
+- [x] **Step 1: Add the failing regression test**
 
 Insert after the locale-resolution test:
 
@@ -42,7 +42,7 @@ test('tutorial video follows the resolved locale and appears immediately before 
 });
 ```
 
-- [ ] **Step 2: Run the focused test and confirm RED**
+- [x] **Step 2: Run the focused test and confirm RED**
 
 Run:
 
@@ -60,7 +60,7 @@ Expected: FAIL because `homepage.getTutorialVideo` is absent.
 - Modify: `web/homepage.css`
 - Test: `web/tests/homepage.test.mjs`
 
-- [ ] **Step 1: Restore the locale-to-video contract**
+- [x] **Step 1: Restore the locale-to-video contract**
 
 Add after `downloadConfig` in `web/homepage.js`:
 
@@ -85,7 +85,7 @@ export function getTutorialVideo(locale) {
 
 Add `tutorialVideo: { eyebrow: 'VIDEO', title: '使用教學影片' }` to the Traditional Chinese copy and `tutorialVideo: { eyebrow: 'VIDEO', title: 'Video tutorial' }` to English copy. In `initializePage()`, after generic localized attributes are applied, select `[data-tutorial-video]` and assign the resolved video's `src` and `title`.
 
-- [ ] **Step 2: Restore the semantic section before FAQ**
+- [x] **Step 2: Restore the semantic section before FAQ**
 
 Insert this immediately before `.faq-section` in `web/index.html`:
 
@@ -98,7 +98,7 @@ Insert this immediately before `.faq-section` in `web/index.html`:
 </section>
 ```
 
-- [ ] **Step 3: Restore responsive styling**
+- [x] **Step 3: Restore responsive styling**
 
 Add before the FAQ styles in `web/homepage.css`:
 
@@ -109,7 +109,7 @@ Add before the FAQ styles in `web/homepage.css`:
 .tutorial-video-frame { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
 ```
 
-- [ ] **Step 4: Recalculate the homepage asset version**
+- [x] **Step 4: Recalculate the homepage asset version**
 
 Run:
 
@@ -124,7 +124,7 @@ PY
 
 Replace both `homepage.css?v=...` and `homepage.js?v=...` query values in `web/index.html` with the printed 12-character version.
 
-- [ ] **Step 5: Run the focused test and confirm GREEN**
+- [x] **Step 5: Run the focused test and confirm GREEN**
 
 Run:
 
@@ -139,7 +139,7 @@ Expected: PASS.
 **Files:**
 - Modify: `docs/superpowers/plans/2026-07-31-homepage-tutorial-restoration.md` only for checkbox tracking
 
-- [ ] **Step 1: Run complete local verification**
+- [x] **Step 1: Run complete local verification**
 
 Run:
 
