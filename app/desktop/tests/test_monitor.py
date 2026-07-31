@@ -48,11 +48,13 @@ class FakeLine:
         main_window: bool = True,
         send_success: bool = True,
         cleanup_success: bool = True,
+        capture_cleanup_result: str = "discarded",
     ) -> None:
         self.contacts = contacts
         self.main_window = main_window
         self.send_success = send_success
         self.cleanup_success = cleanup_success
+        self.capture_cleanup_result = capture_cleanup_result
         self.opened: list[str] = []
         self.sent: list[tuple[str, str]] = []
         self.closed = 0
@@ -84,9 +86,10 @@ class FakeLine:
         self.events.append("capture")
         return Path("/tmp/test-line-chat.png")
 
-    def discard_chat_capture(self, screenshot_path: Path) -> None:
+    def discard_chat_capture(self, screenshot_path: Path) -> str:
         self.events.append("discard")
         self.discarded.append(screenshot_path)
+        return self.capture_cleanup_result
 
     def send_message(self, target_name: str, reply: str) -> bool:
         assert target_name in self.opened
@@ -344,6 +347,32 @@ def test_successful_cycle_logs_stage_events_and_ai_decision(repo, caplog, diagno
     }
     assert ai_event["timestamp"].endswith("+00:00")
     assert repo.get_target(target["id"])["round_trips"] == 1
+
+
+def test_diagnostic_cycle_logs_retained_screenshot_path(repo, caplog, diagnostics_enabled):
+    repo.create_target(target_payload("Rose"))
+    line = FakeLine(
+        [UnreadContact(index=1, name="Rose")],
+        capture_cleanup_result="retained",
+    )
+    logger = logging.getLogger("test.sweety.monitor.retained")
+    controller = MonitorController(
+        repo,
+        line,
+        FakeAi(ReplyDecision(action="skip", incoming_summary="", msg_reply="")),
+        sleeper=lambda _seconds: None,
+        logger=logger,
+    )
+    controller.start(background=False)
+
+    with caplog.at_level(logging.INFO, logger=logger.name):
+        assert controller.run_cycle() is False
+
+    events = [json.loads(record.message) for record in caplog.records if record.name == logger.name]
+    retained = next(event for event in events if event["event"] == "screenshot_retained")
+    assert retained["target"] == "Rose"
+    assert retained["path"] == "/tmp/test-line-chat.png"
+    assert all(event["event"] != "screenshot_discarded" for event in events)
 
 
 def test_failed_send_does_not_trigger_metrics_report(repo):

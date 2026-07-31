@@ -42,6 +42,7 @@ def test_metrics_config_has_no_catalog_token_fallback():
 def test_packaging_injects_build_credentials_without_defaults():
     spec_source = (DESKTOP_DIR / "Sweety.spec").read_text()
     config_source = (SOURCE_DIR / "config.py").read_text()
+    main_source = (SOURCE_DIR / "__main__.py").read_text()
     app_build_source = (DESKTOP_DIR / "build_app.sh").read_text()
     dmg_build_source = (DESKTOP_DIR / "build_dmg.sh").read_text()
 
@@ -51,6 +52,7 @@ def test_packaging_injects_build_credentials_without_defaults():
     assert '"LSEnvironment": app_environment' in spec_source
     assert 'export SWEETY_LOG_ENABLED="${SWEETY_LOG_ENABLED:-1}"' in app_build_source
     assert 'SWEETY_LOG_ENABLED=0 "$DESKTOP_DIR/build_app.sh"' in dmg_build_source
+    assert "LineMacAdapter(CACHE_DIR, retain_chat_capture=LOG_ENABLED)" in main_source
     assert "SWEETY_APP_TOKEN" not in spec_source
     assert "_EMBEDDED_AGNES_KEY_B64" not in config_source
     assert "base64.b64decode" not in config_source

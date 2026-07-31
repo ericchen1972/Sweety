@@ -16,7 +16,7 @@
 - Modify: `app/desktop/tests/test_line_mac.py`
 - Modify: `app/desktop/src/sweety_app/line_mac.py`
 
-- [ ] **Step 1: Add failing adapter tests**
+- [x] **Step 1: Add failing adapter tests**
 
 Add tests that construct diagnostic and release adapters and assert:
 
@@ -97,7 +97,7 @@ def test_diagnostic_adapter_startup_preserves_complete_and_removes_partial(tmp_p
     assert adapter.chat_next_path.exists() is False
 ```
 
-- [ ] **Step 2: Run focused adapter tests and confirm RED**
+- [x] **Step 2: Run focused adapter tests and confirm RED**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_line_mac.py
@@ -105,7 +105,7 @@ rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_line_mac.py
 
 Expected: failures for the unknown `retain_chat_capture` argument and missing `chat_next_path`.
 
-- [ ] **Step 3: Implement atomic replacement and cleanup results**
+- [x] **Step 3: Implement atomic replacement and cleanup results**
 
 Update `LineMacAdapter.__init__`:
 
@@ -162,7 +162,7 @@ def discard_chat_capture(self, screenshot_path: str | Path) -> str:
     return "discarded"
 ```
 
-- [ ] **Step 4: Run focused adapter tests and confirm GREEN**
+- [x] **Step 4: Run focused adapter tests and confirm GREEN**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_line_mac.py
@@ -178,7 +178,7 @@ Expected: all adapter tests pass.
 - Modify: `app/desktop/src/sweety_app/monitor.py`
 - Modify: `app/desktop/src/sweety_app/__main__.py`
 
-- [ ] **Step 1: Add failing monitor and entrypoint tests**
+- [x] **Step 1: Add failing monitor and entrypoint tests**
 
 Change `FakeLine` to accept `capture_cleanup_result: str = "discarded"` and return it from `discard_chat_capture()`. Add a test whose fake returns `"retained"` and assert the event list contains `screenshot_retained` but not `screenshot_discarded`.
 
@@ -190,7 +190,7 @@ main_source = (SOURCE_DIR / "__main__.py").read_text()
 assert "LineMacAdapter(CACHE_DIR, retain_chat_capture=LOG_ENABLED)" in main_source
 ```
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_monitor.py app/desktop/tests/test_metrics_integration_contract.py
@@ -198,7 +198,7 @@ rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_monitor.py 
 
 Expected: monitor still logs `screenshot_discarded`, and the entrypoint does not pass `LOG_ENABLED`.
 
-- [ ] **Step 3: Implement event and entrypoint wiring**
+- [x] **Step 3: Implement event and entrypoint wiring**
 
 Update the adapter protocol:
 
@@ -222,7 +222,7 @@ Pass the global diagnostic flag in the desktop entrypoint:
 line = LineMacAdapter(CACHE_DIR, retain_chat_capture=LOG_ENABLED)
 ```
 
-- [ ] **Step 4: Run focused tests and confirm GREEN**
+- [x] **Step 4: Run focused tests and confirm GREEN**
 
 ```bash
 rtk app/desktop/.venv/bin/python -m pytest -q app/desktop/tests/test_monitor.py app/desktop/tests/test_metrics_integration_contract.py
@@ -235,7 +235,7 @@ Expected: all focused tests pass.
 **Files:**
 - Modify: `docs/superpowers/plans/2026-07-31-retain-last-chat-screenshot.md` for checkbox tracking
 
-- [ ] **Step 1: Run the complete desktop test suite and diff checks**
+- [x] **Step 1: Run the complete desktop test suite and diff checks**
 
 ```bash
 rtk .venv/bin/python -m pytest -q

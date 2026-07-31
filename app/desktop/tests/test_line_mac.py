@@ -179,6 +179,94 @@ def test_capture_visible_chat_removes_partial_screenshot_when_capture_fails(tmp_
     assert adapter.chat_path.exists() is False
 
 
+def test_diagnostic_capture_replaces_previous_completed_screenshot_atomically(tmp_path: Path):
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        retain_chat_capture=True,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=FakeMouse(),
+        sleeper=lambda _seconds: None,
+    )
+    adapter.chat_path.write_bytes(b"previous complete screenshot")
+    adapter._capture = lambda _window, path: path.write_bytes(b"new complete screenshot")
+
+    screenshot = adapter.capture_visible_chat("投資顧問")
+
+    assert screenshot == adapter.chat_path
+    assert adapter.chat_path.read_bytes() == b"new complete screenshot"
+    assert adapter.chat_next_path.exists() is False
+
+
+def test_failed_diagnostic_capture_preserves_previous_completed_screenshot(tmp_path: Path):
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        retain_chat_capture=True,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=FakeMouse(),
+        sleeper=lambda _seconds: None,
+    )
+    adapter.chat_path.write_bytes(b"previous complete screenshot")
+
+    def fail_after_write(_window, path):
+        path.write_bytes(b"partial screenshot")
+        raise RuntimeError("screen capture failed")
+
+    adapter._capture = fail_after_write
+
+    with pytest.raises(RuntimeError, match="screen capture failed"):
+        adapter.capture_visible_chat("投資顧問")
+
+    assert adapter.chat_path.read_bytes() == b"previous complete screenshot"
+    assert adapter.chat_next_path.exists() is False
+
+
+def test_diagnostic_cleanup_retains_only_the_adapter_screenshot(tmp_path: Path):
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        retain_chat_capture=True,
+        runner=lambda *_args, **_kwargs: Result(),
+    )
+    adapter.chat_path.write_bytes(b"sensitive chat screenshot")
+    other = tmp_path / "other.png"
+    other.write_bytes(b"keep")
+
+    assert adapter.discard_chat_capture(adapter.chat_path) == "retained"
+    assert adapter.discard_chat_capture(other) == "ignored"
+    assert adapter.chat_path.read_bytes() == b"sensitive chat screenshot"
+    assert other.read_bytes() == b"keep"
+
+
+def test_release_adapter_startup_and_cleanup_remove_chat_screenshots(tmp_path: Path):
+    (tmp_path / "line-chat.png").write_bytes(b"old complete screenshot")
+    (tmp_path / "line-chat.next.png").write_bytes(b"old partial screenshot")
+
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        retain_chat_capture=False,
+        runner=lambda *_args, **_kwargs: Result(),
+    )
+
+    assert adapter.chat_path.exists() is False
+    assert adapter.chat_next_path.exists() is False
+    adapter.chat_path.write_bytes(b"current screenshot")
+    assert adapter.discard_chat_capture(adapter.chat_path) == "discarded"
+    assert adapter.chat_path.exists() is False
+
+
+def test_diagnostic_adapter_startup_preserves_complete_and_removes_partial(tmp_path: Path):
+    (tmp_path / "line-chat.png").write_bytes(b"last complete screenshot")
+    (tmp_path / "line-chat.next.png").write_bytes(b"stale partial screenshot")
+
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        retain_chat_capture=True,
+        runner=lambda *_args, **_kwargs: Result(),
+    )
+
+    assert adapter.chat_path.read_bytes() == b"last complete screenshot"
+    assert adapter.chat_next_path.exists() is False
+
+
 def test_discard_chat_capture_removes_only_the_adapter_screenshot(tmp_path: Path):
     adapter = LineMacAdapter(cache_dir=tmp_path, runner=lambda *_args, **_kwargs: Result())
     adapter.chat_path.write_bytes(b"sensitive chat screenshot")

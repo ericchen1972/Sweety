@@ -124,7 +124,7 @@ def main() -> None:
         SWEETY_METRICS_APP_TOKEN,
     )
     permission_status = check_permissions(prompt=True)
-    line = LineMacAdapter(CACHE_DIR)
+    line = LineMacAdapter(CACHE_DIR, retain_chat_capture=LOG_ENABLED)
     ai = AiClient(agnes_key=BUNDLED_AGNES_KEY, repository=repository)
     monitor = MonitorController(
         repository,

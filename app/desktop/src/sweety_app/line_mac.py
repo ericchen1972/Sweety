@@ -89,6 +89,7 @@ class LineMacAdapter:
         self,
         cache_dir: str | Path,
         *,
+        retain_chat_capture: bool = False,
         runner: Callable[..., Any] = subprocess.run,
         mouse: Any | None = None,
         clipboard: Any | None = None,
@@ -97,6 +98,7 @@ class LineMacAdapter:
     ) -> None:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.retain_chat_capture = retain_chat_capture
         self.runner = runner
         self.mouse = mouse
         self.clipboard = clipboard
@@ -104,6 +106,10 @@ class LineMacAdapter:
         self._ocr_engine = ocr
         self.contact_list_path = self.cache_dir / "line-contacts.png"
         self.chat_path = self.cache_dir / "line-chat.png"
+        self.chat_next_path = self.cache_dir / "line-chat.next.png"
+        self.chat_next_path.unlink(missing_ok=True)
+        if not self.retain_chat_capture:
+            self.chat_path.unlink(missing_ok=True)
 
     def main_window_exists(self) -> bool:
         return self._main_window() is not None
@@ -176,17 +182,21 @@ end tell'''
         self._mouse().scroll(-2000)
         self.sleeper(0.5)
         try:
-            self._capture(chat, self.chat_path)
+            self._capture(chat, self.chat_next_path)
+            self.chat_next_path.replace(self.chat_path)
         except Exception:
-            self.chat_path.unlink(missing_ok=True)
+            self.chat_next_path.unlink(missing_ok=True)
             raise
         return self.chat_path
 
-    def discard_chat_capture(self, screenshot_path: str | Path) -> None:
+    def discard_chat_capture(self, screenshot_path: str | Path) -> str:
         path = Path(screenshot_path)
         if path != self.chat_path:
-            return
+            return "ignored"
+        if self.retain_chat_capture:
+            return "retained"
         path.unlink(missing_ok=True)
+        return "discarded"
 
     def send_message(self, target_name: str, reply: str) -> bool:
         chat = next((item for item in self._windows() if item["name"] == target_name), None)
