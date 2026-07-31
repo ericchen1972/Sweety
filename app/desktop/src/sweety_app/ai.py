@@ -7,7 +7,7 @@ import mimetypes
 from pathlib import Path
 from typing import Any
 
-from openai import OpenAI
+from openai import APITimeoutError, OpenAI
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .catalog import BASE_PERSONA_TEXT
@@ -48,6 +48,10 @@ PERSONA_CLASSIFIER_PROMPT = """
 
 
 class AiError(RuntimeError):
+    pass
+
+
+class AiTimeoutError(AiError):
     pass
 
 
@@ -249,6 +253,8 @@ class AiClient:
             return ReplyDecision.model_validate(decision)
         except AiError:
             raise
+        except APITimeoutError as exc:
+            raise AiTimeoutError("AI request timed out") from exc
         except Exception as exc:
             raise AiError("AI request failed") from exc
 

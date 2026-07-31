@@ -4,11 +4,13 @@ import json
 import logging
 from types import SimpleNamespace
 
+import httpx
 import pytest
+from openai import APITimeoutError
 from pydantic import ValidationError
 
 import sweety_app.ai as ai_module
-from sweety_app.ai import AiClient, AiError, build_messages, contains_external_link
+from sweety_app.ai import AiClient, AiError, AiTimeoutError, build_messages, contains_external_link
 from sweety_app.diagnostics import configure_diagnostics
 
 
@@ -160,6 +162,43 @@ class FakeStructuredClientFactory:
                 )
             )
         )
+
+
+def provider_timeout() -> APITimeoutError:
+    return APITimeoutError(
+        request=httpx.Request("POST", "https://example.test/v1/chat/completions")
+    )
+
+
+def test_generate_reply_surfaces_timeout_after_existing_retries_are_exhausted(tmp_path):
+    factory = FakeStructuredClientFactory([provider_timeout(), provider_timeout()])
+    client = AiClient(client_factory=factory, agnes_key="agnes-test")
+
+    with pytest.raises(AiTimeoutError, match="timed out"):
+        client.generate_reply(
+            target=target_payload(),
+            screenshot_path=screenshot_path(tmp_path),
+            history=[],
+            total_messages=0,
+            settings=settings(),
+        )
+
+    assert len(factory.parse_calls) == 2
+
+
+def test_generate_reply_hides_transient_timeout_when_retry_succeeds(tmp_path):
+    result = ai_module.ReplyDecision(incoming_summary="新訊息", msg_reply="正常回覆")
+    factory = FakeStructuredClientFactory([provider_timeout(), result])
+    client = AiClient(client_factory=factory, agnes_key="agnes-test")
+
+    assert client.generate_reply(
+        target=target_payload(),
+        screenshot_path=screenshot_path(tmp_path),
+        history=[],
+        total_messages=0,
+        settings=settings(),
+    ) == result
+    assert len(factory.parse_calls) == 2
 
 
 @pytest.mark.parametrize(
