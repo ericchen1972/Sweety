@@ -250,14 +250,14 @@ rtk git status --short
 
 Expected: every desktop test passes, diff checks are clean, and `videos/` remains untouched.
 
-- [ ] **Step 2: Commit the implementation files**
+- [x] **Step 2: Commit the implementation files**
 
 ```bash
 rtk git add app/desktop/src/sweety_app/line_mac.py app/desktop/src/sweety_app/monitor.py app/desktop/src/sweety_app/__main__.py app/desktop/tests/test_line_mac.py app/desktop/tests/test_monitor.py app/desktop/tests/test_metrics_integration_contract.py docs/superpowers/plans/2026-07-31-retain-last-chat-screenshot.md
 rtk git commit -m "fix: retain last diagnostic chat screenshot"
 ```
 
-- [ ] **Step 3: Stop the idle local App and rebuild a logging-enabled test App**
+- [x] **Step 3: Stop the idle local App and rebuild a logging-enabled test App**
 
 Confirm the monitor is stopped through `/api/monitor/status`, quit the local test App, then run:
 
@@ -267,7 +267,7 @@ rtk app/desktop/build_app.sh
 
 Expected: the App builds with `SWEETY_LOG_ENABLED=1` and passes code-sign verification. Do not start monitoring or send a LINE message as part of build verification.
 
-- [ ] **Step 4: Verify the built diagnostic contract without external messaging**
+- [x] **Step 4: Verify the built diagnostic contract without external messaging**
 
 Verify the built App's `Info.plist` has `SWEETY_LOG_ENABLED=1`. Run the focused adapter tests against an isolated temporary directory to prove that a completed screenshot survives cleanup and a failed replacement preserves the previous image.
 
