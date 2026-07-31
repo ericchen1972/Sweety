@@ -17,7 +17,8 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-f1ab09fc';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-b05babee';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2441e922';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -46,7 +47,7 @@ test('macOS release helper preserves the metrics environment and verifies the up
 
 test('Windows release helper validates and verifies the uploaded Inno Setup binary', () => {
   assert.match(windowsReleaseHelper, /web\/sftp-config\.json/);
-  assert.match(windowsReleaseHelper, /Sweety-Windows-Setup-1\.0\.1\.exe/);
+  assert.match(windowsReleaseHelper, /Sweety-Setup-1\.0\.1-Windows-x64\.exe/);
   assert.match(windowsReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-Windows-Setup-latest\.exe/);
   assert.match(windowsReleaseHelper, /fread\([^,]+,\s*2\)[^;]*===\s*['"]MZ['"]/s);
   assert.match(windowsReleaseHelper, /FTP_BINARY/);
@@ -54,10 +55,17 @@ test('Windows release helper validates and verifies the uploaded Inno Setup bina
   assert.doesNotMatch(windowsReleaseHelper, /echo[^;]*(?:password|user)/i);
 });
 
+test('homepage deployment remains website-only and never rebuilds the desktop app', () => {
+  assert.doesNotMatch(deployHelper, /build_app\.sh/);
+  assert.doesNotMatch(deployHelper, /build_dmg\.sh/);
+  assert.doesNotMatch(deployHelper, /dist\/Sweety\.app/);
+});
+
 test('production update manifest is safe for current 1.0.1 installations and deploys publicly', () => {
   assert.deepEqual(updateManifest, {
     latestVersion: '1.0.1',
     downloads: {
+      windows: expectedWindowsDownload,
       macos: expectedMacDownload,
     },
   });
@@ -65,10 +73,9 @@ test('production update manifest is safe for current 1.0.1 installations and dep
   assert.match(manifest, /['"]sweety-update\.json['"]/);
 });
 
-test('machine-readable homepage copy marks Windows as coming later', () => {
-  assert.match(llms, /目前下載：macOS/);
-  assert.match(llms, /Windows：稍後提供/);
-  assert.doesNotMatch(llms, /支援平台：Windows、macOS/);
+test('machine-readable homepage copy lists both desktop downloads', () => {
+  assert.match(llms, /目前下載：Windows、macOS/);
+  assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
 
 test('resolveLocale follows browser language preference order and fallback', () => {
@@ -194,29 +201,21 @@ test('Chinese copy preserves every supplied block and step verbatim', () => {
   });
   assert.equal(copy['zh-TW'].counter.intro, '目前 Sweety 已經消耗了詐騙總計');
   assert.equal(copy['zh-TW'].download.title, '下載 Sweety');
-  assert.deepEqual(copy['zh-TW'].instructions, {
-    title: '使用說明',
-    intro: 'Sweety 使用你閒置的電腦並操作 Line 桌面 App ，透過人物設定，讓 AI 不斷消耗詐騙的時間，請注意 - AI 不會主動與詐騙聯繫，只會被動回覆，你可以透過修改人設，讓 AI 發揮更大的拖延效果。',
-    quote: '「你拖延對方越多的時間、代表他們要付出更多的時間與人力成本、而你挽救了更多人免於被騙。」',
-    openSourceNote: '＊Sweety 是一款完全免費且開源的程式，如果您對以編譯完成的執行檔有安全疑慮，歡迎透過 Git 重新編譯',
-  });
-  assert.equal(copy['zh-TW'].quick.title, '快速上手');
-  assert.deepEqual(copy['zh-TW'].quick.steps, [
-    '在騙子列表內建立對象，輸入對方的 Line 名稱',
-    '選擇要使用的人設（建議選擇與您自身類似的人設）',
-    '勾選要回覆的對象',
-    '在面板上案開始',
-    '如果你想親自接手交談，可隨時按停止',
-    '睡覺去',
+  assert.equal(copy['zh-TW'].instructions.title, '使用說明');
+  assert.equal(copy['zh-TW'].instructions.intro, 'Sweety 使用你閒置的電腦並操作 Line 桌面 App ，透過人物設定，讓 AI 不斷消耗詐騙的時間，請注意 - AI 不會主動與詐騙聯繫，只會被動回覆，你可以透過修改人設，讓 AI 發揮更大的拖延效果。');
+  assert.equal(copy['zh-TW'].instructions.quote, '「你拖延對方越多的時間、代表他們要付出更多的時間與人力成本、而你挽救了更多人免於被騙。」');
+  assert.equal(copy['zh-TW'].instructions.openSourceNote, '＊Sweety 是一款完全免費且開源的程式，如果您對以編譯完成的執行檔有安全疑慮，歡迎透過 Git 重新編譯');
+  assert.deepEqual(Object.keys(copy['zh-TW'].instructions.guide), [
+    'controlPanel', 'dashboard', 'basicSettings', 'targetList',
+    'basePersonas', 'personaDetails', 'customPersonas',
   ]);
-  assert.deepEqual(copy['zh-TW'].advanced.steps, [
-    '選擇基礎人設',
-    '點擊「增加到自訂人設」',
-    '進入自訂人設修改',
-    '在監控對象上套用自訂人設',
-  ]);
-  assert.equal(copy['zh-TW'].advanced.title, '進階設定');
-  assert.equal(copy['zh-TW'].advanced.intro, '如果您覺得預設人物不夠精準，您可以自訂人設，或者用基礎人設做延伸');
+  assert.equal(copy['zh-TW'].instructions.guide.controlPanel.title, '控制面板');
+  assert.equal(copy['zh-TW'].instructions.guide.dashboard.title, '儀表板');
+  assert.equal(copy['zh-TW'].instructions.guide.basicSettings.title, '基本設定');
+  assert.equal(copy['zh-TW'].instructions.guide.targetList.title, '騙子列表');
+  assert.equal(copy['zh-TW'].instructions.guide.basePersonas.title, '基礎人設');
+  assert.equal(copy['zh-TW'].instructions.guide.personaDetails.title, '人設詳細內容');
+  assert.equal(copy['zh-TW'].instructions.guide.customPersonas.title, '自訂人設');
   assert.equal(copy['zh-TW'].notice.title, '注意事項');
   assert.equal(copy['zh-TW'].notice.intro, 'Mac OS 系統下，需賦予 Sweety 三種權限，分別是');
   assert.deepEqual(copy['zh-TW'].notice.permissions, ['輔助使用', '螢幕與系統錄音', '自動化']);
@@ -232,6 +231,35 @@ test('copy contains no extra hero lead-in or unsupplied Chinese slogans', () => 
   assert.equal(copy['zh-TW'].footer, 'Sweety');
   assert.doesNotMatch(JSON.stringify(copy['zh-TW']), /Sweety · 主動反詐|從建立對象到啟動，只需要幾個步驟。|Anti-scam companion/);
   assert.doesNotMatch(html, /data-copy="hero\.eyebrow"|Anti-scam companion/);
+});
+
+test('homepage instructions use seven single-column illustrated guide items', () => {
+  const guideItems = [
+    ['controlPanel', 'instructions-control-panel.webp', 419, 499],
+    ['dashboard', 'instructions-dashboard.webp', 1325, 757],
+    ['basicSettings', 'instructions-basic-settings.webp', 1325, 757],
+    ['targetList', 'instructions-target-list.webp', 1325, 757],
+    ['basePersonas', 'instructions-base-personas.webp', 1325, 757],
+    ['personaDetails', 'instructions-persona-details.webp', 1325, 757],
+    ['customPersonas', 'instructions-custom-personas.webp', 1325, 757],
+  ];
+
+  assert.equal((html.match(/class="instruction-guide-item/g) ?? []).length, 7);
+  for (const [key, filename, width, height] of guideItems) {
+    assert.match(html, new RegExp(`src="images/home/${filename}"`));
+    assert.match(html, new RegExp(`data-copy="instructions\\.guide\\.${key}\\.title"`));
+    assert.match(html, new RegExp(`data-copy="instructions\\.guide\\.${key}\\.body"`));
+    assert.match(html, new RegExp(`data-alt="instructions\\.guide\\.${key}\\.imageAlt"`));
+    assert.match(html, new RegExp(`src="images/home/${filename}"[^>]+width="${width}"[^>]+height="${height}"`));
+  }
+  assert.equal(
+    homepage.copy['zh-TW'].instructions.triggerNotice,
+    'Sweety 不會主動傳送訊息給對方，只有當對方傳訊息來時才會進行回覆，也就是視窗內必須有來自監控對象的未讀訊息才會觸發 Sweety',
+  );
+  assert.match(html, /data-copy="instructions\.triggerNotice"/);
+  assert.match(css, /\.instruction-guide\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+  assert.doesNotMatch(html, /quick-start|custom-persona(?:-edit|-apply)?\.(?:png|webp)/);
+  assert.doesNotMatch(html, /data-list="(?:quick|advanced)\.steps"/);
 });
 
 test('homepage includes the LINE window warning and five independent localized FAQs', () => {
@@ -296,9 +324,9 @@ test('homepage author card uses the public portrait and safe new-tab project lin
   assert.match(css, /\.author-avatar[^}]*border-radius:\s*50%/s);
 });
 
-test('download configuration enables macOS and keeps Windows unavailable', () => {
+test('download configuration enables Windows and macOS', () => {
   assert.deepEqual(homepage.downloadConfig, {
-    windows: null,
+    windows: expectedWindowsDownload,
     macos: expectedMacDownload,
   });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
@@ -307,18 +335,20 @@ test('download configuration enables macOS and keeps Windows unavailable', () =>
     label: '下載 macOS 版',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'zh-TW'), {
-    enabled: false,
-    href: null,
-    label: '稍後提供',
+    enabled: true,
+    href: expectedWindowsDownload,
+    label: '下載 Windows 版',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'en'), {
-    enabled: false,
-    href: null,
-    label: 'Coming soon',
+    enabled: true,
+    href: expectedWindowsDownload,
+    label: 'Download for Windows',
   });
   assert.equal((html.match(/data-platform="(?:windows|macos)"/g) ?? []).length, 2);
   assert.equal((html.match(/class="platform-icon[^"]*"[^>]*aria-hidden="true"/g) ?? []).length, 3);
-  assert.equal((html.match(/class="download-action"[^>]*disabled/g) ?? []).length, 2);
+  assert.equal((html.match(/class="download-action"[^>]*disabled/g) ?? []).length, 0);
+  assert.match(html, new RegExp(`href="${expectedWindowsDownload.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+  assert.match(html, new RegExp(`href="${expectedMacDownload.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
   assert.doesNotMatch(html, /<div class="platform-icon"[^>]*>[●⊞]<\/div>/);
 });
 
@@ -431,8 +461,8 @@ test('robots, sitemap, and llms discovery files identify the canonical public si
   assert.match(llms, /^# Sweety/m);
   assert.match(llms, /主動式反詐騙 App/);
   assert.match(llms, /https:\/\/github\.com\/ericchen1972\/Sweety/);
-  assert.match(llms, /目前下載：macOS/);
-  assert.match(llms, /Windows：稍後提供/);
+  assert.match(llms, /目前下載：Windows、macOS/);
+  assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
 
 test('future download decisions allow HTTPS or safe relative paths and use action copy', () => {
@@ -468,17 +498,20 @@ test('landing page has semantic sections, required assets, and no dead download 
   }
   assert.match(html, /images\/home\/hero-helpless\.png/);
   assert.match(html, /images\/home\/time-clock-blue\.png/);
-  assert.match(html, /images\/home\/quick-start\.png/);
-  assert.match(html, /images\/home\/quick-start-create\.png/);
-  assert.match(html, /images\/home\/quick-start-panel\.png/);
-  assert.match(html, /images\/home\/custom-persona\.png/);
-  assert.match(html, /images\/home\/custom-persona-edit\.png/);
-  assert.match(html, /images\/home\/custom-persona-apply\.png/);
+  for (const asset of [
+    'instructions-control-panel.webp',
+    'instructions-dashboard.webp',
+    'instructions-basic-settings.webp',
+    'instructions-target-list.webp',
+    'instructions-base-personas.webp',
+    'instructions-persona-details.webp',
+    'instructions-custom-personas.webp',
+  ]) assert.match(html, new RegExp(`images/home/${asset}`));
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /homepage\.js/);
   assert.match(html, /homepage\.css/);
   assert.doesNotMatch(html, /href=["'](?:#|javascript:|)["']/i);
-  assert.equal((html.match(/class="download-action"[^>]*disabled/g) ?? []).length, 2);
+  assert.equal((html.match(/class="download-action"[^>]*disabled/g) ?? []).length, 0);
 });
 
 test('homepage stylesheet and module script share an explicit cache-busting version', () => {
@@ -498,17 +531,20 @@ test('static HTML is a complete default-English document without JavaScript', ()
     'A scammer’s greatest cost: time',
     'You do not need to spend any of your own time on scammers.',
     'When you wake up, the conversation between the other person and AI may put you in a good mood for the rest of the day.',
-    'Create a contact in the scammer list and enter their LINE name',
-    'Apply the custom persona to a monitored contact',
+    'Control panel',
+    'Dashboard',
+    'Basic settings',
+    'Scammer list',
+    'Base personas',
+    'Persona details',
+    'Custom personas',
+    'Sweety never initiates messages.',
     'Accessibility',
     'Screen &amp; System Audio Recording',
     'Automation',
   ]) assert.match(html, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  const quickList = html.match(/data-list="quick\.steps"[^>]*>([\s\S]*?)<\/ol>/)?.[1] ?? '';
-  const advancedList = html.match(/data-list="advanced\.steps"[^>]*>([\s\S]*?)<\/ol>/)?.[1] ?? '';
   const permissions = html.match(/data-list="notice\.permissions"[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? '';
-  assert.equal((quickList.match(/<li>/g) ?? []).length, 6);
-  assert.equal((advancedList.match(/<li>/g) ?? []).length, 4);
+  assert.equal((html.match(/class="instruction-guide-item/g) ?? []).length, 7);
   assert.equal((permissions.match(/<li>/g) ?? []).length, 3);
   assert.doesNotMatch(html, /data-copy="(?:hero\.body|hero\.closing|time\.subtitle|time\.body|time\.close)"\s*><\/p>/);
 });
@@ -533,18 +569,12 @@ test('counter uses local split-flap markup and reduced-motion styling', () => {
 });
 
 test('images declare intrinsic dimensions and compressed WebP sources', async () => {
-  const assets = [
+  const pngAssets = [
     ['images/logo.png', 373, 373, false],
     ['images/home/hero-helpless.png', 1672, 941, false],
     ['images/home/time-clock-blue.png', 1672, 941, false],
-    ['images/home/quick-start.png', 1498, 777, true],
-    ['images/home/quick-start-create.png', 1498, 777, true],
-    ['images/home/quick-start-panel.png', 420, 528, true],
-    ['images/home/custom-persona.png', 1425, 891, true],
-    ['images/home/custom-persona-edit.png', 1498, 777, true],
-    ['images/home/custom-persona-apply.png', 1498, 777, true],
   ];
-  for (const [path, width, height, lazy] of assets) {
+  for (const [path, width, height, lazy] of pngAssets) {
     const png = await readFile(new URL(path, webRoot));
     assert.equal(png.toString('hex', 0, 8), '89504e470d0a1a0a');
     assert.equal(png.readUInt32BE(16), width);
@@ -555,11 +585,26 @@ test('images declare intrinsic dimensions and compressed WebP sources', async ()
     assert.match(tag, new RegExp(`height="${height}"`));
     assert.match(tag, /decoding="async"/);
     if (lazy) assert.match(tag, /loading="lazy"/);
-    const webpPath = path.replace(/\.png$/, '.webp');
-    const webp = await readFile(new URL(webpPath, webRoot)).catch(() => null);
-    assert.ok(webp, `${webpPath} should exist`);
-    assert.ok(webp.byteLength < png.byteLength, `${webpPath} should be smaller than PNG`);
-    assert.match(html, new RegExp(`<source[^>]+srcset="${webpPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]+type="image/webp"`));
+  }
+  const webpAssets = [
+    ['images/home/instructions-control-panel.webp', 419, 499],
+    ['images/home/instructions-dashboard.webp', 1325, 757],
+    ['images/home/instructions-basic-settings.webp', 1325, 757],
+    ['images/home/instructions-target-list.webp', 1325, 757],
+    ['images/home/instructions-base-personas.webp', 1325, 757],
+    ['images/home/instructions-persona-details.webp', 1325, 757],
+    ['images/home/instructions-custom-personas.webp', 1325, 757],
+  ];
+  for (const [path, width, height] of webpAssets) {
+    const webp = await readFile(new URL(path, webRoot));
+    assert.equal(webp.toString('ascii', 0, 4), 'RIFF');
+    assert.equal(webp.toString('ascii', 8, 12), 'WEBP');
+    const escaped = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const tag = html.match(new RegExp(`<img[^>]+src="${escaped}"[^>]*>`))?.[0] ?? '';
+    assert.match(tag, new RegExp(`width="${width}"`));
+    assert.match(tag, new RegExp(`height="${height}"`));
+    assert.match(tag, /decoding="async"/);
+    assert.match(tag, /loading="lazy"/);
   }
 });
 

@@ -163,14 +163,6 @@ if (!is_array($migration) || ($migration['ok'] ?? false) !== true) {
 }
 ftp_close($ftp);
 
-putenv('SWEETY_METRICS_APP_TOKEN=' . $metricsToken);
-chdir($root . '/app/desktop');
-passthru('./build_app.sh', $buildExit);
-if ($buildExit !== 0) {
-    fail('macOS app build failed after site deployment.');
-}
-
 echo 'Uploaded homepage files and ' . count($files) . " verified assets/files.\n";
 echo 'Metrics schema verified; aggregate hours: ' . (string) $migration['aggregateHours'] . "\n";
 echo 'Download counter verified; total downloads: ' . (string) $migration['downloadTotal'] . "\n";
-echo "Rebuilt and signed app/desktop/dist/Sweety.app with dedicated metrics configuration.\n";
