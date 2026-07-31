@@ -271,7 +271,7 @@ Expected: the App builds with `SWEETY_LOG_ENABLED=1` and passes code-sign verifi
 
 Verify the built App's `Info.plist` has `SWEETY_LOG_ENABLED=1`. Run the focused adapter tests against an isolated temporary directory to prove that a completed screenshot survives cleanup and a failed replacement preserves the previous image.
 
-- [ ] **Step 5: Push canonical main and confirm final state**
+- [x] **Step 5: Push canonical main and confirm final state**
 
 ```bash
 rtk git push origin main
