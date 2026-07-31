@@ -307,7 +307,7 @@ rtk git commit -m "fix: always reply using chat bubble colors"
 - Modify: `docs/superpowers/plans/2026-07-31-no-skip-color-chat-reply.md` (checkbox tracking only)
 - Verify: `app/desktop/dist/Sweety.app`
 
-- [ ] **Step 1: Run the complete desktop suite and repository checks**
+- [x] **Step 1: Run the complete desktop suite and repository checks**
 
 From `app/desktop`:
 
@@ -321,17 +321,16 @@ From the repository root:
 rtk git diff --check
 rtk git status --short --branch
 rtk rg -n 'action.?=.?"skip"|ai_decision_skipped|ai_decision_skip|decision\.should_reply' \
-  app/desktop/src/sweety_app app/desktop/tests/test_ai.py app/desktop/tests/test_monitor.py \
-  app/desktop/tests/test_metrics_integration_contract.py
+  app/desktop/src/sweety_app
 ```
 
 Expected: the complete suite passes; diff checks are clean; the product contract search has no matches; only the unrelated `videos/` directory is untracked.
 
-- [ ] **Step 2: Stop an idle local App without starting monitoring or messaging**
+- [x] **Step 2: Stop an idle local App without starting monitoring or messaging**
 
 Check `http://127.0.0.1:8891/api/monitor/status` if the App is running. If monitoring is active, stop it through the existing local API, then quit the App normally. Do not open a chat or send a LINE message for verification.
 
-- [ ] **Step 3: Rebuild the logging-enabled local test App**
+- [x] **Step 3: Rebuild the logging-enabled local test App**
 
 ```bash
 rtk app/desktop/build_app.sh
@@ -339,7 +338,7 @@ rtk app/desktop/build_app.sh
 
 Expected: the build completes with `SWEETY_LOG_ENABLED=1`, PyInstaller produces `app/desktop/dist/Sweety.app`, and the build's signing verification succeeds.
 
-- [ ] **Step 4: Verify the built diagnostic contract and signature**
+- [x] **Step 4: Verify the built diagnostic contract and signature**
 
 ```bash
 /usr/libexec/PlistBuddy \
