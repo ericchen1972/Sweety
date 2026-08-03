@@ -17,8 +17,8 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-b05babee';
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-2441e922';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-1a2600f9';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-bb0d7e46';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
