@@ -1,4 +1,4 @@
-export type Locale = "zh-TW" | "en";
+export type Locale = "zh-TW" | "en" | "ja";
 export type Gender = "female" | "male";
 export type AgeGroup = "20-35" | "35-50" | "50-65" | "65+";
 export type CatalogSource = "base" | "custom";
@@ -60,7 +60,10 @@ export interface AppState {
 }
 
 export function detectLocale(language: string | null | undefined): Locale {
-  return language?.toLowerCase() === "zh-tw" ? "zh-TW" : "en";
+  const normalized = language?.toLowerCase() ?? "";
+  if (normalized === "zh-tw" || normalized.startsWith("zh-hant")) return "zh-TW";
+  if (normalized === "ja" || normalized.startsWith("ja-")) return "ja";
+  return "en";
 }
 
 export function validateTargetName(name: string): boolean {
@@ -131,12 +134,17 @@ export function formatDuration(milliseconds: number, locale: Locale): string {
   if (locale === "zh-TW") {
     return hours > 0 ? `${hours} 小時 ${minutes} 分` : `${minutes} 分鐘`;
   }
+  if (locale === "ja") {
+    return hours > 0 ? `${hours} 時間 ${minutes} 分` : `${minutes} 分`;
+  }
   return hours > 0 ? `${hours} hr ${minutes} min` : `${minutes} min`;
 }
 
 export function formatDurationHours(milliseconds: number, locale: Locale): string {
   const hours = Math.round((milliseconds / 3_600_000) * 10) / 10;
-  return locale === "zh-TW" ? `${hours} 小時` : `${hours} hr`;
+  if (locale === "zh-TW") return `${hours} 小時`;
+  if (locale === "ja") return `${hours} 時間`;
+  return `${hours} hr`;
 }
 
 export function formatPersonaStyle(value: string, locale: Locale): string {
@@ -151,17 +159,17 @@ export function formatPersonaStyle(value: string, locale: Locale): string {
       ? parsed.natural_reactions.filter((item): item is string => typeof item === "string")
       : [];
     const sentenceLength = parsed.sentence_length === "very_short"
-      ? (locale === "zh-TW" ? "很短的句子" : "very short messages")
-      : (locale === "zh-TW" ? "短句" : "short messages");
+      ? (locale === "zh-TW" ? "很短的句子" : locale === "ja" ? "とても短いメッセージ" : "very short messages")
+      : (locale === "zh-TW" ? "短句" : locale === "ja" ? "短いメッセージ" : "short messages");
     const emoji = parsed.emoji_frequency === "none" || parsed.emoji_frequency === "rare"
-      ? (locale === "zh-TW" ? "很少使用表情符號" : "rarely uses emoji")
-      : (locale === "zh-TW" ? "偶爾使用表情符號" : "occasionally uses emoji");
+      ? (locale === "zh-TW" ? "很少使用表情符號" : locale === "ja" ? "絵文字はほとんど使いません" : "rarely uses emoji")
+      : (locale === "zh-TW" ? "偶爾使用表情符號" : locale === "ja" ? "時々絵文字を使います" : "occasionally uses emoji");
     const reactionText = reactions.length
-      ? (locale === "zh-TW" ? `常見反應：${reactions.join("、")}。` : `Typical reactions: ${reactions.join(", ")}.`)
+      ? (locale === "zh-TW" ? `常見反應：${reactions.join("、")}。` : locale === "ja" ? `よくある反応：${reactions.join("、")}。` : `Typical reactions: ${reactions.join(", ")}.`)
       : "";
-    return locale === "zh-TW"
-      ? `說話自然，通常使用${sentenceLength}，${emoji}。${reactionText}`
-      : `Speaks naturally in ${sentenceLength} and ${emoji}. ${reactionText}`.trim();
+    if (locale === "zh-TW") return `說話自然，通常使用${sentenceLength}，${emoji}。${reactionText}`;
+    if (locale === "ja") return `自然な口調で${sentenceLength}を使い、${emoji}。${reactionText}`;
+    return `Speaks naturally in ${sentenceLength} and ${emoji}. ${reactionText}`.trim();
   } catch {
     return value;
   }

@@ -74,13 +74,13 @@ function App() {
   const setState: StateSetter = (updater) => setAppState((current) => {
     const next = updater(current);
     void saveState(next).catch((error: unknown) => {
-      setToast(error instanceof Error ? error.message : (locale === "zh-TW" ? "儲存失敗" : "Save failed"));
+      setToast(error instanceof Error ? error.message : copy.saveFailed);
     });
     return next;
   });
 
   useEffect(() => {
-    document.documentElement.lang = locale === "zh-TW" ? "zh-Hant" : "en";
+    document.documentElement.lang = locale === "zh-TW" ? "zh-Hant" : locale;
   }, [locale]);
 
   useEffect(() => {
@@ -117,7 +117,7 @@ function App() {
         if (active) setAppState(loaded);
       })
       .catch((error: unknown) => {
-        if (active) setLoadError(error instanceof Error ? error.message : "Unable to load Sweety");
+        if (active) setLoadError(error instanceof Error ? error.message : copy.connectFailed);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -151,11 +151,11 @@ function App() {
   }
 
   if (loading) {
-    return <main className="flex min-h-dvh items-center justify-center bg-slate-50 text-sm font-medium text-slate-600 dark:bg-zinc-950 dark:text-zinc-300">{locale === "zh-TW" ? "正在載入 Sweety..." : "Loading Sweety..."}</main>;
+    return <main className="flex min-h-dvh items-center justify-center bg-slate-50 text-sm font-medium text-slate-600 dark:bg-zinc-950 dark:text-zinc-300">{copy.loadingApp}</main>;
   }
 
   if (loadError) {
-    return <main className="flex min-h-dvh items-center justify-center bg-slate-50 px-6 dark:bg-zinc-950"><section className="max-w-md text-center"><h1 className="text-lg font-semibold">{locale === "zh-TW" ? "無法連接 Sweety" : "Unable to connect to Sweety"}</h1><p className="mt-3 break-words text-sm text-slate-500 dark:text-zinc-400">{loadError}</p><button type="button" className="primary-button mt-5" onClick={() => window.location.reload()}>{locale === "zh-TW" ? "重試" : "Retry"}</button></section></main>;
+    return <main className="flex min-h-dvh items-center justify-center bg-slate-50 px-6 dark:bg-zinc-950"><section className="max-w-md text-center"><h1 className="text-lg font-semibold">{copy.connectFailed}</h1><p className="mt-3 break-words text-sm text-slate-500 dark:text-zinc-400">{loadError}</p><button type="button" className="primary-button mt-5" onClick={() => window.location.reload()}>{copy.retry}</button></section></main>;
   }
 
   return (
@@ -170,7 +170,7 @@ function App() {
                 <img src={sweetyLogo} alt="" className="h-10 w-10 rounded-md object-contain shadow-sm" />
                 <span>
                   <strong className="block text-lg font-semibold">{copy.appName}</strong>
-                  <span className="block text-xs text-slate-500 dark:text-zinc-500">Anti-scam companion</span>
+                  <span className="block text-xs text-slate-500 dark:text-zinc-500">{copy.appTagline}</span>
                 </span>
               </button>
               <button type="button" className="icon-button lg:hidden" onClick={() => setMobileMenuOpen(false)} title={copy.close}>
@@ -178,7 +178,7 @@ function App() {
               </button>
             </div>
 
-            <nav className="mt-6 space-y-2" aria-label="Main navigation">
+            <nav className="mt-6 space-y-2" aria-label={copy.mainNavigation}>
               {pages.map((page) => {
                 const Icon = page.icon;
                 const active = activePage === page.id;
@@ -461,7 +461,7 @@ function TargetsPage({ state, setState, locale, copy, onToast }: { state: AppSta
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      onToast(error instanceof Error ? error.message : (locale === "zh-TW" ? "輸出失敗" : "Export failed"));
+      onToast(error instanceof Error ? error.message : copy.exportFailed);
     }
   }
 

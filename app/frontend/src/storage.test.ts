@@ -33,4 +33,23 @@ describe("loaded state compatibility", () => {
       en: "Legacy English content",
     });
   });
+
+  it("keeps server-provided Japanese persona content authoritative", () => {
+    const state = normalizeLoadedState({
+      version: 1,
+      monitoringEnabled: false,
+      settings: { aiProvider: "sweety", openAiApiKey: "", openAiModel: "gpt-5.5", checkIntervalSeconds: 10, replyDelayMinSeconds: 15, replyDelayMaxSeconds: 45 },
+      basePersonas: [{
+        id: "remote-persona",
+        ageGroup: "20-35",
+        gender: "female",
+        name: { "zh-TW": "遠端", en: "Remote", ja: "リモート" },
+        content: { "zh-TW": "遠端中文", en: "Remote English", ja: "サーバー提供の日本語" },
+        image: "/remote.jpg",
+      }],
+      targets: [], customPersonas: [], customWeapons: [],
+    });
+
+    expect(state.basePersonas[0].content.ja).toBe("サーバー提供の日本語");
+  });
 });

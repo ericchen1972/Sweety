@@ -36,7 +36,7 @@ export function normalizeLoadedState(value: unknown): AppState {
     ...state,
     basePersonas: personas.map(({ text, ...persona }) => ({
       ...persona,
-      content: persona.content ?? text ?? basePersonas.find((item) => item.id === persona.id)?.content ?? { "zh-TW": "", en: "" },
+      content: persona.content ?? text ?? basePersonas.find((item) => item.id === persona.id)?.content ?? { "zh-TW": "", en: "", ja: "" },
     })),
   } as AppState;
 }

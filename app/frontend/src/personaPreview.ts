@@ -1,6 +1,6 @@
 export function personaPreview(content: string, limit = 72): string {
   const normalized = content
-    .replace(/^\s*(?:人物資料|Character information)\s*[:：]\s*/u, "")
+    .replace(/^\s*(?:人物資料|人物情報|Character information)\s*[:：]\s*/u, "")
     .replace(/\s+/gu, " ")
     .trim();
   const characters = Array.from(normalized);

@@ -17,4 +17,17 @@ describe("custom persona copy", () => {
     );
     expect(copy.targetNameError).toBe("名稱只能使用英文字母或數字。");
   });
+
+  it("provides complete natural Japanese copy", () => {
+    const japanese = getCopy("ja");
+    const english = getCopy("en");
+
+    expect(Object.keys(japanese).sort()).toEqual(Object.keys(english).sort());
+    expect(japanese.dashboard).toBe("ダッシュボード");
+    expect(japanese.targets).toBe("詐欺アカウント一覧");
+    expect(japanese.addTarget).toBe("対象を追加");
+    expect(japanese.save).toBe("設定を保存");
+    expect(japanese.aboutSweety).toBe("Sweetyについて");
+    expect(japanese.updateAvailable).toBe("新しいバージョンをダウンロードできます");
+  });
 });

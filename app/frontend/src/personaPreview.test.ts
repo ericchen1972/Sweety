@@ -6,6 +6,7 @@ describe("personaPreview", () => {
   it("uses the canonical content and removes only its leading section label", () => {
     expect(personaPreview("人物資料：\n王筱蘭住在板橋。", 20)).toBe("王筱蘭住在板橋。");
     expect(personaPreview("Character information:\nWang lives in Banqiao.", 30)).toBe("Wang lives in Banqiao.");
+    expect(personaPreview("人物情報：\n王筱蘭は板橋に住んでいます。", 30)).toBe("王筱蘭は板橋に住んでいます。");
   });
 
   it("appends three dots only when the normalized content is truncated", () => {

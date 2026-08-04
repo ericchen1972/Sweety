@@ -29,12 +29,14 @@ const target: Target = {
 };
 
 describe("detectLocale", () => {
-  it("uses Traditional Chinese only for zh-TW", () => {
+  it("detects Traditional Chinese and Japanese locale families", () => {
     expect(detectLocale("zh-TW")).toBe("zh-TW");
     expect(detectLocale("zh-tw")).toBe("zh-TW");
     expect(detectLocale("zh-HK")).toBe("en");
     expect(detectLocale("zh-CN")).toBe("en");
-    expect(detectLocale("ja-JP")).toBe("en");
+    expect(detectLocale("ja")).toBe("ja");
+    expect(detectLocale("ja-JP")).toBe("ja");
+    expect(detectLocale("ja-JP-u-ca-japanese")).toBe("ja");
   });
 });
 
@@ -78,6 +80,7 @@ describe("target lifecycle and metrics", () => {
     expect(formatDurationHours(0, "zh-TW")).toBe("0 小時");
     expect(formatDurationHours(90 * 60 * 1000, "zh-TW")).toBe("1.5 小時");
     expect(formatDurationHours(3 * 60 * 60 * 1000, "en")).toBe("3 hr");
+    expect(formatDurationHours(90 * 60 * 1000, "ja")).toBe("1.5 時間");
   });
 });
 
@@ -115,5 +118,19 @@ describe("persona style display", () => {
   it("keeps natural-language style text unchanged", () => {
     const style = "說話親切而務實，通常使用短句。";
     expect(formatPersonaStyle(style, "zh-TW")).toBe(style);
+  });
+
+  it("turns legacy JSON into readable Japanese", () => {
+    const legacy = JSON.stringify({
+      sentence_length: "short",
+      emoji_frequency: "occasional",
+      natural_reactions: ["客に呼ばれて離れる", "仕事後に戻る"],
+    });
+
+    const formatted = formatPersonaStyle(legacy, "ja");
+
+    expect(formatted).toContain("短いメッセージ");
+    expect(formatted).toContain("時々絵文字を使います");
+    expect(formatted).toContain("客に呼ばれて離れる");
   });
 });

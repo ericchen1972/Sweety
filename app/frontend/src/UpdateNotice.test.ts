@@ -60,6 +60,14 @@ describe("UpdateNotice", () => {
     expect(html).not.toContain("Windows");
   });
 
+  it("renders Japanese update copy", () => {
+    const html = renderToStaticMarkup(createElement(UpdateNotice, { update: available, copy: getCopy("ja") }));
+
+    expect(html).toContain("バージョン 1.2.0 をダウンロードできます");
+    expect(html).toContain("新しいバージョンをダウンロードできます");
+    expect(html).toContain("アクセシビリティ");
+  });
+
   it("does not render before a checked update with a usable download", () => {
     expect(renderToStaticMarkup(createElement(UpdateNotice, {
       update: { checked: false, updateAvailable: false },
