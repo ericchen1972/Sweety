@@ -64,7 +64,7 @@ The source-timecode file retains the original one-hour editing offset. The norma
   /Users/eric/tmp_img/sweety_japanese_tutorial_work/build_and_verify_subtitles.mjs
 ```
 
-Expected: `PASS`, 149 cues, 135 voiced cues, 14 blank cues, matching relative timestamps, and no remaining CJK Unified Ideographs used as Chinese prose.
+Expected: `PASS`, 149 cues, 135 voiced cues, 14 blank cues, and matching relative timestamps. Review the Japanese text manually for untranslated Chinese prose because Japanese legitimately contains CJK ideographs.
 
 ### Task 3: Select and synthesize the Japanese female voice
 
@@ -115,7 +115,7 @@ ffmpeg -y \
   -map 0:v:0 -map 1:a:0 \
   -vf "subtitles='/Users/eric/tmp_img/sweety_japanese_tutorial_work/Sweety-Tutorial.ja-JP.srt':force_style='FontName=Hiragino Sans,FontSize=22,Outline=2,Shadow=0,MarginV=42'" \
   -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k \
-  -metadata:s:a:0 language=jpn -movflags +faststart -shortest \
+  -metadata:s:a:0 language=jpn -movflags +faststart \
   '/Users/eric/tmp_img/sweety_japanese_tutorial_work/Sweety-Tutorial-ja-JP.mp4'
 ```
 
@@ -125,7 +125,7 @@ Check the beginning, middle, and end for Japanese subtitle wrapping, safe margin
 
 - [ ] **Step 3: Run final media checks**
 
-Expected: non-empty H.264/AAC MP4, 1920×1080, approximately 578.8 seconds, Japanese audio metadata, and readable burned-in subtitles.
+Expected: non-empty H.264/AAC MP4, 1920×1080, the same duration as the source picture (approximately 582 seconds), Japanese audio metadata, and readable burned-in subtitles. The standalone narration may end at 578.833 seconds while the final picture continues through its original closing frames.
 
 ### Task 5: Deliver final artifacts on the 1TB volume
 
