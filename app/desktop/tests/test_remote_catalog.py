@@ -44,8 +44,8 @@ def remote_payload() -> dict:
                 "id": "remote-persona",
                 "ageGroup": "35-50",
                 "gender": "female",
-                "name": {"zh-TW": "遠端人設", "en": "Remote Persona"},
-                "content": {"zh-TW": "完整人物資料與風格內容", "en": "Complete character and style content"},
+                "name": {"zh-TW": "遠端人設", "en": "Remote Persona", "ja": "リモートペルソナ"},
+                "content": {"zh-TW": "完整人物資料與風格內容", "en": "Complete character and style content", "ja": "完全な人物情報とスタイル"},
                 "image": "/images/personas/remote.jpg",
             }
         ],
@@ -66,6 +66,7 @@ def test_sync_remote_catalog_updates_local_cache(tmp_path):
     assert repo.get_base_persona_text("remote-persona") == "完整人物資料與風格內容"
     persona = repo.list_base_personas()[0]
     assert persona["content"]["zh-TW"] == "完整人物資料與風格內容"
+    assert persona["content"]["ja"] == "完全な人物情報とスタイル"
     assert not ({"summary", "profile", "style", "text"} & set(persona))
 
 
@@ -89,3 +90,15 @@ def test_sync_remote_catalog_ignores_invalid_payloads(tmp_path):
 
     assert updated is False
     assert repo.get_system_prompt_template() == original_prompt
+
+
+def test_sync_remote_catalog_rejects_payload_without_japanese(tmp_path):
+    repo = make_repo(tmp_path)
+    original_personas = repo.list_base_personas()
+    payload = remote_payload()
+    del payload["basePersonas"][0]["content"]["ja"]
+
+    updated = sync_remote_catalog(repo, "https://example.test/sweety/catalog", session=FakeSession(FakeResponse(payload)))
+
+    assert updated is False
+    assert repo.list_base_personas() == original_personas

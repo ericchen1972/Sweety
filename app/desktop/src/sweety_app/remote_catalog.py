@@ -12,7 +12,7 @@ class HttpSession(Protocol):
     def get(self, url: str, **kwargs: Any) -> Any: ...
 
 
-REQUIRED_LOCALES = ("zh-TW", "en")
+REQUIRED_LOCALES = ("zh-TW", "en", "ja")
 
 
 def sync_remote_catalog(
