@@ -1,6 +1,6 @@
 import importlib
 
-from sweety_app.config import LOGO_PATH, PROJECT_DIR, normalize_locale
+from sweety_app.config import LOGO_PATH, PROJECT_DIR, about_url_for_locale, normalize_locale
 
 
 def test_traditional_chinese_locale_variants_use_zh_tw():
@@ -46,3 +46,9 @@ def test_diagnostics_switch_reads_enabled_build_environment(monkeypatch):
 
 def test_logo_uses_public_web_asset():
     assert LOGO_PATH == PROJECT_DIR / "web" / "images" / "logo.png"
+
+
+def test_about_url_uses_japanese_page_only_for_japanese_locale():
+    assert about_url_for_locale("ja").endswith("/about_sweety_ja.html")
+    assert about_url_for_locale("zh-TW").endswith("/about_sweety.html")
+    assert about_url_for_locale("en").endswith("/about_sweety.html")

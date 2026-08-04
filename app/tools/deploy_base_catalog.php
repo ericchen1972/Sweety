@@ -136,6 +136,9 @@ $migrationVolumeRoot = '/volume1/sweety.tw';
 if (!ftp_put($ftp, $migrationRemoteRoot . '/about_sweety.html', $root . '/web/about_sweety.html', FTP_BINARY)) {
     fail('Unable to upload about_sweety.html to site root.');
 }
+if (!ftp_put($ftp, $migrationRemoteRoot . '/about_sweety_ja.html', $root . '/web/about_sweety_ja.html', FTP_BINARY)) {
+    fail('Unable to upload about_sweety_ja.html to site root.');
+}
 $token = bin2hex(random_bytes(24));
 $suffix = bin2hex(random_bytes(8));
 $runnerName = '.__sweety_catalog_' . $suffix . '.php';
@@ -205,6 +208,7 @@ ftp_close($ftp);
 echo "Uploaded " . count($assets) . " catalog images.\n";
 echo "Uploaded sweety-catalog.php and sweety-catalog-lib.php.\n";
 echo "Uploaded about_sweety.html.\n";
+echo "Uploaded about_sweety_ja.html.\n";
 foreach ($result['counts'] as $table => $count) {
     printf("%-28s %d\n", $table, (int) $count);
 }

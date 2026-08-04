@@ -18,7 +18,7 @@ from Foundation import NSObject
 from .ai import AiClient
 from .about import AboutContentClient
 from .api import create_app
-from .config import ABOUT_SWEETY_URL, API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, FRONTEND_DIST, LOG_ENABLED, LOGO_PATH, LOG_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, preferred_locale
+from .config import API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, FRONTEND_DIST, LOG_ENABLED, LOGO_PATH, LOG_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, about_url_for_locale, preferred_locale
 from .database import Database
 from .diagnostics import configure_diagnostics, log_event
 from .line_mac import LineMacAdapter
@@ -89,6 +89,7 @@ def main() -> None:
     log_event(logging.getLogger("sweety.app"), "app_started", version=APP_VERSION)
     application = NSApplication.sharedApplication()
     application.setActivationPolicy_(NSApplicationActivationPolicyRegular)
+    locale = detected_locale()
 
     database = Database(DATABASE_PATH)
     database.migrate()
@@ -126,14 +127,14 @@ def main() -> None:
         monitor=monitor,
         frontend_dist=FRONTEND_DIST,
         persona_validator=ai,
-        about_loader=AboutContentClient(ABOUT_SWEETY_URL),
+        about_loader=AboutContentClient(about_url_for_locale(locale)),
         update_state=update_state,
     )
     runtime = ServerRuntime(api, API_HOST, API_PORT)
     runtime.start()
 
     delegate = SweetyAppDelegate.alloc().initWithComponents_permissionStatus_locale_updateState_(
-        (repository, monitor, runtime), permission_status, detected_locale(), update_state
+        (repository, monitor, runtime), permission_status, locale, update_state
     )
     application.setDelegate_(delegate)
     signal.signal(signal.SIGINT, lambda *_args: application.terminate_(None))

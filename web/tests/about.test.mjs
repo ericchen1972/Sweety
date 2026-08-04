@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const webRoot = new URL('../', import.meta.url);
 const html = await readFile(new URL('about_sweety.html', webRoot), 'utf8');
+const japanese = await readFile(new URL('about_sweety_ja.html', webRoot), 'utf8');
 
 test('about page presents Sweety as an open-source project with a safe GitHub link', () => {
   assert.match(html, /<h2>開源專案<\/h2>/);
@@ -29,4 +30,15 @@ test('about page has canonical and social metadata', () => {
   assert.match(html, /<link rel="canonical" href="https:\/\/sweety\.tw\/about_sweety\.html">/);
   assert.match(html, /<meta name="description" content="[^"]+">/);
   assert.match(html, /<meta property="og:image" content="https:\/\/sweety\.tw\/images\/sweety-social-1200x630\.png">/);
+});
+
+test('Japanese about page contains complete localized product and author content', () => {
+  assert.match(japanese, /<html lang="ja">/);
+  assert.match(japanese, /<h1>Sweetyについて<\/h1>/);
+  assert.match(japanese, /Sweetyとは/);
+  assert.match(japanese, /安全上の注意/);
+  assert.match(japanese, /オープンソース/);
+  assert.match(japanese, /Eric \/ Web・AIエンジニア/);
+  assert.match(japanese, /href="https:\/\/github\.com\/ericchen1972\/Sweety"[^>]+target="_blank"[^>]+rel="noopener noreferrer"/);
+  assert.match(japanese, /<link rel="canonical" href="https:\/\/sweety\.tw\/about_sweety_ja\.html">/);
 });

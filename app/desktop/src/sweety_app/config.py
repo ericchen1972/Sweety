@@ -17,6 +17,7 @@ REMOTE_UPDATE_URL = os.getenv("SWEETY_UPDATE_URL", "https://sweety.tw/sweety-upd
 SWEETY_METRICS_APP_TOKEN = os.getenv("SWEETY_METRICS_APP_TOKEN", "").strip()
 REGION_LOOKUP_URL = os.getenv("SWEETY_REGION_LOOKUP_URL", "https://api.country.is/")
 ABOUT_SWEETY_URL = os.getenv("SWEETY_ABOUT_URL", "https://sweety.tw/about_sweety.html")
+ABOUT_SWEETY_JA_URL = os.getenv("SWEETY_ABOUT_JA_URL", "https://sweety.tw/about_sweety_ja.html")
 
 PROJECT_DIR = Path(__file__).resolve().parents[4]
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", PROJECT_DIR))
@@ -65,3 +66,7 @@ def preferred_locale(fallback: str | None = None) -> str:
     except ImportError:
         pass
     return normalize_locale(fallback)
+
+
+def about_url_for_locale(locale: str) -> str:
+    return ABOUT_SWEETY_JA_URL if normalize_locale(locale) == "ja" else ABOUT_SWEETY_URL
