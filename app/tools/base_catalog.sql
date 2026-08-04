@@ -165,7 +165,15 @@ VALUES
 ON DUPLICATE KEY UPDATE
     template = VALUES(template), is_active = VALUES(is_active);
 
+ALTER TABLE base_personas
+    ADD COLUMN IF NOT EXISTS name_ja VARCHAR(100) NULL AFTER name_en,
+    ADD COLUMN IF NOT EXISTS content_ja LONGTEXT NULL AFTER content_en;
+
 -- __BASE_PERSONAS_GENERATED__
+
+ALTER TABLE base_personas
+    MODIFY name_ja VARCHAR(100) NOT NULL,
+    MODIFY content_ja LONGTEXT NOT NULL;
 
 INSERT INTO base_weapons
     (slug, name_zh_tw, name_en, summary_zh_tw, summary_en, prompt_zh_tw, prompt_en, image_path, sort_order, is_active)

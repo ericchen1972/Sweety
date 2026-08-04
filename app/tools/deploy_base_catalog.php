@@ -143,9 +143,20 @@ $sqlName = '.__sweety_catalog_' . $suffix . '.sql';
 $template = file_get_contents(__DIR__ . '/catalog_remote_runner.template.php');
 $sql = file_get_contents(__DIR__ . '/base_catalog.sql');
 $generatedPersonas = file_get_contents(__DIR__ . '/base_personas.generated.sql');
+$canonicalPersonas = json_decode((string) file_get_contents($root . '/app/catalog/base_personas.json'), true);
 
-if ($template === false || $sql === false || $generatedPersonas === false) {
+if ($template === false || $sql === false || $generatedPersonas === false || !is_array($canonicalPersonas)) {
     fail('Unable to read migration files.');
+}
+if (count($canonicalPersonas) !== 24) {
+    fail('Canonical persona catalog must contain 24 entries.');
+}
+foreach ($canonicalPersonas as $persona) {
+    foreach (['name', 'content'] as $field) {
+        if (!isset($persona[$field]['ja']) || trim((string) $persona[$field]['ja']) === '') {
+            fail('Canonical persona catalog has incomplete Japanese content.');
+        }
+    }
 }
 if (!str_contains($sql, '-- __BASE_PERSONAS_GENERATED__')) {
     fail('Persona insertion marker is missing.');

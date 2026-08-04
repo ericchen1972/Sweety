@@ -10,8 +10,10 @@ $persona = sweety_catalog_persona([
     'gender' => 'female',
     'name_zh_tw' => '謹慎的會計助理',
     'name_en' => 'Cautious Accounting Assistant',
+    'name_ja' => '慎重な経理アシスタント',
     'content_zh_tw' => '人物資料：王筱蘭住在板橋。',
     'content_en' => 'Character information: Wang Xiaolan lives in Banqiao.',
+    'content_ja' => '日本語の人物設定',
     'image_path' => '/images/personas/cautious-accounting-assistant.jpg',
 ], static fn (string $path): string => $path);
 
@@ -19,10 +21,11 @@ assert($persona === [
     'id' => 'cautious-accounting-assistant',
     'ageGroup' => '20-35',
     'gender' => 'female',
-    'name' => ['zh-TW' => '謹慎的會計助理', 'en' => 'Cautious Accounting Assistant'],
+    'name' => ['zh-TW' => '謹慎的會計助理', 'en' => 'Cautious Accounting Assistant', 'ja' => '慎重な経理アシスタント'],
     'content' => [
         'zh-TW' => '人物資料：王筱蘭住在板橋。',
         'en' => 'Character information: Wang Xiaolan lives in Banqiao.',
+        'ja' => '日本語の人物設定',
     ],
     'image' => '/images/personas/cautious-accounting-assistant.jpg',
 ]);

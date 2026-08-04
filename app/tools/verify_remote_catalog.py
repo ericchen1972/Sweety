@@ -49,6 +49,10 @@ def main() -> None:
 
     for persona in personas:
         assert set(persona) == {"id", "ageGroup", "gender", "name", "content", "image"}
+        assert set(persona["name"]) == {"zh-TW", "en", "ja"}
+        assert set(persona["content"]) == {"zh-TW", "en", "ja"}
+        assert persona["name"]["ja"].strip()
+        assert len(persona["content"]["ja"]) >= 180
         assert len(persona["content"]["zh-TW"]) >= 180
         assert len(persona["content"]["en"]) >= 300
         header, encoded = persona["image"].split(",", 1)

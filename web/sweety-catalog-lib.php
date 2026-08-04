@@ -7,6 +7,7 @@ function sweety_catalog_text(array $row, string $prefix): array
     return [
         'zh-TW' => (string) $row[$prefix . '_zh_tw'],
         'en' => (string) $row[$prefix . '_en'],
+        'ja' => (string) $row[$prefix . '_ja'],
     ];
 }
 
