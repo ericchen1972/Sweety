@@ -15,6 +15,7 @@ FRONTEND_MODULE = ROOT / "app" / "frontend" / "src" / "catalog.ts"
 PYTHON = ROOT / "app" / "desktop" / "src" / "sweety_app" / "catalog_personas.py"
 PYTHON_MODULE = ROOT / "app" / "desktop" / "src" / "sweety_app" / "catalog.py"
 SQL = ROOT / "app" / "tools" / "base_personas.generated.sql"
+SUPPORTED_LOCALES = ("zh-TW", "en", "ja")
 BASE_SQL = ROOT / "app" / "tools" / "base_catalog.sql"
 CATALOG_URL = "https://sweety.tw/sweety-catalog.php"
 HEADERS = {
@@ -170,16 +171,25 @@ def refresh_from_live() -> list[dict[str, Any]]:
     response = requests.get(CATALOG_URL, headers=HEADERS, timeout=20)
     response.raise_for_status()
     live = response.json()["basePersonas"]
+    existing = {
+        item["id"]: item
+        for item in json.loads(CANONICAL.read_text(encoding="utf-8"))
+    } if CANONICAL.exists() else {}
     result = []
     for index, item in enumerate(live):
         result.append({
             "id": item["id"],
             "ageGroup": item["ageGroup"],
             "gender": item["gender"],
-            "name": item["name"],
+            "name": {
+                "zh-TW": item["name"]["zh-TW"],
+                "en": item["name"]["en"],
+                "ja": item.get("name", {}).get("ja") or existing[item["id"]]["name"]["ja"],
+            },
             "content": {
                 "zh-TW": canonical_content(item, "zh-TW"),
                 "en": canonical_content(item, "en"),
+                "ja": existing[item["id"]]["content"]["ja"],
             },
             "image": f"/images/personas/{item['id']}.jpg",
             "sortOrder": (index + 1) * 10,
@@ -210,6 +220,17 @@ def update_catalog_module(catalog_module: str) -> str:
 
 
 def generate(personas: list[dict[str, Any]]) -> None:
+    if len(personas) != 24:
+        raise ValueError("persona catalog must contain exactly 24 entries")
+    for persona in personas:
+        for field in ("name", "content"):
+            localized = persona.get(field)
+            if not isinstance(localized, dict):
+                raise ValueError(f"{persona.get('id', 'unknown')} missing {field}")
+            for locale in SUPPORTED_LOCALES:
+                value = localized.get(locale)
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError(f"{persona.get('id', 'unknown')} missing {field}.{locale}")
     FRONTEND.write_text(json.dumps(personas, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     FRONTEND_MODULE.write_text(
         'import type { BasePersona } from "./domain";\n'
@@ -237,8 +258,10 @@ def generate(personas: list[dict[str, Any]]) -> None:
                 sql_string(item["gender"]),
                 sql_string(item["name"]["zh-TW"]),
                 sql_string(item["name"]["en"]),
+                sql_string(item["name"]["ja"]),
                 sql_string(item["content"]["zh-TW"]),
                 sql_string(item["content"]["en"]),
+                sql_string(item["content"]["ja"]),
                 sql_string(item["image"]),
                 str(item["sortOrder"]),
             ])
@@ -246,12 +269,12 @@ def generate(personas: list[dict[str, Any]]) -> None:
         )
     SQL.write_text(
         "INSERT INTO base_personas\n"
-        "    (slug, age_group_id, gender, name_zh_tw, name_en, content_zh_tw, content_en, image_path, sort_order)\n"
+        "    (slug, age_group_id, gender, name_zh_tw, name_en, name_ja, content_zh_tw, content_en, content_ja, image_path, sort_order)\n"
         "VALUES\n" + ",\n".join(values) + "\n"
         "ON DUPLICATE KEY UPDATE\n"
         "    age_group_id = VALUES(age_group_id), gender = VALUES(gender),\n"
-        "    name_zh_tw = VALUES(name_zh_tw), name_en = VALUES(name_en),\n"
-        "    content_zh_tw = VALUES(content_zh_tw), content_en = VALUES(content_en),\n"
+        "    name_zh_tw = VALUES(name_zh_tw), name_en = VALUES(name_en), name_ja = VALUES(name_ja),\n"
+        "    content_zh_tw = VALUES(content_zh_tw), content_en = VALUES(content_en), content_ja = VALUES(content_ja),\n"
         "    image_path = VALUES(image_path), sort_order = VALUES(sort_order);\n",
         encoding="utf-8",
     )
@@ -265,8 +288,10 @@ def generate(personas: list[dict[str, Any]]) -> None:
     gender ENUM('female', 'male') NOT NULL,
     name_zh_tw VARCHAR(100) NOT NULL,
     name_en VARCHAR(100) NOT NULL,
+    name_ja VARCHAR(100) NOT NULL,
     content_zh_tw LONGTEXT NOT NULL,
     content_en LONGTEXT NOT NULL,
+    content_ja LONGTEXT NOT NULL,
     image_path VARCHAR(255) NOT NULL,
     sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

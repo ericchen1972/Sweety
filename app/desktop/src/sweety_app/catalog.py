@@ -48,6 +48,8 @@ DEFAULT_SYSTEM_PROMPT_TEMPLATE = """你正在 LINE 上代替一名真實使用�
 
 目前完整歷史共有 {total_messages} 筆，下面最多只提供最近 20 筆。
 請先根據最近對話與總筆數判斷雙方熟稔度，再決定語氣、長度、是否反問、是否延後或是否保留。"""
+
+
 from .catalog_personas import BASE_PERSONAS
 
 BASE_PERSONA_TEXT = {persona["id"]: persona["content"]["zh-TW"] for persona in BASE_PERSONAS}

@@ -8,6 +8,8 @@ describe("bundled persona catalog contract", () => {
     for (const persona of basePersonas) {
       expect(persona.content["zh-TW"].trim()).not.toBe("");
       expect(persona.content.en.trim()).not.toBe("");
+      expect(persona.content.ja.trim()).not.toBe("");
+      expect(persona.name.ja.trim()).not.toBe("");
       expect(persona).not.toHaveProperty("summary");
       expect(persona).not.toHaveProperty("profile");
       expect(persona).not.toHaveProperty("style");
@@ -26,6 +28,7 @@ describe("bundled persona catalog contract", () => {
     for (const persona of basePersonas) {
       expect(Array.from(persona.content["zh-TW"]).length).toBeGreaterThanOrEqual(180);
       expect(persona.content.en.length).toBeGreaterThanOrEqual(300);
+      expect(Array.from(persona.content.ja).length).toBeGreaterThanOrEqual(180);
     }
   });
 
@@ -37,5 +40,13 @@ describe("bundled persona catalog contract", () => {
     expect(persona?.content["zh-TW"]).toContain("你幹嘛啦～");
     expect(persona?.content["zh-TW"]).toContain("好窩");
     expect(persona?.content["zh-TW"]).toContain("母湯啦");
+  });
+
+  it("keeps the approved Wang Xiaolan details in Japanese", () => {
+    const persona = basePersonas.find((item) => item.id === "cautious-accounting-assistant");
+    expect(persona?.name.ja).toBe("慎重な経理アシスタント");
+    expect(persona?.content.ja).toContain("王筱蘭");
+    expect(persona?.content.ja).toContain("70万台湾ドル");
+    expect(persona?.content.ja).toContain("詐欺");
   });
 });
