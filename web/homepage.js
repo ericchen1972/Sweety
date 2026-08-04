@@ -8,8 +8,8 @@ export function resolveLocale(locales, fallbackLocale) {
 }
 
 export const downloadConfig = Object.freeze({
-  windows: 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-1a2600f9',
-  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-bb0d7e46',
+  windows: 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-958abb30',
+  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-b3132dad',
 });
 
 export const tutorialVideos = Object.freeze({
