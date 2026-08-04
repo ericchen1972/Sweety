@@ -8,7 +8,8 @@ def test_traditional_chinese_locale_variants_use_zh_tw():
     assert normalize_locale("zh_Hant_TW") == "zh-TW"
     assert normalize_locale("zh-Hant") == "zh-TW"
     assert normalize_locale("zh-CN") == "en"
-    assert normalize_locale("ja-JP") == "en"
+    assert normalize_locale("ja") == "ja"
+    assert normalize_locale("ja-JP") == "ja"
 
 
 def test_agnes_key_is_empty_without_environment(monkeypatch):

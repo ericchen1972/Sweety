@@ -58,20 +58,60 @@ STATUS_COPY = {
         "target_required": "Select at least one target first",
         "error": "Error",
     },
+    "ja": {
+        "stopped": "停止中",
+        "monitoring": "新着メッセージを監視中",
+        "waiting": "新着メッセージを待っています",
+        "processing": "処理中",
+        "permission_required": "macOSの権限が必要です",
+        "line_window_required": "LINEのメインウィンドウを開いてください",
+        "target_required": "対象を1人以上選択してください",
+        "error": "エラー",
+    },
 }
 
 AI_TIMEOUT_ALERT_COPY = {
     "zh-TW": "AI 目前沒有回應，請切換 AI 模型或稍後再試。",
     "en": "AI is not responding. Switch AI models or try again later.",
+    "ja": "AIが応答していません。AIモデルを切り替えるか、しばらくしてから再試行してください。",
+}
+
+PANEL_UI_COPY = {
+    "zh-TW": {"subtitle": "主動反詐陪伴工具", "selected_targets": "已勾選對象", "start": "開始", "stop": "停止", "open_management": "開啟管理介面", "quit_app": "結束 App", "show": "顯示 Sweety", "quit": "結束"},
+    "en": {"subtitle": "Anti-scam companion", "selected_targets": "Selected targets", "start": "Start", "stop": "Stop", "open_management": "Open management", "quit_app": "Quit App", "show": "Show Sweety", "quit": "Quit"},
+    "ja": {"subtitle": "詐欺対策サポートツール", "selected_targets": "選択中の対象", "start": "開始", "stop": "停止", "open_management": "管理画面を開く", "quit_app": "Appを終了", "show": "Sweetyを表示", "quit": "終了"},
 }
 
 
+def _supported_locale(locale: str) -> str:
+    return locale if locale in {"zh-TW", "ja"} else "en"
+
+
+def panel_ui_copy(locale: str) -> dict[str, str]:
+    return PANEL_UI_COPY[_supported_locale(locale)]
+
+
+def permission_alert_copy(locale: str, missing_permissions: list[str] | tuple[str, ...]) -> dict[str, str]:
+    language = _supported_locale(locale)
+    names = {
+        "zh-TW": {"Accessibility": "輔助使用", "Screen Recording": "螢幕錄製", "System Events": "System Events 自動化", "LINE": "LINE 自動化"},
+        "en": {},
+        "ja": {"Accessibility": "アクセシビリティ", "Screen Recording": "画面収録", "System Events": "システムイベントのオートメーション", "LINE": "LINEオートメーション"},
+    }
+    missing = ", ".join(names[language].get(name, name) for name in missing_permissions)
+    if language == "zh-TW":
+        return {"title": "Sweety 需要 macOS 權限", "message": f"尚未允許：{missing}。請完成授權，然後重新啟動 Sweety。"}
+    if language == "ja":
+        return {"title": "SweetyにはmacOSの権限が必要です", "message": f"未許可：{missing}。権限を許可してからSweetyを再起動してください。"}
+    return {"title": "Sweety needs macOS permissions", "message": f"Not yet allowed: {missing}. Grant access, then restart Sweety."}
+
+
 def ai_timeout_alert_copy(locale: str) -> str:
-    return AI_TIMEOUT_ALERT_COPY["zh-TW" if locale == "zh-TW" else "en"]
+    return AI_TIMEOUT_ALERT_COPY[_supported_locale(locale)]
 
 
 def status_text(locale: str, snapshot: dict[str, Any]) -> str:
-    language = "zh-TW" if locale == "zh-TW" else "en"
+    language = _supported_locale(locale)
     status = str(snapshot.get("status", "stopped"))
     text = STATUS_COPY[language].get(status, status)
     if snapshot.get("currentTarget"):
@@ -103,6 +143,14 @@ def panel_update_copy(locale: str, update: dict[str, Any]) -> dict[str, str]:
             "emphasis": "螢幕與系統錄音以及自動化等三種權限",
             "windows": "Win 版",
             "macos": "Mac OS 版",
+        }
+    if locale == "ja":
+        return {
+            "heading": f"バージョン {version} をダウンロードできます",
+            "note": "Mac OS版のインストール後は、アクセシビリティ、画面収録・システムオーディオ録音、オートメーションの権限を再設定してください。",
+            "emphasis": "画面収録・システムオーディオ録音、オートメーションの権限",
+            "windows": "Windows版",
+            "macos": "Mac OS版",
         }
     return {
         "heading": f"Version {version} is ready to download",
@@ -237,7 +285,7 @@ class PanelWindowController(NSObject):
         if self is None:
             return None
         self.bridge = bridge
-        self.locale = "zh-TW" if locale == "zh-TW" else "en"
+        self.locale = _supported_locale(locale)
         self.window = None
         self.status_item = None
         self.timer = None
@@ -269,13 +317,14 @@ class PanelWindowController(NSObject):
 
         self.title_label = _label("Sweety", (84, 440, 210, 24), 19, True)
         content.addSubview_(self.title_label)
-        self.subtitle_label = _label("Anti-scam companion", (84, 420, 220, 18), 12)
+        ui_copy = panel_ui_copy(self.locale)
+        self.subtitle_label = _label(ui_copy["subtitle"], (84, 420, 220, 18), 12)
         content.addSubview_(self.subtitle_label)
         self.version_label = _label(f"v{APP_VERSION}", (328, 432, 66, 24), 11, True)
         self.version_label.setAlignment_(NSTextAlignmentCenter)
         content.addSubview_(self.version_label)
 
-        selected_title = "已勾選對象" if self.locale == "zh-TW" else "Selected targets"
+        selected_title = ui_copy["selected_targets"]
         content.addSubview_(_label(selected_title, (32, 356, 180, 20), 13))
         self.count_label = _label("0", (32, 304, 180, 52), 42, True)
         content.addSubview_(self.count_label)
@@ -304,11 +353,11 @@ class PanelWindowController(NSObject):
         self.toggle_button.setKeyEquivalent_("\r")
         content.addSubview_(self.toggle_button)
 
-        manage_title = "開啟管理介面" if self.locale == "zh-TW" else "Open management"
+        manage_title = ui_copy["open_management"]
         manage = _panel_button(manage_title, self, "openManagement:", 120, symbol_name="safari")
         content.addSubview_(manage)
 
-        quit_title = "結束 App" if self.locale == "zh-TW" else "Quit App"
+        quit_title = ui_copy["quit_app"]
         quit_button = _panel_button(quit_title, self, "quitApp:", 56, symbol_name="power")
         content.addSubview_(quit_button)
 
@@ -325,12 +374,13 @@ class PanelWindowController(NSObject):
         status_button.setImage_(logo)
         status_button.setToolTip_("Sweety")
         menu = NSMenu.alloc().init()
-        show_title = "顯示 Sweety" if self.locale == "zh-TW" else "Show Sweety"
+        ui_copy = panel_ui_copy(self.locale)
+        show_title = ui_copy["show"]
         show_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(show_title, "showWindow:", "")
         show_item.setTarget_(self)
         menu.addItem_(show_item)
         menu.addItem_(NSMenuItem.separatorItem())
-        quit_title = "結束" if self.locale == "zh-TW" else "Quit"
+        quit_title = ui_copy["quit"]
         quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(quit_title, "quitApp:", "q")
         quit_item.setTarget_(self)
         menu.addItem_(quit_item)
@@ -405,9 +455,8 @@ class PanelWindowController(NSObject):
         enabled = bool(snapshot.get("enabled"))
         self.count_label.setStringValue_(str(snapshot.get("selectedTargetCount", 0)))
         self.status_label.setStringValue_(status_text(self.locale, snapshot))
-        self.toggle_button.setTitle_(
-            ("停止" if enabled else "開始") if self.locale == "zh-TW" else ("Stop" if enabled else "Start")
-        )
+        ui_copy = panel_ui_copy(self.locale)
+        self.toggle_button.setTitle_(ui_copy["stop"] if enabled else ui_copy["start"])
         self.toggle_button.setImage_(
             _system_symbol("stop.fill" if enabled else "play.fill", self.toggle_button.title())
         )

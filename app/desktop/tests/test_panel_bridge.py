@@ -9,6 +9,8 @@ from sweety_app.panel import (
     _panel_button,
     _update_note_label,
     ai_timeout_alert_copy,
+    panel_ui_copy,
+    permission_alert_copy,
     panel_update_copy,
     panel_update_downloads,
     status_text,
@@ -70,12 +72,31 @@ def test_bridge_reports_count_and_controls_monitor(tmp_path):
 def test_status_text_is_localized():
     assert status_text("zh-TW", {"status": "target_required"}) == "請先勾選至少一個對象"
     assert status_text("en", {"status": "line_window_required"}) == "Open the LINE main window first"
+    assert status_text("ja", {"status": "target_required"}) == "対象を1人以上選択してください"
+    assert status_text("ja", {"status": "processing", "currentTarget": "Fraud1"}) == "処理中: Fraud1"
 
 
 def test_ai_timeout_alert_copy_is_localized():
     assert ai_timeout_alert_copy("zh-TW") == "AI 目前沒有回應，請切換 AI 模型或稍後再試。"
     assert ai_timeout_alert_copy("en") == "AI is not responding. Switch AI models or try again later."
     assert ai_timeout_alert_copy("unsupported") == "AI is not responding. Switch AI models or try again later."
+    assert ai_timeout_alert_copy("ja") == "AIが応答していません。AIモデルを切り替えるか、しばらくしてから再試行してください。"
+
+
+def test_panel_and_permission_copy_are_localized_in_japanese():
+    copy = panel_ui_copy("ja")
+    assert copy["subtitle"] == "詐欺対策サポートツール"
+    assert copy["selected_targets"] == "選択中の対象"
+    assert copy["start"] == "開始"
+    assert copy["stop"] == "停止"
+    assert copy["open_management"] == "管理画面を開く"
+    assert copy["quit_app"] == "Appを終了"
+
+    alert = permission_alert_copy("ja", ["Accessibility", "Screen Recording", "LINE"])
+    assert alert["title"] == "SweetyにはmacOSの権限が必要です"
+    assert "アクセシビリティ" in alert["message"]
+    assert "画面収録" in alert["message"]
+    assert "LINEオートメーション" in alert["message"]
 
 
 def test_bridge_preserves_monitor_timeout_alert_snapshot(tmp_path):
@@ -158,6 +179,13 @@ def test_panel_update_copy_and_downloads_are_localized_and_omit_missing_platform
         "emphasis": "Screen & System Audio Recording, and Automation permissions",
         "windows": "Windows",
         "macos": "Mac OS",
+    }
+    assert panel_update_copy("ja", update) == {
+        "heading": "バージョン 1.1.0 をダウンロードできます",
+        "note": "Mac OS版のインストール後は、アクセシビリティ、画面収録・システムオーディオ録音、オートメーションの権限を再設定してください。",
+        "emphasis": "画面収録・システムオーディオ録音、オートメーションの権限",
+        "windows": "Windows版",
+        "macos": "Mac OS版",
     }
     assert panel_update_downloads(update) == [("macos", "https://sweety.tw/Sweety.dmg")]
 

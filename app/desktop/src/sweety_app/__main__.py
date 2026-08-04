@@ -24,7 +24,7 @@ from .diagnostics import configure_diagnostics, log_event
 from .line_mac import LineMacAdapter
 from .monitor import MonitorController
 from .metrics_reporter import start_metrics_reporting
-from .panel import PanelBridge, PanelWindowController
+from .panel import PanelBridge, PanelWindowController, permission_alert_copy
 from .permissions import PermissionStatus, check_permissions
 from .remote_catalog import sync_remote_catalog
 from .region_access import check_region_access
@@ -68,24 +68,11 @@ class SweetyAppDelegate(NSObject):
         self.panel.build()
         self.panel.show()
         if not self.permission_status.ready:
-            permission_names = {
-                "Accessibility": "輔助使用",
-                "Screen Recording": "螢幕錄製",
-                "System Events": "System Events 自動化",
-                "LINE": "LINE 自動化",
-            }
-            missing = ", ".join(
-                permission_names.get(name, name) if self.locale == "zh-TW" else name
-                for name in self.permission_status.missing
-            )
+            copy = permission_alert_copy(self.locale, self.permission_status.missing)
             alert = NSAlert.alloc().init()
             alert.setAlertStyle_(NSAlertStyleWarning)
-            alert.setMessageText_("Sweety 需要 macOS 權限" if self.locale == "zh-TW" else "Sweety needs macOS permissions")
-            alert.setInformativeText_(
-                f"尚未允許：{missing}。請完成授權，然後重新啟動 Sweety。"
-                if self.locale == "zh-TW"
-                else f"Not yet allowed: {missing}. Grant access, then restart Sweety."
-            )
+            alert.setMessageText_(copy["title"])
+            alert.setInformativeText_(copy["message"])
             alert.runModal()
 
     def applicationShouldTerminateAfterLastWindowClosed_(self, _application) -> bool:

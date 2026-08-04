@@ -50,6 +50,8 @@ def normalize_locale(identifier: str | None) -> str:
     language = (identifier or "").replace("_", "-").lower()
     if language == "zh-tw" or language.startswith("zh-hant"):
         return "zh-TW"
+    if language == "ja" or language.startswith("ja-"):
+        return "ja"
     return "en"
 
 
