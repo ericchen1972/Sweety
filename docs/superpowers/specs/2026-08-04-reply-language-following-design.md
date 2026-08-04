@@ -26,7 +26,7 @@
 
 App 內建來源為 `app/desktop/src/sweety_app/catalog.py` 的 `DEFAULT_SYSTEM_PROMPT_TEMPLATE`。Server seed 來源為 `app/tools/base_catalog.sql` 中 `system_prompts` 的同一份提示內容。
 
-兩處必須加入相同語意與相同關鍵句，避免 App 離線時和遠端同步後出現不同回覆行為。既有 `deploy_base_catalog.php` 仍負責把 server seed 套用到 production；本次會修改並驗證 server 程式，但除非使用者另行要求，不直接部署 production server。
+兩處必須加入相同語意與相同關鍵句，避免 App 離線時和遠端同步後出現不同回覆行為。模型請求邊界另以「遠端 prompt 缺少時才補上」的方式保障舊 Server 相容性；新版 prompt 已含規則時不得重複。既有 `deploy_base_catalog.php` 仍負責把 server seed 套用到 production；本次會修改並驗證 server 程式，但除非使用者另行要求，不直接部署 production server。
 
 ## 測試
 

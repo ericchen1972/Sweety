@@ -75,6 +75,7 @@ Expected: failures state that both bundled and SQL prompts lack the reply-langua
 
 **Files:**
 - Modify: `app/desktop/src/sweety_app/catalog.py`
+- Modify: `app/desktop/src/sweety_app/ai.py`
 - Modify: `app/tools/base_catalog.sql`
 - Test: `app/desktop/tests/test_prompt_contract.py`
 - Test: `app/desktop/tests/test_ai.py`
@@ -92,7 +93,11 @@ Insert this exact section in both files:
 - incoming_summary 必須保留對方的原始語言、字句與順序，不要翻譯成系統提示、App 介面或人設說明的語言。
 ```
 
-- [ ] **Step 2: Run focused tests and verify GREEN**
+- [ ] **Step 2: Guarantee the contract at the model request boundary**
+
+Export the language section as `REPLY_LANGUAGE_CONTRACT` from `catalog.py`. In `build_messages()`, append it only when the remote template does not already contain `回覆語言：`; this keeps old Server prompts safe without duplicating the section in updated prompts.
+
+- [ ] **Step 3: Run focused tests and verify GREEN**
 
 ```bash
 cd app/desktop
@@ -101,10 +106,10 @@ uv run pytest tests/test_prompt_contract.py tests/test_ai.py::test_prompt_isolat
 
 Expected: all focused tests pass, including bundled/SQL full prompt identity.
 
-- [ ] **Step 3: Commit the behavior change**
+- [ ] **Step 4: Commit the behavior change**
 
 ```bash
-git add app/desktop/src/sweety_app/catalog.py app/tools/base_catalog.sql app/desktop/tests/test_prompt_contract.py app/desktop/tests/test_ai.py
+git add app/desktop/src/sweety_app/ai.py app/desktop/src/sweety_app/catalog.py app/tools/base_catalog.sql app/desktop/tests/test_prompt_contract.py app/desktop/tests/test_ai.py
 git commit -m "feat: follow counterpart reply language"
 ```
 

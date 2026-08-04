@@ -34,6 +34,12 @@ def _conversation_continuation(prompt: str) -> str:
     return match.group(1)
 
 
+def _reply_language(prompt: str) -> str:
+    match = re.search(r"回覆語言：\n(.*?)\n\n歷史紀錄：", prompt, flags=re.DOTALL)
+    assert match is not None, "prompt is missing the reply-language section"
+    return match.group(1)
+
+
 @pytest.fixture(params=["bundled", "sql"])
 def prompt(request: pytest.FixtureRequest) -> str:
     if request.param == "bundled":
@@ -106,6 +112,30 @@ def test_bundled_and_sql_prompts_share_the_same_knowledge_boundary():
 
 def test_bundled_and_sql_prompts_are_identical():
     assert DEFAULT_SYSTEM_PROMPT_TEMPLATE == _sql_catalog_prompt()
+
+
+def test_reply_language_follows_latest_meaningful_message_without_translating_summary(prompt):
+    language = _reply_language(prompt)
+    for required in (
+        "msg_reply",
+        "最新一則",
+        "主要語言",
+        "混用多種語言",
+        "最下方",
+        "貼圖、圖片、影片、語音",
+        "最近對話的主要語言",
+        "專有名詞",
+        "incoming_summary",
+        "原始語言",
+        "不要翻譯",
+    ):
+        assert required in language
+
+
+def test_bundled_and_sql_prompts_share_the_same_reply_language_contract():
+    assert _reply_language(DEFAULT_SYSTEM_PROMPT_TEMPLATE) == _reply_language(
+        _sql_catalog_prompt()
+    )
 
 
 def test_existing_safety_remains_without_json_output_instructions(prompt):
