@@ -84,7 +84,10 @@ test('resolveLocale follows browser language preference order and fallback', () 
   for (const locale of ['zh-TW', 'zh-Hant', 'zh-Hant-TW', 'zh-HK', 'zh-MO']) {
     assert.equal(resolveLocale(locale), 'zh-TW');
   }
-  for (const locale of ['zh', 'zh-CN', 'en', 'en-US', 'ja-JP', undefined]) {
+  for (const locale of ['ja', 'ja-JP', 'ja-JP-u-ca-japanese']) {
+    assert.equal(resolveLocale(locale), 'ja');
+  }
+  for (const locale of ['zh', 'zh-CN', 'en', 'en-US', 'fr-FR', undefined]) {
     assert.equal(resolveLocale(locale), 'en');
   }
   assert.equal(resolveLocale(['zh-Hant-TW', 'en-US'], 'en-US'), 'zh-TW');
@@ -103,6 +106,11 @@ test('tutorial video follows the resolved locale and appears immediately before 
     id: '-qS4MGvnsa4',
     src: 'https://www.youtube-nocookie.com/embed/-qS4MGvnsa4',
     title: 'Sweety English tutorial',
+  });
+  assert.deepEqual(homepage.getTutorialVideo('ja'), {
+    id: 'CLLEgl9tRWA',
+    src: 'https://www.youtube-nocookie.com/embed/CLLEgl9tRWA',
+    title: 'Sweety 日本語使い方ガイド',
   });
 
   const videoIndex = html.indexOf('class="tutorial-video-section"');
@@ -156,6 +164,61 @@ test('locale presentation and live counter text are pure and localized', () => {
   });
   assert.equal(homepage.formatCounterText('zh-TW', 12, 7), '目前 Sweety 已經消耗了詐騙總計 12 天 7 小時');
   assert.equal(homepage.formatCounterText('en', 12, 7), 'So far, Sweety has consumed a total of 12 days 7 hours');
+});
+
+test('Japanese copy covers the complete homepage and uses Japanese formatting', () => {
+  assert.deepEqual(Object.keys(homepage.copy.ja), Object.keys(homepage.copy.en));
+  assert.deepEqual(
+    Object.keys(homepage.copy.ja.instructions.guide),
+    Object.keys(homepage.copy.en.instructions.guide),
+  );
+  assert.equal(homepage.copy.ja.faq.items.length, 5);
+  assert.equal(homepage.copy.ja.hero.title, '詐欺に対して、私たちは受け身で防ぐことしかできないのでしょうか？');
+  assert.equal(homepage.copy.ja.instructions.title, '使い方');
+  assert.equal(homepage.copy.ja.notice.title, '注意事項');
+  assert.equal(homepage.copy.ja.tutorialVideo.title, '使い方動画');
+  assert.equal(homepage.formatDownloadCount('ja', 42), 'ダウンロード数：42回');
+  assert.equal(homepage.formatDownloadCount('ja', null), 'ダウンロード数：—回');
+  assert.equal(homepage.formatCounterText('ja', 12, 7), 'Sweetyが詐欺業者に使わせた時間：12日7時間');
+  assert.deepEqual(homepage.getLocalePresentation(['ja-JP'], 'en-US'), {
+    locale: 'ja',
+    lang: 'ja',
+    title: 'Sweety｜攻める詐欺対策',
+  });
+  assert.deepEqual(homepage.getDownloadDecision('macos', 'ja'), {
+    enabled: true,
+    href: expectedMacDownload,
+    label: 'macOS版をダウンロード',
+  });
+  assert.deepEqual(homepage.getDownloadDecision('windows', 'ja'), {
+    enabled: true,
+    href: expectedWindowsDownload,
+    label: 'Windows版をダウンロード',
+  });
+});
+
+test('Japanese metadata and FAQ structured data come from the localized copy', () => {
+  assert.deepEqual(homepage.getMetadata('ja'), {
+    title: 'Sweety｜攻める詐欺対策',
+    description: 'Sweetyは、AIが不審な相手に返信して詐欺業者の時間を消費させる、完全無料・オープンソースの詐欺対策アプリです。',
+    socialTitle: 'Sweety｜攻める詐欺対策',
+    socialDescription: 'AIを味方につけて、詐欺業者の時間を積極的に奪います。',
+    ogLocale: 'ja_JP',
+  });
+
+  const faq = homepage.buildFaqStructuredData('ja');
+  assert.equal(faq['@type'], 'FAQPage');
+  assert.equal(faq['@id'], 'https://sweety.tw/#faq');
+  assert.equal(faq.mainEntity.length, 5);
+  assert.equal(faq.mainEntity[0].name, homepage.copy.ja.faq.items[0].question);
+  assert.equal(
+    faq.mainEntity[4].acceptedAnswer.text,
+    homepage.copy.ja.faq.items[4].answerPrefix + homepage.copy.ja.faq.items[4].answerEmphasis,
+  );
+  assert.match(html, /<meta property="og:locale:alternate" content="ja_JP">/);
+  assert.match(html, /<script[^>]+type="application\/ld\+json"[^>]+id="homepage-structured-data"[^>]*>/);
+  assert.match(html, /"inLanguage": \["zh-TW", "en", "ja"\]/);
+  assert.match(javascript, /applyMetadata\(document,\s*locale\)/);
 });
 
 test('aggregate loader releases after timeout and ignores a late stale completion', async () => {
@@ -463,7 +526,7 @@ test('homepage exposes complete social metadata and machine-readable application
   assert.equal(social.readUInt32BE(16), 1200);
   assert.equal(social.readUInt32BE(20), 630);
 
-  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((match) => JSON.parse(match[1]));
+  const blocks = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map((match) => JSON.parse(match[1]));
   const graph = blocks.flatMap((block) => block['@graph'] ?? [block]);
   for (const type of ['WebSite', 'Organization', 'Person', 'SoftwareApplication', 'FAQPage']) {
     assert.ok(graph.some((node) => node['@type'] === type), `JSON-LD should include ${type}`);
