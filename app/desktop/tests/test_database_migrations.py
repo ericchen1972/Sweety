@@ -96,9 +96,12 @@ def test_v3_persona_table_migrates_to_canonical_content_columns(tmp_path):
         migrated = connection.execute("SELECT * FROM base_personas WHERE id = 'legacy-persona'").fetchone()
     assert columns == {
         "id", "age_group", "gender", "name_zh_tw", "name_en",
-        "content_zh_tw", "content_en", "image", "sort_order", "updated_at",
+        "name_ja", "content_zh_tw", "content_en", "content_ja",
+        "image", "sort_order", "updated_at",
     }
     assert migrated["content_zh_tw"] == "人物資料：\n完整舊人設"
+    assert migrated["name_ja"]
+    assert migrated["content_ja"]
 
 
 def test_v4_database_upgrades_the_prior_official_prompt_to_schema_v5(tmp_path):

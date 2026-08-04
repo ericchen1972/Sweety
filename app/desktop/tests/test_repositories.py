@@ -66,8 +66,8 @@ def test_cached_remote_catalog_replaces_local_prompt_and_base_personas(repo):
                 "id": "remote-persona",
                 "ageGroup": "35-50",
                 "gender": "female",
-                "name": {"zh-TW": "遠端人設", "en": "Remote Persona"},
-                "content": {"zh-TW": "遠端完整文字", "en": "Remote full text"},
+                "name": {"zh-TW": "遠端人設", "en": "Remote Persona", "ja": "リモートペルソナ"},
+                "content": {"zh-TW": "遠端完整文字", "en": "Remote full text", "ja": "リモート完全設定"},
                 "image": "/images/personas/remote.jpg",
             }
         ],
@@ -80,8 +80,8 @@ def test_cached_remote_catalog_replaces_local_prompt_and_base_personas(repo):
             "id": "remote-persona",
             "ageGroup": "35-50",
             "gender": "female",
-            "name": {"zh-TW": "遠端人設", "en": "Remote Persona"},
-            "content": {"zh-TW": "遠端完整文字", "en": "Remote full text"},
+            "name": {"zh-TW": "遠端人設", "en": "Remote Persona", "ja": "リモートペルソナ"},
+            "content": {"zh-TW": "遠端完整文字", "en": "Remote full text", "ja": "リモート完全設定"},
             "image": "/images/personas/remote.jpg",
         }
     ]

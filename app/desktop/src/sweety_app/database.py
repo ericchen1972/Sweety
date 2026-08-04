@@ -9,7 +9,7 @@ from typing import Iterator
 from .catalog import BASE_PERSONAS, DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 
 SCHEMA = """
@@ -44,8 +44,10 @@ CREATE TABLE IF NOT EXISTS base_personas (
     gender TEXT NOT NULL,
     name_zh_tw TEXT NOT NULL,
     name_en TEXT NOT NULL,
+    name_ja TEXT NOT NULL,
     content_zh_tw TEXT NOT NULL,
     content_en TEXT NOT NULL,
+    content_ja TEXT NOT NULL,
     image TEXT NOT NULL,
     sort_order INTEGER NOT NULL,
     updated_at TEXT NOT NULL
@@ -199,8 +201,10 @@ class Database:
                         gender TEXT NOT NULL,
                         name_zh_tw TEXT NOT NULL,
                         name_en TEXT NOT NULL,
+                        name_ja TEXT NOT NULL DEFAULT '',
                         content_zh_tw TEXT NOT NULL,
                         content_en TEXT NOT NULL,
+                        content_ja TEXT NOT NULL DEFAULT '',
                         image TEXT NOT NULL,
                         sort_order INTEGER NOT NULL,
                         updated_at TEXT NOT NULL
@@ -210,30 +214,48 @@ class Database:
                 connection.execute(
                     f"""
                     INSERT INTO base_personas_v4(
-                        id, age_group, gender, name_zh_tw, name_en,
-                        content_zh_tw, content_en, image, sort_order, updated_at
+                        id, age_group, gender, name_zh_tw, name_en, name_ja,
+                        content_zh_tw, content_en, content_ja, image, sort_order, updated_at
                     )
-                    SELECT id, age_group, gender, name_zh_tw, name_en,
-                           {zh_source}, {en_source}, image, sort_order, updated_at
+                    SELECT id, age_group, gender, name_zh_tw, name_en, name_en,
+                           {zh_source}, {en_source}, {en_source}, image, sort_order, updated_at
                     FROM base_personas
                     """
                 )
                 connection.execute("DROP TABLE base_personas")
                 connection.execute("ALTER TABLE base_personas_v4 RENAME TO base_personas")
+            columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(base_personas)").fetchall()
+            }
+            if "name_ja" not in columns:
+                connection.execute("ALTER TABLE base_personas ADD COLUMN name_ja TEXT NOT NULL DEFAULT ''")
+            if "content_ja" not in columns:
+                connection.execute("ALTER TABLE base_personas ADD COLUMN content_ja TEXT NOT NULL DEFAULT ''")
+            connection.execute(
+                "UPDATE base_personas SET name_ja = name_en WHERE name_ja = ''"
+            )
+            connection.execute(
+                "UPDATE base_personas SET content_ja = content_en WHERE content_ja = ''"
+            )
             for index, persona in enumerate(BASE_PERSONAS):
                 connection.execute(
                     """
                     INSERT OR IGNORE INTO base_personas(
-                        id, age_group, gender, name_zh_tw, name_en,
-                        content_zh_tw, content_en, image, sort_order, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                        id, age_group, gender, name_zh_tw, name_en, name_ja,
+                        content_zh_tw, content_en, content_ja, image, sort_order, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                     """,
                     (
                         persona["id"], persona.get("ageGroup", "20-35"), persona["gender"],
-                        persona["name"]["zh-TW"], persona["name"]["en"],
-                        persona["content"]["zh-TW"], persona["content"]["en"],
+                        persona["name"]["zh-TW"], persona["name"]["en"], persona["name"]["ja"],
+                        persona["content"]["zh-TW"], persona["content"]["en"], persona["content"]["ja"],
                         persona["image"], index,
                     ),
+                )
+                connection.execute(
+                    "UPDATE base_personas SET name_ja = ?, content_ja = ? WHERE id = ?",
+                    (persona["name"]["ja"], persona["content"]["ja"], persona["id"]),
                 )
             if previous_version < CURRENT_SCHEMA_VERSION:
                 connection.execute(

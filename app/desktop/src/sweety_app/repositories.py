@@ -221,14 +221,14 @@ class Repository:
                 connection.execute(
                     """
                     INSERT INTO base_personas(
-                        id, age_group, gender, name_zh_tw, name_en,
-                        content_zh_tw, content_en, image, sort_order, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        id, age_group, gender, name_zh_tw, name_en, name_ja,
+                        content_zh_tw, content_en, content_ja, image, sort_order, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         str(persona["id"]), str(persona.get("ageGroup", "20-35")), str(persona["gender"]),
-                        str(persona["name"]["zh-TW"]), str(persona["name"]["en"]),
-                        str(persona["content"]["zh-TW"]), str(persona["content"]["en"]),
+                        str(persona["name"]["zh-TW"]), str(persona["name"]["en"]), str(persona["name"]["ja"]),
+                        str(persona["content"]["zh-TW"]), str(persona["content"]["en"]), str(persona["content"]["ja"]),
                         str(persona["image"]), index, now,
                     ),
                 )
@@ -239,8 +239,8 @@ class Repository:
             "id": row["id"],
             "ageGroup": row["age_group"],
             "gender": row["gender"],
-            "name": {"zh-TW": row["name_zh_tw"], "en": row["name_en"]},
-            "content": {"zh-TW": row["content_zh_tw"], "en": row["content_en"]},
+            "name": {"zh-TW": row["name_zh_tw"], "en": row["name_en"], "ja": row["name_ja"]},
+            "content": {"zh-TW": row["content_zh_tw"], "en": row["content_en"], "ja": row["content_ja"]},
             "image": row["image"],
         }
 
