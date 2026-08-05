@@ -81,8 +81,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleDisplayName": "Sweety",
         "CFBundleName": "Sweety",
-        "CFBundleShortVersionString": "1.0.1",
-        "CFBundleVersion": "101",
+        "CFBundleShortVersionString": "1.0.2",
+        "CFBundleVersion": "102",
         "LSMinimumSystemVersion": "13.0",
         "NSAppleEventsUsageDescription": "Sweety needs permission to operate LINE and System Events for selected anti-scam conversations.",
         "NSHighResolutionCapable": True,
