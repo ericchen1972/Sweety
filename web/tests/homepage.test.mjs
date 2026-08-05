@@ -17,8 +17,8 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.1-958abb30';
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.1-b3132dad';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.2-d1f2664b';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.2-7be756f5';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -47,7 +47,7 @@ test('macOS release helper preserves the metrics environment and verifies the up
 
 test('Windows release helper validates and verifies the uploaded Inno Setup binary', () => {
   assert.match(windowsReleaseHelper, /web\/sftp-config\.json/);
-  assert.match(windowsReleaseHelper, /Sweety-Setup-1\.0\.1-Windows-x64\.exe/);
+  assert.match(windowsReleaseHelper, /Sweety-Setup-1\.0\.2-Windows-x64\.exe/);
   assert.match(windowsReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-Windows-Setup-latest\.exe/);
   assert.match(windowsReleaseHelper, /fread\([^,]+,\s*2\)[^;]*===\s*['"]MZ['"]/s);
   assert.match(windowsReleaseHelper, /FTP_BINARY/);
@@ -61,9 +61,9 @@ test('homepage deployment remains website-only and never rebuilds the desktop ap
   assert.doesNotMatch(deployHelper, /dist\/Sweety\.app/);
 });
 
-test('production update manifest is safe for current 1.0.1 installations and deploys publicly', () => {
+test('production update manifest advertises 1.0.2 and deploys publicly', () => {
   assert.deepEqual(updateManifest, {
-    latestVersion: '1.0.1',
+    latestVersion: '1.0.2',
     downloads: {
       windows: expectedWindowsDownload,
       macos: expectedMacDownload,
@@ -74,6 +74,7 @@ test('production update manifest is safe for current 1.0.1 installations and dep
 });
 
 test('machine-readable homepage copy lists both desktop downloads', () => {
+  assert.match(llms, /最新版本：1\.0\.2/);
   assert.match(llms, /目前下載：Windows、macOS/);
   assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
@@ -554,7 +555,7 @@ test('homepage exposes complete social metadata and machine-readable application
     assert.ok(graph.some((node) => node['@type'] === type), `JSON-LD should include ${type}`);
   }
   const app = graph.find((node) => node['@type'] === 'SoftwareApplication');
-  assert.equal(app.softwareVersion, '1.0.1');
+  assert.equal(app.softwareVersion, '1.0.2');
   assert.equal(app.operatingSystem, 'Windows, macOS');
   assert.equal(app.offers.price, '0');
 });

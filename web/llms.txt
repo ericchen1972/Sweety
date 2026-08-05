@@ -6,7 +6,7 @@
 
 - 官方網站：https://sweety.tw/
 - 開源程式碼：https://github.com/ericchen1972/Sweety
-- 最新版本：1.0.1
+- 最新版本：1.0.2
 - 授權：MIT License
 - 目前下載：Windows、macOS
 - 作者：Eric，網站與 AI 工程師，20 年開發經驗
