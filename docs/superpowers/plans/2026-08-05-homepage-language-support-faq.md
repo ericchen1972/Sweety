@@ -174,7 +174,7 @@ git commit -m "feat: add homepage language support FAQ"
 - Deploy with: `app/tools/deploy_homepage.php`
 - Verify: `https://sweety.tw/`
 
-- [ ] **Step 1: Publish website files only**
+- [x] **Step 1: Publish website files only**
 
 Run:
 
@@ -184,11 +184,11 @@ php app/tools/deploy_homepage.php
 
 Expected: homepage files/assets upload successfully, metrics schema and download counter checks pass, and there is no desktop build/signing output.
 
-- [ ] **Step 2: Fetch cache-busted live assets**
+- [x] **Step 2: Fetch cache-busted live assets**
 
 Fetch `https://sweety.tw/?verify=<timestamp>`, extract the shared asset version, and download that exact `homepage.js` resource. Expected: the live asset version equals the local 12-character hash and the response contains all three new translations.
 
-- [ ] **Step 3: Verify live FAQ and structured data**
+- [x] **Step 3: Verify live FAQ and structured data**
 
 Expected live evidence:
 
