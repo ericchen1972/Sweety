@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 import time
@@ -8,6 +9,7 @@ from typing import Any, Callable
 
 from PIL import Image
 
+from .diagnostics import log_event
 from .monitor import UnreadContact
 
 
@@ -118,7 +120,11 @@ class LineMacAdapter:
         main = self._main_window()
         if main is None:
             raise RuntimeError("LINE main window not found")
-        self._activate_line()
+        scrolled = self.scroll_main_window_to_top(main)
+        log_event(
+            logging.getLogger("sweety.line"),
+            "contact_list_scroll_top_succeeded" if scrolled else "contact_list_scroll_top_failed",
+        )
         self._capture(main, self.contact_list_path)
         with Image.open(self.contact_list_path) as image:
             cropped = image.crop((62, CONTACT_TOP_OFFSET, image.width, image.height))
@@ -130,6 +136,21 @@ class LineMacAdapter:
             image_height=height,
             has_badge=lambda index: self._has_green_badge(self.contact_list_path, index),
         )
+
+    def scroll_main_window_to_top(self, main: dict[str, Any]) -> bool:
+        try:
+            self._activate_line()
+            self._mouse().moveTo(
+                int(main["x"]) + CONTACT_CLICK_X_OFFSET,
+                int(main["y"]) + int(main["height"]) // 2,
+                duration=0.3,
+            )
+            self._mouse().scroll(2000)
+            self._mouse().scroll(2000)
+            self.sleeper(0.5)
+            return True
+        except Exception:
+            return False
 
     def prepare_next_chat(self) -> bool:
         self.sleeper(1.0)

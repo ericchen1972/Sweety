@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 
 from sweety_app.line_mac import (
     LineMacAdapter,
@@ -59,6 +60,45 @@ def test_prepare_next_chat_waits_then_reuses_line_activation(tmp_path: Path):
 
     assert adapter.prepare_next_chat() is True
     assert events == [("sleep", 1.0), ("activate", None)]
+
+
+def test_scroll_main_window_to_top_moves_into_contact_list_and_scrolls_twice(tmp_path: Path):
+    mouse = FakeMouse()
+    sleeps = []
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=mouse,
+        sleeper=sleeps.append,
+    )
+    adapter._activate_line = lambda: None
+    main = {"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}
+
+    assert adapter.scroll_main_window_to_top(main) is True
+    assert mouse.clicks == [(170, 480, 0.3)]
+    assert mouse.keys == [("scroll", 2000), ("scroll", 2000)]
+    assert sleeps == [0.5]
+
+
+@pytest.mark.parametrize("scroll_result", [True, False])
+def test_unread_contacts_scrolls_before_capture_even_when_scroll_fails(
+    tmp_path: Path,
+    scroll_result: bool,
+):
+    events = []
+    adapter = LineMacAdapter(cache_dir=tmp_path, runner=lambda *_args, **_kwargs: Result())
+    adapter._main_window = lambda: {"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}
+    adapter.scroll_main_window_to_top = lambda _main: events.append("scroll") or scroll_result
+
+    def capture(_main, path):
+        events.append("capture")
+        Image.new("RGB", (360, 800)).save(path)
+
+    adapter._capture = capture
+    adapter._run_ocr = lambda _path: []
+
+    assert adapter.unread_contacts() == []
+    assert events == ["scroll", "capture"]
 
 
 def test_contacts_from_ocr_requires_green_badge_and_filters_times():
