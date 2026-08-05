@@ -62,9 +62,10 @@ def test_prepare_next_chat_waits_then_reuses_line_activation(tmp_path: Path):
     assert events == [("sleep", 1.0), ("activate", None)]
 
 
-def test_scroll_main_window_to_top_moves_into_contact_list_and_scrolls_twice(tmp_path: Path):
+def test_scroll_main_window_to_top_uses_whomai_home_key_sequence(tmp_path: Path):
     mouse = FakeMouse()
     sleeps = []
+    scripts = []
     adapter = LineMacAdapter(
         cache_dir=tmp_path,
         runner=lambda *_args, **_kwargs: Result(),
@@ -72,12 +73,33 @@ def test_scroll_main_window_to_top_moves_into_contact_list_and_scrolls_twice(tmp
         sleeper=sleeps.append,
     )
     adapter._activate_line = lambda: None
+    adapter._osascript = lambda script: scripts.append(script) or SimpleNamespace(stdout="success")
     main = {"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}
 
     assert adapter.scroll_main_window_to_top(main) is True
-    assert mouse.clicks == [(170, 480, 0.3)]
-    assert mouse.keys == [("scroll", 2000), ("scroll", 2000)]
-    assert sleeps == [0.5]
+    assert mouse.clicks == [(200, 480, 0.5)]
+    assert len(scripts) == 1
+    assert 'keystroke "a" using command down' in scripts[0]
+    assert "key code 115" in scripts[0]
+    assert mouse.keys == []
+    assert sleeps == [1.0, 0.5]
+
+
+def test_scroll_main_window_to_top_reports_automation_failure_without_fallback(tmp_path: Path):
+    mouse = FakeMouse()
+    adapter = LineMacAdapter(
+        cache_dir=tmp_path,
+        runner=lambda *_args, **_kwargs: Result(),
+        mouse=mouse,
+        sleeper=lambda _seconds: None,
+    )
+    adapter._activate_line = lambda: None
+    adapter._osascript = lambda _script: (_ for _ in ()).throw(RuntimeError("automation failed"))
+
+    assert adapter.scroll_main_window_to_top(
+        {"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}
+    ) is False
+    assert mouse.keys == []
 
 
 @pytest.mark.parametrize("scroll_result", [True, False])

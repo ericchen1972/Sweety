@@ -4,7 +4,7 @@
 
 **Goal:** Return the macOS LINE contact list to the top before every unread-contact screenshot, then build a logging-enabled local Sweety.app.
 
-**Architecture:** Add one focused `LineMacAdapter.scroll_main_window_to_top()` helper that activates LINE, positions the pointer in the contact list, scrolls upward twice, and reports success without raising. `unread_contacts()` calls it before capture and writes the result through the existing global diagnostics pipeline.
+**Architecture:** Add one focused `LineMacAdapter.scroll_main_window_to_top()` helper that activates LINE, runs whomai's `Cmd+A` plus Home-key sequence, and reports success without raising. `unread_contacts()` calls it before capture and writes the result through the existing global diagnostics pipeline; there is no separate mouse-scroll fallback.
 
 **Tech Stack:** Python 3.11+, pytest, PyAutoGUI, Pillow, PyInstaller, macOS codesign
 
@@ -24,7 +24,7 @@
 - [ ] **Step 1: Write the failing scroll helper test**
 
 ```python
-def test_scroll_main_window_to_top_moves_into_contact_list_and_scrolls_twice(tmp_path: Path):
+def test_scroll_main_window_to_top_uses_whomai_home_key_sequence(tmp_path: Path):
     mouse = FakeMouse()
     sleeps = []
     adapter = LineMacAdapter(
@@ -37,9 +37,10 @@ def test_scroll_main_window_to_top_moves_into_contact_list_and_scrolls_twice(tmp
     main = {"name": "LINE", "x": 20, "y": 80, "width": 360, "height": 800}
 
     assert adapter.scroll_main_window_to_top(main) is True
-    assert mouse.clicks == [(170, 480, 0.3)]
-    assert mouse.keys == [("scroll", 2000), ("scroll", 2000)]
-    assert sleeps == [0.5]
+    assert mouse.clicks == [(200, 480, 0.5)]
+    assert 'keystroke "a" using command down' in scripts[0]
+    assert "key code 115" in scripts[0]
+    assert mouse.keys == []
 ```
 
 - [ ] **Step 2: Write the failing capture-order and fallback tests**
@@ -84,12 +85,19 @@ def scroll_main_window_to_top(self, main: dict[str, Any]) -> bool:
     try:
         self._activate_line()
         self._mouse().moveTo(
-            int(main["x"]) + CONTACT_CLICK_X_OFFSET,
+            int(main["x"]) + int(main["width"]) // 2,
             int(main["y"]) + int(main["height"]) // 2,
-            duration=0.3,
+            duration=0.5,
         )
-        self._mouse().scroll(2000)
-        self._mouse().scroll(2000)
+        self._osascript("""tell application \"System Events\"
+tell application \"LINE\" to activate
+set frontmost of process \"LINE\" to true
+tell process \"LINE\"
+  keystroke \"a\" using command down
+  key code 115
+end tell
+end tell""")
+        return result.stdout.strip() == "success"
         self.sleeper(0.5)
         return True
     except Exception:

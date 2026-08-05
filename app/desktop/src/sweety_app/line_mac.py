@@ -140,15 +140,34 @@ class LineMacAdapter:
     def scroll_main_window_to_top(self, main: dict[str, Any]) -> bool:
         try:
             self._activate_line()
+            self.sleeper(1.0)
             self._mouse().moveTo(
-                int(main["x"]) + CONTACT_CLICK_X_OFFSET,
+                int(main["x"]) + int(main["width"]) // 2,
                 int(main["y"]) + int(main["height"]) // 2,
-                duration=0.3,
+                duration=0.5,
             )
-            self._mouse().scroll(2000)
-            self._mouse().scroll(2000)
             self.sleeper(0.5)
-            return True
+            result = self._osascript(
+                '''tell application "System Events"
+tell application "LINE" to activate
+delay 0.5
+set frontmost of process "LINE" to true
+delay 0.5
+tell process "LINE"
+  set mainWindow to window "LINE"
+  try
+    keystroke "a" using command down
+    delay 0.5
+    key code 115
+    delay 0.3
+    return "success"
+  on error
+    return "failed"
+end try
+end tell
+end tell'''
+            )
+            return result.stdout.strip() == "success"
         except Exception:
             return False
 

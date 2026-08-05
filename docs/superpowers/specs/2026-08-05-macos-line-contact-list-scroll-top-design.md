@@ -15,11 +15,11 @@ Before Sweety captures the LINE main window for unread-contact detection, return
 Add a small `scroll_main_window_to_top` operation to `LineMacAdapter`. It will:
 
 1. Activate LINE and obtain the current main-window geometry.
-2. Move the pointer into the contact-list area.
-3. issue two large upward scroll operations.
-4. Wait briefly for the contact list to settle.
+2. Move the pointer to the center of the LINE main window.
+3. Use the legacy whomai AppleScript sequence: `Cmd+A`, then the Home key (`key code 115`).
+4. Treat any AppleScript failure as a failed normalization attempt; do not issue a separate mouse-scroll fallback.
 
-`unread_contacts()` will invoke this operation after resolving the main window and before capturing it. Unlike the legacy whomai implementation, Sweety will not send `Cmd+A`; avoiding keyboard selection reduces focus-dependent side effects.
+`unread_contacts()` will invoke this operation after resolving the main window and before capturing it. The keyboard sequence is retained because large PyAutoGUI scroll values alone do not reliably reach the top on macOS LINE, and no independent mouse-scroll fallback is used.
 
 ## Failure Handling and Diagnostics
 
@@ -29,7 +29,8 @@ Failure to scroll is non-fatal. `unread_contacts()` will continue with the captu
 
 Focused macOS adapter tests will establish:
 
-- the pointer moves into the LINE contact-list area and scrolls upward twice;
+- the pointer moves into the LINE main window and sends whomai's `Cmd+A` and Home sequence;
+- AppleScript failure returns `False` without a mouse-scroll fallback;
 - `unread_contacts()` attempts the scroll before capturing the main window;
 - a failed scroll attempt still proceeds to capture and OCR.
 
