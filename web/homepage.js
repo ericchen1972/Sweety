@@ -215,6 +215,7 @@ export const copy = {
           answerPrefix: '因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的',
           answerEmphasis: '「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。',
         },
+        { question: 'Sweety 支援哪些語系？', answer: 'Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。' },
       ],
     },
     author: {
@@ -319,6 +320,7 @@ export const copy = {
           answerPrefix: 'After an update, macOS may treat Sweety as a new app. In System Settings, ',
           answerEmphasis: 'remove Sweety from Accessibility and Screen & System Audio Recording, then add it again.',
         },
+        { question: 'Which languages does Sweety support?', answer: 'The Sweety interface supports Traditional Chinese, English, and Japanese. AI replies will primarily use the language spoken by the other person.' },
       ],
     },
     author: {
@@ -423,6 +425,7 @@ export const copy = {
           answerPrefix: 'アップデート後、macOSがSweetyを新しいアプリとして認識する場合があります。システム設定の',
           answerEmphasis: '「アクセシビリティ」と「画面収録とシステムオーディオ録音」からSweetyを一度削除し、再度追加してください。',
         },
+        { question: 'Sweetyはどの言語に対応していますか？', answer: 'Sweetyのインターフェースは繁体字中国語、英語、日本語に対応しています。ただし、AIは主に相手が使用している言語で返信します。' },
       ],
     },
     author: {

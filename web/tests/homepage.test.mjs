@@ -172,7 +172,7 @@ test('Japanese copy covers the complete homepage and uses Japanese formatting', 
     Object.keys(homepage.copy.ja.instructions.guide),
     Object.keys(homepage.copy.en.instructions.guide),
   );
-  assert.equal(homepage.copy.ja.faq.items.length, 5);
+  assert.equal(homepage.copy.ja.faq.items.length, 6);
   assert.equal(homepage.copy.ja.hero.title, '詐欺に対して、私たちは受け身で防ぐことしかできないのでしょうか？');
   assert.equal(homepage.copy.ja.instructions.title, '使い方');
   assert.equal(homepage.copy.ja.notice.title, '注意事項');
@@ -209,12 +209,14 @@ test('Japanese metadata and FAQ structured data come from the localized copy', (
   const faq = homepage.buildFaqStructuredData('ja');
   assert.equal(faq['@type'], 'FAQPage');
   assert.equal(faq['@id'], 'https://sweety.tw/#faq');
-  assert.equal(faq.mainEntity.length, 5);
+  assert.equal(faq.mainEntity.length, 6);
   assert.equal(faq.mainEntity[0].name, homepage.copy.ja.faq.items[0].question);
   assert.equal(
     faq.mainEntity[4].acceptedAnswer.text,
     homepage.copy.ja.faq.items[4].answerPrefix + homepage.copy.ja.faq.items[4].answerEmphasis,
   );
+  assert.equal(faq.mainEntity[5].name, homepage.copy.ja.faq.items[5].question);
+  assert.equal(faq.mainEntity[5].acceptedAnswer.text, homepage.copy.ja.faq.items[5].answer);
   assert.match(html, /<meta property="og:locale:alternate" content="ja_JP">/);
   assert.match(html, /<script[^>]+type="application\/ld\+json"[^>]+id="homepage-structured-data"[^>]*>/);
   assert.match(html, /"inLanguage": \["zh-TW", "en", "ja"\]/);
@@ -346,13 +348,17 @@ test('homepage instructions use seven single-column illustrated guide items', ()
   assert.doesNotMatch(html, /data-list="(?:quick|advanced)\.steps"/);
 });
 
-test('homepage includes the LINE window warning and five independent localized FAQs', () => {
+test('homepage includes the LINE window warning and six independent localized FAQs', () => {
   const permissionFaqZh = homepage.copy['zh-TW'].faq.items[4];
   const permissionFaqEn = homepage.copy.en.faq.items[4];
+  const languageFaqZh = homepage.copy['zh-TW'].faq.items[5];
+  const languageFaqEn = homepage.copy.en.faq.items[5];
+  const languageFaqJa = homepage.copy.ja.faq.items[5];
 
   assert.equal(homepage.copy['zh-TW'].notice.windowPosition, 'Line 桌面 App 視窗位置請勿超過螢幕左側或右側邊緣，否則將造成 Sweety 辨識失敗');
-  assert.equal(homepage.copy['zh-TW'].faq.items.length, 5);
-  assert.equal(homepage.copy.en.faq.items.length, 5);
+  assert.equal(homepage.copy['zh-TW'].faq.items.length, 6);
+  assert.equal(homepage.copy.en.faq.items.length, 6);
+  assert.equal(homepage.copy.ja.faq.items.length, 6);
   assert.deepEqual(permissionFaqZh, {
     question: '為什麼按下開始後顯示「需要 Mac 權限」？',
     answerPrefix: '因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的',
@@ -363,8 +369,20 @@ test('homepage includes the LINE window warning and five independent localized F
     answerPrefix: 'After an update, macOS may treat Sweety as a new app. In System Settings, ',
     answerEmphasis: 'remove Sweety from Accessibility and Screen & System Audio Recording, then add it again.',
   });
-  assert.equal((html.match(/<details\b/g) ?? []).length, 5);
-  assert.equal((html.match(/<summary\b/g) ?? []).length, 5);
+  assert.deepEqual(languageFaqZh, {
+    question: 'Sweety 支援哪些語系？',
+    answer: 'Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。',
+  });
+  assert.deepEqual(languageFaqEn, {
+    question: 'Which languages does Sweety support?',
+    answer: 'The Sweety interface supports Traditional Chinese, English, and Japanese. AI replies will primarily use the language spoken by the other person.',
+  });
+  assert.deepEqual(languageFaqJa, {
+    question: 'Sweetyはどの言語に対応していますか？',
+    answer: 'Sweetyのインターフェースは繁体字中国語、英語、日本語に対応しています。ただし、AIは主に相手が使用している言語で返信します。',
+  });
+  assert.equal((html.match(/<details\b/g) ?? []).length, 6);
+  assert.equal((html.match(/<summary\b/g) ?? []).length, 6);
   assert.doesNotMatch(html, /<details[^>]+\bname=/);
   for (const hook of [
     'faq.title',
@@ -373,6 +391,8 @@ test('homepage includes the LINE window warning and five independent localized F
     'faq.items.4.question',
     'faq.items.4.answerPrefix',
     'faq.items.4.answerEmphasis',
+    'faq.items.5.question',
+    'faq.items.5.answer',
     'instructions.openSourceNote',
     'notice.windowPosition',
   ]) {
@@ -382,6 +402,8 @@ test('homepage includes the LINE window warning and five independent localized F
   assert.match(html, /<strong data-copy="faq\.items\.4\.answerEmphasis">/);
   assert.match(html, /"name": "為什麼按下開始後顯示「需要 Mac 權限」？"/);
   assert.match(html, /"text": "因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。"/);
+  assert.match(html, /"name": "Sweety 支援哪些語系？"/);
+  assert.match(html, /"text": "Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。"/);
   assert.doesNotMatch(html, /\*\*「輔助使用」/);
   assert.match(css, /\.faq-item/);
   assert.match(css, /\.faq-item summary/);
