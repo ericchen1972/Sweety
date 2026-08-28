@@ -359,9 +359,9 @@ test('homepage presents the complete ChatGPT perspective in all three locales be
     'full.extraSteps', 'full.honeypot', 'full.networkLead', 'full.networkBefore',
     'full.networkTransition', 'full.networkAfter', 'full.threeLayersLead', 'full.layer1',
     'full.layer2', 'full.layer3', 'full.thirdValue', 'full.diagram', 'full.positioning',
-    'full.roiLead', 'full.roi', 'full.antiScam', 'full.sweetyIncreaseLead',
-    'full.sweetyIncrease', 'full.asymmetry', 'full.ruleBefore', 'full.ruleAfterLead',
-    'full.ruleAfter',
+    'full.roiLead', 'full.roiStatement', 'full.roiBusiness', 'full.roi', 'full.antiScam',
+    'full.sweetyIncreaseLead', 'full.sweetyIncrease', 'full.asymmetry', 'full.aiFit',
+    'full.ruleBefore', 'full.ruleAfterLead', 'full.ruleAfter',
   ];
   const valueAt = (source, path) => path.split('.').reduce((value, key) => value?.[key], source);
   const zh = homepage.copy['zh-TW'].instructions.perspective;
@@ -379,7 +379,9 @@ test('homepage presents the complete ChatGPT perspective in all three locales be
   assert.equal(zh.source, '以下內容是 ChatGPT 在與作者討論 Sweety 時，對此專案提出的觀點。');
   assert.equal(zh.full.funnelBefore, '10,000 個接觸\n→ 500 個回覆\n→ 100 個長聊\n→ 10 個匯款');
   assert.equal(zh.full.funnelAfter, '10,000 個接觸\n→ 1,500 個回覆\n→ 800 個長聊\n→ 其中 700 個其實是 AI');
+  assert.equal(zh.full.roiStatement, '降低詐騙產業的 ROI。');
   assert.equal(zh.full.roi, 'Profit = 成功詐得金額 − 人力 − 帳號 − 廣告 − 洗錢 − 時間成本');
+  assert.equal(zh.full.aiFit, '這種成本不對稱，才是 AI 最適合做的事。');
   assert.equal(zh.full.ruleAfter, '「能聊下去，什麼也不代表。」');
   assert.equal(en.full.ruleAfter, '“A conversation continuing means nothing.”');
   assert.equal(ja.full.ruleAfter, '「会話が続いても、何の意味もない。」');
@@ -391,6 +393,24 @@ test('homepage presents the complete ChatGPT perspective in all three locales be
   assert.match(html, /<aside class="chatgpt-perspective"[^>]*>/);
   assert.match(html, /<details class="chatgpt-perspective-details">/);
   assert.match(html, /<summary class="chatgpt-perspective-toggle">/);
+});
+
+test('ChatGPT perspective styles keep the expandable article readable on mobile', () => {
+  for (const selector of [
+    '.chatgpt-perspective',
+    '.chatgpt-perspective-summary',
+    '.chatgpt-perspective-details',
+    '.perspective-funnel',
+    '.perspective-diagram',
+    '.perspective-expand-label',
+    '.perspective-collapse-label',
+  ]) {
+    assert.match(css, new RegExp(`\\${selector}[^,{]*[,{]`));
+  }
+  const preRule = css.match(/\.perspective-funnel[^}]*\.perspective-diagram[^}]*\{([^}]*)\}/s)?.[1] ?? '';
+  assert.match(preRule, /overflow-x:\s*auto/);
+  assert.match(css, /\.chatgpt-perspective-details\[open\][^{]*\.perspective-expand-label\s*\{[^}]*display:\s*none/s);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.chatgpt-perspective\s*\{[^}]*padding:/);
 });
 
 test('homepage includes the LINE window warning and six independent localized FAQs', () => {
@@ -426,8 +446,9 @@ test('homepage includes the LINE window warning and six independent localized FA
     question: 'Sweetyはどの言語に対応していますか？',
     answer: 'Sweetyのインターフェースは繁体字中国語、英語、日本語に対応しています。ただし、AIは主に相手が使用している言語で返信します。',
   });
-  assert.equal((html.match(/<details\b/g) ?? []).length, 6);
-  assert.equal((html.match(/<summary\b/g) ?? []).length, 6);
+  assert.equal((html.match(/<details class="faq-item"/g) ?? []).length, 6);
+  assert.equal((html.match(/<details\b/g) ?? []).length, 7);
+  assert.equal((html.match(/<summary\b/g) ?? []).length, 7);
   assert.doesNotMatch(html, /<details[^>]+\bname=/);
   for (const hook of [
     'faq.title',

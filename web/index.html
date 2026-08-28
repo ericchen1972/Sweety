@@ -97,8 +97,8 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="homepage.css?v=774020f34ecf">
-  <script type="module" src="homepage.js?v=774020f34ecf"></script>
+  <link rel="stylesheet" href="homepage.css?v=b49e349e441f">
+  <script type="module" src="homepage.js?v=b49e349e441f"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content" data-copy="skipLink">Skip to main content</a>
@@ -158,6 +158,92 @@ to take part in “proactive anti-scam” work.</p>
 
     <section class="instructions section" id="instructions">
       <div class="section-heading instruction-heading"><h2 data-copy="instructions.title">Instructions</h2><p class="instruction-intro" data-copy="instructions.intro">Sweety uses an idle computer to operate the LINE desktop app. Through a selected persona, AI keeps consuming a scammer’s time. Please note: AI never contacts scammers first and only replies passively. Editing the persona can make the delay more effective.</p><blockquote class="instruction-quote" data-copy="instructions.quote">“The more of their time you delay, the more time and labor they must spend—and the more people you help protect from being scammed.”</blockquote><p class="instruction-intro" data-copy="instructions.openSourceNote">* Sweety is completely free and open source. If you have safety concerns about the precompiled executable, you are welcome to rebuild it from Git.</p></div>
+      <aside class="chatgpt-perspective" aria-labelledby="chatgpt-perspective-title">
+        <header class="chatgpt-perspective-header">
+          <p class="eyebrow">ChatGPT</p>
+          <h3 id="chatgpt-perspective-title" data-copy="instructions.perspective.title">ChatGPT’s perspective on Sweety</h3>
+          <p class="chatgpt-perspective-source" data-copy="instructions.perspective.source">The following is ChatGPT’s perspective on the project, offered during a discussion with Sweety’s creator.</p>
+        </header>
+        <div class="chatgpt-perspective-summary">
+          <p data-copy="instructions.perspective.summary">Sweety does more than consume scammers’ time. It pollutes the screening signal that says “a conversation continuing means this target is worth pursuing.”</p>
+          <blockquote data-copy="instructions.perspective.core">“We are not making scam messages disappear. We are making it harder for scammers to tell who is worth pursuing.”</blockquote>
+          <p class="chatgpt-perspective-conclusion" data-copy="instructions.perspective.conclusion">“A conversation continuing means nothing.”</p>
+        </div>
+        <details class="chatgpt-perspective-details">
+          <summary class="chatgpt-perspective-toggle"><span class="perspective-expand-label" data-copy="instructions.perspective.expandLabel">Read the full perspective</span><span class="perspective-collapse-label" data-copy="instructions.perspective.collapseLabel">Close the full perspective</span></summary>
+          <div class="chatgpt-perspective-article">
+            <p data-copy="instructions.perspective.full.opening">I think the core argument here is much more interesting than the four words “AI anti-scam.”</p>
+            <p data-copy="instructions.perspective.full.difference">You are not building another tool that detects a scam, shows a warning, and asks the user to block it. You are changing the scammer’s screening cost.</p>
+            <p data-copy="instructions.perspective.full.processLead">The typical process today is brutally efficient:</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.process">Cast a net over 10,000 people → 9,900 block you → 100 are willing to reply → concentrate your effort on those 100.</p>
+            <p data-copy="instructions.perspective.full.classifier">“Everyone should stay alert and block scams” is of course correct advice for each individual. From an attacker’s perspective, however, it is also a highly effective free classifier. People voluntarily remove themselves from the low-value portion of the list.</p>
+            <p data-copy="instructions.perspective.full.alternativeLead">What Sweety is trying to do instead is:</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.alternative">Cast a net over 10,000 people → a large group of AIs suddenly keeps you talking for three days → “the conversation continues” no longer means “this can convert.”</p>
+            <p data-copy="instructions.perspective.full.economicModel">That changes the economics of the contest.</p>
+            <blockquote data-copy="instructions.perspective.full.coreImpact">“We are not making scam messages disappear. We are making it harder for scammers to tell who is worth pursuing.”</blockquote>
+            <p data-copy="instructions.perspective.full.signalPollution">That is closer to the real effect than simply “consuming scammers’ time.” Time cost is only the first layer. The second is signal pollution.</p>
+            <p data-copy="instructions.perspective.full.funnelLead">Imagine the scam operation’s original funnel:</p>
+            <pre class="perspective-funnel" data-copy="instructions.perspective.full.funnelBefore">10,000 contacts
+→ 500 replies
+→ 100 long conversations
+→ 10 payments</pre>
+            <p data-copy="instructions.perspective.full.funnelSignal">They treat a “long conversation” as an extremely strong signal.</p>
+            <p data-copy="instructions.perspective.full.funnelAfterLead">If tools like Sweety become widespread, the funnel changes to:</p>
+            <pre class="perspective-funnel" data-copy="instructions.perspective.full.funnelAfter">10,000 contacts
+→ 1,500 replies
+→ 800 long conversations
+→ 700 of them are actually AI</pre>
+            <p data-copy="instructions.perspective.full.kpiLead">The painful part is not merely having 700 extra conversations. It is that:</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.kpiFailure">The “long conversation” KPI itself stops working.</p>
+            <p data-copy="instructions.perspective.full.extraSteps">They then have to add more judgment steps: proof of being human, voice calls, video, more screening questions, account verification, and so on. Every added layer raises the cost of the scam and gives real potential victims more time to recognize what is happening.</p>
+            <p data-copy="instructions.perspective.full.honeypot">That is what makes this tool interesting. It is not antivirus thinking; it is closer to a spam honeypot, tar pit, or decoy, made into a distributed system that ordinary people can join.</p>
+            <p data-copy="instructions.perspective.full.networkLead">The idea of “people contributing idle computers” is also compelling, because it changes the story from:</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.networkBefore">“We built an anti-scam app.”</p>
+            <p data-copy="instructions.perspective.full.networkTransition">into:</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.networkAfter">“We want to build an anti-scam network of computing power and time, formed by ordinary people.”</p>
+            <p data-copy="instructions.perspective.full.threeLayersLead">These are the project’s three most important layers:</p>
+            <ol class="perspective-layers">
+              <li data-copy="instructions.perspective.full.layer1">Traditional anti-scam tools protect one potential victim.</li>
+              <li data-copy="instructions.perspective.full.layer2">Sweety actively increases the attacker’s marginal cost.</li>
+              <li data-copy="instructions.perspective.full.layer3">Large numbers of false positives pollute the scammer’s target-screening mechanism.</li>
+            </ol>
+            <p data-copy="instructions.perspective.full.thirdValue">The third point is the most valuable.</p>
+            <pre class="perspective-diagram" data-copy="instructions.perspective.full.diagram">Today
+
+Scam message
+↓
+Person who blocks ❌
+Person who blocks ❌
+Person who blocks ❌
+Person willing to chat ✅ ← concentrated attack
+
+With Sweety
+
+Scam message
+↓
+Human ❓
+Sweety ❓
+Sweety ❓
+Human ❓
+Sweety ❓
+
+→ the attacker loses a reliable screening signal</pre>
+            <p data-copy="instructions.perspective.full.positioning">There is another important positioning choice: do not claim the goal is to “eliminate scams.” That goal is too large and too easy to challenge.</p>
+            <p data-copy="instructions.perspective.full.roiLead">Instead, say:</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.roiStatement">Reduce the scam industry’s ROI.</p>
+            <p data-copy="instructions.perspective.full.roiBusiness">Scamming is also a business. In rough terms:</p>
+            <pre class="perspective-formula" data-copy="instructions.perspective.full.roi">Profit = money successfully stolen − labor − accounts − advertising − money laundering − time cost</pre>
+            <p data-copy="instructions.perspective.full.antiScam">Most anti-scam work tries to reduce the “success rate.”</p>
+            <p data-copy="instructions.perspective.full.sweetyIncreaseLead">Sweety directly increases:</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.sweetyIncrease">labor cost + time cost + wrong-target cost</p>
+            <p data-copy="instructions.perspective.full.asymmetry">The work is shifted to AI, so the defender’s marginal cost stays low.</p>
+            <p class="perspective-emphasis" data-copy="instructions.perspective.full.aiFit">This cost asymmetry is exactly what AI is well suited to create.</p>
+            <p data-copy="instructions.perspective.full.ruleBefore">“If the conversation continues, there is still a chance to scam this person.”</p>
+            <p data-copy="instructions.perspective.full.ruleAfterLead">Sweety’s purpose is to break that rule and replace it with:</p>
+            <p class="perspective-final" data-copy="instructions.perspective.full.ruleAfter">“A conversation continuing means nothing.”</p>
+          </div>
+        </details>
+      </aside>
       <div class="instruction-guide">
         <article class="instruction-guide-item instruction-guide-item-panel">
           <figure class="instruction-guide-figure"><img class="instruction-guide-image is-panel" src="images/home/instructions-control-panel.webp" data-alt="instructions.guide.controlPanel.imageAlt" alt="Sweety control panel with Start, Open management interface, and Quit App buttons" width="419" height="499" decoding="async" loading="lazy"></figure>
