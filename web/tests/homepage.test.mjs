@@ -349,6 +349,50 @@ test('homepage instructions use seven single-column illustrated guide items', ()
   assert.doesNotMatch(html, /data-list="(?:quick|advanced)\.steps"/);
 });
 
+test('homepage presents the complete ChatGPT perspective in all three locales below the instructions copy', () => {
+  const perspectiveKeys = [
+    'title', 'source', 'summary', 'core', 'conclusion', 'expandLabel', 'collapseLabel',
+    'full.opening', 'full.difference', 'full.processLead', 'full.process', 'full.classifier',
+    'full.alternativeLead', 'full.alternative', 'full.economicModel', 'full.coreImpact',
+    'full.signalPollution', 'full.funnelLead', 'full.funnelBefore', 'full.funnelSignal',
+    'full.funnelAfterLead', 'full.funnelAfter', 'full.kpiLead', 'full.kpiFailure',
+    'full.extraSteps', 'full.honeypot', 'full.networkLead', 'full.networkBefore',
+    'full.networkTransition', 'full.networkAfter', 'full.threeLayersLead', 'full.layer1',
+    'full.layer2', 'full.layer3', 'full.thirdValue', 'full.diagram', 'full.positioning',
+    'full.roiLead', 'full.roi', 'full.antiScam', 'full.sweetyIncreaseLead',
+    'full.sweetyIncrease', 'full.asymmetry', 'full.ruleBefore', 'full.ruleAfterLead',
+    'full.ruleAfter',
+  ];
+  const valueAt = (source, path) => path.split('.').reduce((value, key) => value?.[key], source);
+  const zh = homepage.copy['zh-TW'].instructions.perspective;
+  const en = homepage.copy.en.instructions.perspective;
+  const ja = homepage.copy.ja.instructions.perspective;
+
+  for (const key of perspectiveKeys) {
+    assert.equal(typeof valueAt(zh, key), 'string', `missing zh-TW perspective.${key}`);
+    assert.equal(typeof valueAt(en, key), 'string', `missing en perspective.${key}`);
+    assert.equal(typeof valueAt(ja, key), 'string', `missing ja perspective.${key}`);
+    assert.match(html, new RegExp(`data-copy="instructions\\.perspective\\.${key.replaceAll('.', '\\.')}`));
+  }
+
+  assert.equal(zh.title, 'ChatGPT 對 Sweety 的觀點');
+  assert.equal(zh.source, '以下內容是 ChatGPT 在與作者討論 Sweety 時，對此專案提出的觀點。');
+  assert.equal(zh.full.funnelBefore, '10,000 個接觸\n→ 500 個回覆\n→ 100 個長聊\n→ 10 個匯款');
+  assert.equal(zh.full.funnelAfter, '10,000 個接觸\n→ 1,500 個回覆\n→ 800 個長聊\n→ 其中 700 個其實是 AI');
+  assert.equal(zh.full.roi, 'Profit = 成功詐得金額 − 人力 − 帳號 − 廣告 − 洗錢 − 時間成本');
+  assert.equal(zh.full.ruleAfter, '「能聊下去，什麼也不代表。」');
+  assert.equal(en.full.ruleAfter, '“A conversation continuing means nothing.”');
+  assert.equal(ja.full.ruleAfter, '「会話が続いても、何の意味もない。」');
+
+  const openSourceOffset = html.indexOf('data-copy="instructions.openSourceNote"');
+  const perspectiveOffset = html.indexOf('class="chatgpt-perspective"');
+  const guideOffset = html.indexOf('class="instruction-guide"');
+  assert.ok(openSourceOffset < perspectiveOffset && perspectiveOffset < guideOffset);
+  assert.match(html, /<aside class="chatgpt-perspective"[^>]*>/);
+  assert.match(html, /<details class="chatgpt-perspective-details">/);
+  assert.match(html, /<summary class="chatgpt-perspective-toggle">/);
+});
+
 test('homepage includes the LINE window warning and six independent localized FAQs', () => {
   const permissionFaqZh = homepage.copy['zh-TW'].faq.items[4];
   const permissionFaqEn = homepage.copy.en.faq.items[4];
