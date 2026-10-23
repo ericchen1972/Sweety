@@ -140,7 +140,7 @@ class LineService:
             self.state={'status':'connected','name':str(profile.get('displayName') or ''),'avatarUrl':avatar_url(profile.get('picturePath')),'qr':'','pin':'','error':''}
             self.store.recover()
             self.archive_pending()
-        
+
 
     def restore(self):
         if not self.vault: return
