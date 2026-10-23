@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("AppKit")
+
 from AppKit import NSApplication, NSColor, NSCalibratedRGBColorSpace, NSButton, NSFontAttributeName, NSFontBoldTrait, NSStatusBar
 
 from sweety_app.database import Database

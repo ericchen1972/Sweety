@@ -17,8 +17,8 @@ def test_monitor_has_no_ai_skip_branch():
 
 
 def test_startup_schedules_catalog_sync_before_metrics_report():
-    module = ast.parse((SOURCE_DIR / "__main__.py").read_text())
-    main = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "main")
+    module = ast.parse((SOURCE_DIR / "bootstrap.py").read_text())
+    main = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "start_services")
 
     catalog_sync_line = next(
         node.lineno
@@ -50,7 +50,7 @@ def test_metrics_config_has_no_catalog_token_fallback():
 def test_packaging_injects_build_credentials_without_defaults():
     spec_source = (DESKTOP_DIR / "Sweety.spec").read_text()
     config_source = (SOURCE_DIR / "config.py").read_text()
-    main_source = (SOURCE_DIR / "__main__.py").read_text()
+    main_source = (SOURCE_DIR / "bootstrap.py").read_text()
     app_build_source = (DESKTOP_DIR / "build_app.sh").read_text()
     dmg_build_source = (DESKTOP_DIR / "build_dmg.sh").read_text()
 
@@ -72,9 +72,10 @@ def test_packaging_injects_build_credentials_without_defaults():
 
 
 def test_startup_wires_one_shared_update_state_to_background_check_api_and_delegate():
-    module = ast.parse((SOURCE_DIR / "__main__.py").read_text())
-    main = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "main")
-    delegate = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == "SweetyAppDelegate")
+    module = ast.parse((SOURCE_DIR / "bootstrap.py").read_text())
+    main = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "start_services")
+    mac_module = ast.parse((SOURCE_DIR / "__main__.py").read_text())
+    delegate = next(node for node in mac_module.body if isinstance(node, ast.ClassDef) and node.name == "SweetyAppDelegate")
 
     update_state_assignments = [
         node
@@ -118,9 +119,10 @@ def test_startup_wires_one_shared_update_state_to_background_check_api_and_deleg
         for keyword in create_app_call.keywords
     )
 
+    mac_main = next(node for node in mac_module.body if isinstance(node, ast.FunctionDef) and node.name == "main")
     delegate_init = next(
         node
-        for node in ast.walk(main)
+        for node in ast.walk(mac_main)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "initWithComponents_locale_updateState_"

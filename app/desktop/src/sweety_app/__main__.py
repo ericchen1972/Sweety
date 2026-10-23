@@ -3,35 +3,23 @@ from __future__ import annotations
 import locale as system_locale
 import logging
 import signal
-import threading
 
 import objc
 from AppKit import (
-    NSAlert,
-    NSAlertStyleWarning,
     NSApplication,
     NSApplicationActivationPolicyRegular,
     NSImage,
 )
 from Foundation import NSObject
 
-from .ai import AiClient
-from .about import AboutContentClient
-from .api import create_app
-from .config import API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, DATA_DIR, FRONTEND_DIST, LOG_ENABLED, LOGO_PATH, LOG_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, about_url_for_locale, preferred_locale
-from .database import Database
-from .diagnostics import configure_diagnostics, log_event
-from .okline_store import LineStore
-from .okline_service import LineService
-from .okline_session import SessionVault
+from .bootstrap import start_services
+from .config import LOGO_PATH, preferred_locale
+from .diagnostics import log_event
 from .monitor import MonitorController
-from .metrics_reporter import start_metrics_reporting
-from .panel import PanelBridge, PanelWindowController, status_text
-from .remote_catalog import sync_remote_catalog
-from .region_access import check_region_access
+from .panel import PanelBridge, PanelWindowController
 from .repositories import Repository
 from .runtime import ServerRuntime
-from .updates import UpdateState, check_remote_update
+from .updates import UpdateState
 
 
 def detected_locale() -> str:
@@ -77,54 +65,13 @@ class SweetyAppDelegate(NSObject):
 
 
 def main() -> None:
-    configure_diagnostics(LOG_PATH, enabled=LOG_ENABLED)
-    log_event(logging.getLogger("sweety.app"), "app_started", version=APP_VERSION)
     application = NSApplication.sharedApplication()
     application.setActivationPolicy_(NSApplicationActivationPolicyRegular)
     locale = detected_locale()
 
-    database = Database(DATABASE_PATH)
-    database.migrate()
-    repository = Repository(database)
-    update_state = UpdateState()
-    threading.Thread(
-        target=check_remote_update,
-        args=(update_state, APP_VERSION, REMOTE_UPDATE_URL),
-        daemon=True,
-    ).start()
-    region_access = check_region_access(url=REGION_LOOKUP_URL)
-    threading.Thread(
-        target=sync_remote_catalog,
-        args=(repository, REMOTE_CATALOG_URL),
-        daemon=True,
-    ).start()
-    metrics_reporter = start_metrics_reporting(
-        repository,
-        REMOTE_METRICS_URL,
-        SWEETY_METRICS_APP_TOKEN,
-    )
-    store = LineStore(repository)
-    line = LineService(repository, store, vault=SessionVault(DATA_DIR / "line-sessions", "local"))
-    ai = AiClient(agnes_key=BUNDLED_AGNES_KEY, repository=repository)
-    monitor = MonitorController(
-        repository,
-        line,
-        ai,
-        region_blocked=region_access.blocked,
-        on_exchange_committed=metrics_reporter.report_async,
-    )
-    line.restore()
-    api = create_app(
-        database,
-        monitor=monitor,
-        line_service=line,
-        frontend_dist=FRONTEND_DIST,
-        persona_validator=ai,
-        about_loader=AboutContentClient(about_url_for_locale(locale)),
-        update_state=update_state,
-    )
-    runtime = ServerRuntime(api, API_HOST, API_PORT)
-    runtime.start()
+    services = start_services()
+    repository, monitor, runtime = services.repository, services.monitor, services.runtime
+    update_state = services.update_state
 
     delegate = SweetyAppDelegate.alloc().initWithComponents_locale_updateState_(
         (repository, monitor, runtime), locale, update_state
@@ -135,9 +82,7 @@ def main() -> None:
     try:
         application.run()
     finally:
-        monitor.stop()
-        line.disconnect(clear=False)
-        runtime.stop()
+        services.stop()
 
 
 if __name__ == "__main__":

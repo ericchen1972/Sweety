@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
+import sys
 from typing import Any
 
 import requests
@@ -13,7 +14,8 @@ class ServerRuntime:
         self.host = host
         self.port = port
         self.server = uvicorn.Server(
-            uvicorn.Config(app, host=host, port=port, log_level="warning", access_log=False)
+            uvicorn.Config(app, host=host, port=port, log_level="warning", access_log=False,
+                           log_config=None if sys.stderr is None else uvicorn.config.LOGGING_CONFIG)
         )
         self.thread: threading.Thread | None = None
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import json
 from pathlib import Path
 
 
@@ -46,7 +47,17 @@ else:
 DATABASE_PATH = DATA_DIR / "sweety.sqlite3"
 LOG_PATH = LOG_DIR / "sweety.log"
 BUNDLED_AGNES_KEY = os.getenv("SWEETY_AGNES_KEY", "").strip()
-LOG_ENABLED = os.getenv("SWEETY_LOG_ENABLED", "0").strip() == "1"
+def _bundled_log_setting() -> str:
+    if getattr(sys, "frozen", False):
+        try:
+            settings = json.loads((RESOURCE_DIR / "runtime-config.json").read_text(encoding="utf-8"))
+            return str(settings.get("SWEETY_LOG_ENABLED", "0"))
+        except (OSError, ValueError, AttributeError):
+            pass
+    return "0"
+
+
+LOG_ENABLED = os.getenv("SWEETY_LOG_ENABLED", _bundled_log_setting()).strip() == "1"
 
 
 def normalize_locale(identifier: str | None) -> str:

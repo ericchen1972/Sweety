@@ -1,0 +1,79 @@
+name: Windows portable test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.9.5'
+      - name: Install locked Python dependencies
+        run: uv sync --frozen --project app/desktop --python "$env:pythonLocation/python.exe" --extra desktop --extra dev
+      - name: Backend tests
+        run: |
+          & app/desktop/.venv/Scripts/python.exe -m pytest app/desktop/tests -q --basetemp="$env:RUNNER_TEMP/sweety-pytest" --junitxml="$env:RUNNER_TEMP/backend-tests.xml"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build portable test ZIP
+        run: |
+          & app/desktop/.venv/Scripts/python.exe app/desktop/build_windows.py --output "$env:RUNNER_TEMP/sweety-windows" --logging 1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check extracted ZIP without installed Python or Node on PATH
+        run: |
+          $build = "$env:RUNNER_TEMP/sweety-windows"
+          Expand-Archive "$build/Sweety-2.0.0-Windows-x64-portable-test.zip" "$build/extracted"
+          $exe = "$build/extracted/Sweety/Sweety.exe"
+          $report = "$build/windows-self-check.json"
+          Remove-Item Env:SWEETY_LOG_ENABLED -ErrorAction SilentlyContinue
+          $env:PATH = "$env:SystemRoot/system32;$env:SystemRoot"
+          $process = Start-Process -FilePath $exe -ArgumentList @('--windows-self-check', "`"$report`"") -PassThru
+          if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Portable self-check timed out' }
+          if (Test-Path $report) { Get-Content $report }
+          if ($process.ExitCode -ne 0) { throw "Self-check exit: $($process.ExitCode)" }
+          $check = Get-Content $report -Raw | ConvertFrom-Json
+          if (-not ($check.ok -and $check.logging -and $check.gui -and $check.shutdown -and $check.frontend -and $check.logCreated)) { throw 'Self-check incomplete' }
+          if ($check.keyringBackend -ne 'keyring.backends.Windows') { throw 'Windows credential backend missing' }
+          if (-not $check.node.StartsWith("$build/extracted/".Replace('/', '\'))) { throw 'Bundled Node was not used' }
+          $env:SWEETY_LOG_ENABLED = '0'
+          $offReport = "$build/windows-logging-off.json"
+          $process = Start-Process -FilePath $exe -ArgumentList @('--windows-self-check', "`"$offReport`"") -PassThru
+          if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Logging-off check timed out' }
+          if ($process.ExitCode -ne 0) { throw 'Logging-off self-check failed' }
+          $off = Get-Content $offReport -Raw | ConvertFrom-Json
+          if (-not $off.ok -or $off.logging -or $off.logCreated) { throw 'Global logging override failed' }
+      - name: Upload portable ZIP and verification reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sweety-2.0.0-Windows-x64-portable-test
+          path: |
+            ${{ runner.temp }}/sweety-windows/*.zip
+            ${{ runner.temp }}/sweety-windows/*.sha256
+            ${{ runner.temp }}/sweety-windows/windows-*.json
+            ${{ runner.temp }}/backend-tests.xml
+          if-no-files-found: error
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-diagnostics
+          path: |
+            ${{ runner.temp }}/backend-tests.xml
+            ${{ runner.temp }}/sweety-windows/windows-*.json
+            ${{ runner.temp }}/sweety-windows/work/**/warn-*.txt

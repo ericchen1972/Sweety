@@ -2,6 +2,10 @@ import sys
 
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--windows-self-check":
+        from sweety_app.portable_checks import self_check
+        self_check(sys.argv[2])
+        return
     if len(sys.argv) == 3 and sys.argv[1] == "--okline-self-check":
         import json
         from pathlib import Path
@@ -17,7 +21,10 @@ def main():
         finally:
             api.close()
         return
-    from sweety_app.__main__ import main as run_app
+    if sys.platform == "win32":
+        from sweety_app.windows import main as run_app
+    else:
+        from sweety_app.__main__ import main as run_app
     run_app()
 
 
