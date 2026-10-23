@@ -134,15 +134,13 @@ def test_target_lifecycle_and_duplicate_error(client):
 
 
 @pytest.mark.parametrize("name", ["Fraud 1", "詐騙1", "Fraud-1", "Fraud1😀"])
-def test_new_target_rejects_non_alphanumeric_name(client, name):
+def test_new_target_accepts_line_display_names(client, name):
     response = client.post("/api/targets", json=target_payload(name))
-
-    assert response.status_code == 400
-    assert response.json()["code"] == "invalid_target_name"
-    assert client.get("/api/state").json()["targets"] == []
+    assert response.status_code == 201
+    assert response.json()['name'] == name
 
 
-def test_state_snapshot_rejects_new_non_alphanumeric_target(client):
+def test_state_snapshot_retains_imported_legacy_display_name(client):
     state = client.get("/api/state").json()
     state["targets"] = [{
         "id": "target-invalid",
@@ -156,9 +154,9 @@ def test_state_snapshot_rejects_new_non_alphanumeric_target(client):
 
     response = client.put("/api/state", json=state)
 
-    assert response.status_code == 400
-    assert response.json()["code"] == "invalid_target_name"
-    assert client.get("/api/state").json()["targets"] == []
+    assert response.status_code == 200
+    assert response.json()["targets"][0]["name"] == "Fraud 1"
+    assert client.get("/api/state").json()["targets"][0]["name"] == "Fraud 1"
 
 
 def test_state_snapshot_allows_unchanged_legacy_target_name(tmp_path):

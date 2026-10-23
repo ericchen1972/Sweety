@@ -1,3 +1,5 @@
+import {LineConnection,UserNamesField,ContactPicker,lineCopy,reloadLineState,type LineContact} from "./LineConnection";
+import {flushStateSaves} from "./storage";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import {
   Archive,
@@ -35,7 +37,6 @@ import {
   targetDurationMs,
   validateCustomName,
   validateReplyDelay,
-  validateTargetName,
   type AgeGroup,
   type AppState,
   type BasePersona,
@@ -128,13 +129,19 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const reload = () => { void flushStateSaves().then(loadState).then(setAppState).catch(e => setToast(String(e))); };
+    window.addEventListener("sweety:reload", reload);
+    return () => window.removeEventListener("sweety:reload", reload);
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(""), 2600);
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
   const selectedCount = state.targets.filter(
-    (target) => target.status === "active" && target.replyEnabled,
+    (target) => target.status === "active" && target.replyEnabled && !!target.lineAvailable,
   ).length;
 
   const pages = [
@@ -393,17 +400,29 @@ function SettingsPage({ state, setState, copy, onToast }: { state: AppState; set
               <input className="form-input" value={form.openAiModel} onChange={(event) => setForm({ ...form, openAiModel: event.target.value })} />
             </label>
           </div>
-        ) : null}
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="block"><span className="mb-2 block text-sm font-medium">Agnes API Key</span>
+              <input type="password" autoComplete="off" className="form-input" value={form.agnesApiKey ?? ""} onChange={event=>setForm({...form,agnesApiKey:event.target.value})} />
+            </label>
+            <label className="block"><span className="mb-2 block text-sm font-medium">{copy.model}</span>
+              <input className="form-input" value={form.agnesModel ?? "agnes-3.0-flash"} onChange={event=>setForm({...form,agnesModel:event.target.value})} />
+            </label>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-sky-600 dark:text-sky-400">
+          <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI — {copy.apiKeyLinks}</a>
+          <a href="https://platform.agnes-ai.com/" target="_blank" rel="noopener noreferrer">Agnes — {copy.apiKeyLinks}</a>
+        </div>
       </section>
 
       <section className="space-y-5 border-t border-zinc-200 pt-7 dark:border-zinc-800">
         <h2 className="section-title">{copy.conversations}</h2>
+        <UserNamesField copy={copy} value={form.userNames ?? ""} onChange={userNames=>setForm({...form,userNames})}/>
         <label className="block max-w-sm">
-          <span className="mb-2 block text-sm font-medium">{copy.checkInterval}</span>
-          <div className="relative">
-            <input type="number" min={1} className="form-input pr-14" value={form.checkIntervalSeconds} onChange={(event) => setForm({ ...form, checkIntervalSeconds: Number(event.target.value) })} />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-500 dark:text-zinc-500">{copy.seconds}</span>
-          </div>
+          <span className="mb-2 block text-sm font-medium">{copy.historyLimit}</span>
+          <input type="number" min={0} max={200} step={1} required className="form-input" value={form.historyLimit ?? 20} onChange={event=>setForm({...form,historyLimit:Number(event.target.value)})} />
+          <span className="mt-2 block text-xs leading-5 text-slate-500 dark:text-zinc-400">{copy.historyLimitHint}</span>
         </label>
         <div>
           <p className="mb-2 text-sm font-medium">{copy.replyDelay}</p>
@@ -467,6 +486,7 @@ function TargetsPage({ state, setState, locale, copy, onToast }: { state: AppSta
 
   return (
     <div className="space-y-6">
+      <LineConnection locale={locale} locked={state.monitoringEnabled} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="inline-flex rounded-md border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
           {(["active", "ended"] as const).map((value) => (
@@ -476,7 +496,7 @@ function TargetsPage({ state, setState, locale, copy, onToast }: { state: AppSta
             </button>
           ))}
         </div>
-        <button type="button" className="primary-button" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> {copy.addTarget}</button>
+        <button type="button" className="primary-button" disabled={state.monitoringEnabled} onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> {copy.addTarget}</button>
       </div>
 
       {targets.length ? (
@@ -535,8 +555,8 @@ function TargetTableRow(props: TargetActionsProps) {
   const { target, state, locale, copy, setState } = props;
   return (
     <tr>
-      <td className="px-4 py-4"><ReplyCheckbox target={target} setState={setState} copy={copy} /></td>
-      <td className="max-w-56 px-4 py-4 font-semibold"><span className="block truncate" title={target.name}>{target.name}</span></td>
+      <td className="px-4 py-4"><ReplyCheckbox target={target} setState={setState} copy={copy} locale={locale} /></td>
+      <td className="max-w-56 px-4 py-4 font-semibold"><span className="block truncate" title={target.name}>{target.name}</span>{!target.lineBound?<small className="block text-amber-600">{lineCopy[locale].unbound}</small>:!target.lineAvailable?<small className="block text-amber-600">{lineCopy[locale].unavailable}</small>:null}</td>
       <td className="px-4 py-4 tabular-nums">{target.roundTrips}</td>
       <td className="whitespace-nowrap px-4 py-4">{formatDurationHours(targetDurationMs(target), locale)}</td>
       <td className="max-w-48 px-4 py-4"><span className="block truncate">{personaName(target, state, locale)}</span></td>
@@ -551,10 +571,10 @@ function TargetMobileCard(props: TargetActionsProps) {
     <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="break-words font-semibold">{target.name}</h3>
+          <h3 className="break-words font-semibold">{target.name}</h3>{!target.lineBound?<p className="text-xs text-amber-600">{lineCopy[locale].unbound}</p>:!target.lineAvailable?<p className="text-xs text-amber-600">{lineCopy[locale].unavailable}</p>:null}
           <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">{target.roundTrips} {copy.rounds} · {formatDurationHours(targetDurationMs(target), locale)}</p>
         </div>
-        <ReplyCheckbox target={target} setState={setState} copy={copy} />
+        <ReplyCheckbox target={target} setState={setState} copy={copy} locale={locale} />
       </div>
       <dl className="mt-4 grid gap-3 text-sm">
         <div><dt className="text-xs text-slate-500 dark:text-zinc-500">{copy.persona}</dt><dd className="mt-1">{personaName(target, state, locale)}</dd></div>
@@ -564,26 +584,26 @@ function TargetMobileCard(props: TargetActionsProps) {
   );
 }
 
-function ReplyCheckbox({ target, setState, copy }: { target: Target; setState: StateSetter; copy: Copy }) {
+function ReplyCheckbox({ target, setState, copy, locale }: { target: Target; setState: StateSetter; copy: Copy; locale:Locale }) {
   return (
     <label className={`inline-flex items-center ${target.status === "ended" ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`} title={copy.replyEnabled}>
       <input
         type="checkbox"
         className="h-5 w-5 rounded border-zinc-300 text-sky-600 focus:ring-sky-500 dark:border-zinc-700 dark:bg-zinc-950"
         checked={target.replyEnabled}
-        disabled={target.status === "ended"}
+        disabled={target.status === "ended" || !target.lineAvailable}
         onChange={(event) => setState((current) => ({ ...current, targets: current.targets.map((item) => item.id === target.id ? { ...item, replyEnabled: event.target.checked } : item) }))}
       />
     </label>
   );
 }
 
-function TargetActionButtons({ target, copy, onEdit, onEnd, onRevive, onDelete, onExport }: TargetActionsProps) {
+function TargetActionButtons({ target, locale, copy, onEdit, onEnd, onRevive, onDelete, onExport }: TargetActionsProps) {
   return (
     <div className="flex justify-end gap-2">
       {target.status === "active" ? (
         <>
-          <button type="button" className="icon-button" title={copy.editAssignment} onClick={() => onEdit(target)}><Pencil className="h-4 w-4" /></button>
+          <button type="button" className="icon-button" title={target.lineBound?copy.editAssignment:lineCopy[locale].bind} onClick={() => onEdit(target)}><Pencil className="h-4 w-4" /></button>
           <button type="button" className="icon-button" title={copy.markEnded} onClick={() => onEnd(target)}><Archive className="h-4 w-4" /></button>
         </>
       ) : (
@@ -596,7 +616,8 @@ function TargetActionButtons({ target, copy, onEdit, onEnd, onRevive, onDelete, 
 }
 
 function TargetModal({ mode, existing, state, locale, copy, onClose, onSave }: { mode: "create" | "edit"; existing?: Target; state: AppState; locale: Locale; copy: Copy; onClose: () => void; onSave: (target: Target) => void }) {
-  const [name, setName] = useState(existing?.name ?? "");
+  const [contact, setContact] = useState<LineContact|null>(null);
+  const [busy, setBusy] = useState(false);
   const [ageGroup, setAgeGroup] = useState<AgeGroup>(existing?.ageGroup ?? "20-35");
   const [gender, setGender] = useState<Gender>(existing?.gender ?? "female");
   const [personaId, setPersonaId] = useState(existing?.personaId ?? "");
@@ -607,46 +628,54 @@ function TargetModal({ mode, existing, state, locale, copy, onClose, onSave }: {
   const customPersonaOptions = state.customPersonas;
   const selectedPersonaSource: CatalogSource = basePersonas.some((persona) => persona.id === personaId) ? "base" : "custom";
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (mode === "create" && !validateTargetName(name)) {
-      setError(copy.targetNameError);
+    if (busy) return;
+    if ((mode === "create" || !existing?.lineBound) && !contact) {
+      setError(lineCopy[locale].choose);
       return;
     }
     if (!personaId) {
       setError(copy.selectPersona);
       return;
     }
-    onSave({
+    const target: Target = {
+      ...existing,
       id: existing?.id ?? createId("target"),
-      name: mode === "edit" ? existing!.name : name.trim(),
+      name: existing?.name ?? contact!.name,
       ageGroup,
       gender,
       personaId,
       personaSource: selectedPersonaSource,
-      weaponId: "persona-only",
-      weaponSource: "base",
+      weaponId: existing?.weaponId ?? "persona-only",
+      weaponSource: existing?.weaponSource ?? "base",
       replyEnabled: existing?.replyEnabled ?? false,
       status: existing?.status ?? "active",
       roundTrips: existing?.roundTrips ?? 0,
       firstReplyAt: existing?.firstReplyAt ?? null,
       lastReplyAt: existing?.lastReplyAt ?? null,
       endedAt: existing?.endedAt ?? null,
-    });
+    };
+    setBusy(true);setError("");
+    try {
+      await flushStateSaves();
+      if(mode === "create") {
+        onSave(await api.addLineTarget(contact!.id,target));
+      } else if(!existing?.lineBound) {
+        const bound=await api.bindLineTarget(existing!.id,contact!.id);
+        onSave(await api.updateTarget({...target,name:bound.name,lineBound:bound.lineBound,lineMid:bound.lineMid,lineAccount:bound.lineAccount,lineAvailable:bound.lineAvailable}));
+      } else onSave(await api.updateTarget(target));
+      reloadLineState();
+    } catch(e) {setError(e instanceof Error?e.message:String(e));} finally {setBusy(false);}
   }
 
   return (
     <Modal title={mode === "create" ? copy.addTarget : copy.editAssignment} closeLabel={copy.close} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-5">
-        {mode === "create" ? (
-          <>
-            <label className="block"><span className="mb-2 block text-sm font-medium">{copy.targetName}</span><input autoFocus className="form-input" value={name} onChange={(event) => setName(event.target.value)} /><span className="mt-2 block text-xs text-slate-500 dark:text-zinc-500">{copy.targetNameHint}</span></label>
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">{copy.targetNameWarning}</div>
-          </>
-        ) : (
-          <div className="rounded-md bg-slate-100 px-4 py-3 text-sm font-semibold dark:bg-zinc-800">{existing?.name}</div>
-        )}
+      <form onSubmit={submit} className="space-y-5"><fieldset disabled={busy} className="space-y-5">
+        {(mode === "create" || !existing?.lineBound) ? <><p className="text-sm text-slate-500">{existing?`${existing.name} — ${lineCopy[locale].bindHint}`:lineCopy[locale].choose}</p><ContactPicker locale={locale} value={contact} onChange={setContact}/></> : <div className="rounded-md bg-slate-100 px-4 py-3 text-sm font-semibold dark:bg-zinc-800">{existing.name}</div>}
+        <>
         <div className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200">{copy.profileNotice}</div>
+        <div className="flex items-center gap-3"><h3 className="shrink-0 text-sm font-semibold">{copy.targetPersonaHeading}</h3><div className="h-px flex-1 bg-slate-200 dark:bg-zinc-700" /></div>
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField label={copy.age} value={ageGroup} onChange={(value) => { setAgeGroup(value as AgeGroup); setPersonaId(""); }} options={ageGroups.map((age) => ({ value: age, label: age }))} />
           <SelectField label={copy.gender} value={gender} onChange={(value) => { setGender(value as Gender); setPersonaId(""); }} options={[{ value: "female", label: copy.female }, { value: "male", label: copy.male }]} />
@@ -660,9 +689,11 @@ function TargetModal({ mode, existing, state, locale, copy, onClose, onSave }: {
             {customPersonaOptions.length ? <optgroup label={copy.customOptions}>{customPersonaOptions.map((persona) => <option key={persona.id} value={persona.id}>{persona.name}</option>)}</optgroup> : null}
           </select>
         </label>
+        </>
+
         {error ? <p className="text-sm font-medium text-red-600 dark:text-red-400">{error}</p> : null}
         <ModalActions copy={copy} onCancel={onClose} submitLabel={mode === "create" ? copy.create : copy.save} />
-      </form>
+      </fieldset></form>
     </Modal>
   );
 }

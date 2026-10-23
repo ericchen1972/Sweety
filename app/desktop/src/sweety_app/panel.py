@@ -6,6 +6,9 @@ from typing import Any
 import objc
 from AppKit import (
     NSApplication,
+    NSAlert,
+    NSAlertFirstButtonReturn,
+    NSAlertStyleWarning,
     NSBackingStoreBuffered,
     NSButton,
     NSColor,
@@ -13,6 +16,7 @@ from AppKit import (
     NSFontAttributeName,
     NSImage,
     NSImageLeading,
+    NSImageScaleAxesIndependently,
     NSImageScaleProportionallyUpOrDown,
     NSImageView,
     NSLineBreakByWordWrapping,
@@ -29,44 +33,55 @@ from AppKit import (
     NSWindowStyleMaskClosable,
     NSWindowStyleMaskMiniaturizable,
     NSWindowStyleMaskTitled,
+    NSWindowStyleMaskFullSizeContentView,
+    NSWindowTitleHidden,
 )
 from Foundation import NSMutableAttributedString, NSMakeRange, NSObject, NSTimer, NSURL
 
-from .config import APP_VERSION, LOGO_PATH, MANAGEMENT_URL
+from .config import APP_VERSION, LOGO_PATH, MANAGEMENT_URL, PANEL_BACKGROUND_PATH
 from .repositories import Repository
 from .updates import SUPPORTED_PLATFORMS, is_valid_https_url
 
 
 STATUS_COPY = {
     "zh-TW": {
+        "api_key_required": "請到基本設定輸入所選 AI 的 API Key",
         "stopped": "已停止",
         "monitoring": "正在監控新訊息",
         "waiting": "等待新訊息",
         "processing": "正在處理",
         "permission_required": "需要 macOS 權限",
-        "line_window_required": "請先開啟 LINE 主視窗",
+        "line_login_required": "請先到管理介面登入 LINE",
+        "line_window_required": "請先到管理介面登入 LINE",
         "target_required": "請先勾選至少一個對象",
         "error": "發生錯誤",
+        "ai_rate_limited": "AI 額度或速率已達上限，請檢查 AI 設定",
     },
     "en": {
+        "api_key_required": "Enter the selected AI API key in Settings",
         "stopped": "Stopped",
         "monitoring": "Monitoring for new messages",
         "waiting": "Waiting for new messages",
         "processing": "Processing",
         "permission_required": "macOS permissions required",
-        "line_window_required": "Open the LINE main window first",
+        "line_login_required": "Log in to LINE in management first",
+        "line_window_required": "Log in to LINE in management first",
         "target_required": "Select at least one target first",
         "error": "Error",
+        "ai_rate_limited": "AI quota or rate limit reached; check AI settings",
     },
     "ja": {
+        "api_key_required": "設定で選択したAIのAPI Keyを入力してください",
         "stopped": "停止中",
         "monitoring": "新着メッセージを監視中",
         "waiting": "新着メッセージを待っています",
         "processing": "処理中",
         "permission_required": "macOSの権限が必要です",
-        "line_window_required": "LINEのメインウィンドウを開いてください",
+        "line_login_required": "管理画面でLINEにログインしてください",
+        "line_window_required": "管理画面でLINEにログインしてください",
         "target_required": "対象を1人以上選択してください",
         "error": "エラー",
+        "ai_rate_limited": "AIの利用上限です。AI設定を確認してください",
     },
 }
 
@@ -76,10 +91,12 @@ AI_TIMEOUT_ALERT_COPY = {
     "ja": "AIが応答していません。AIモデルを切り替えるか、しばらくしてから再試行してください。",
 }
 
+PANEL_SUBTITLE = "Scam Insecticide"
+
 PANEL_UI_COPY = {
-    "zh-TW": {"subtitle": "主動反詐陪伴工具", "selected_targets": "已勾選對象", "start": "開始", "stop": "停止", "open_management": "開啟管理介面", "quit_app": "結束 App", "show": "顯示 Sweety", "quit": "結束"},
-    "en": {"subtitle": "Anti-scam companion", "selected_targets": "Selected targets", "start": "Start", "stop": "Stop", "open_management": "Open management", "quit_app": "Quit App", "show": "Show Sweety", "quit": "Quit"},
-    "ja": {"subtitle": "詐欺対策サポートツール", "selected_targets": "選択中の対象", "start": "開始", "stop": "停止", "open_management": "管理画面を開く", "quit_app": "Appを終了", "show": "Sweetyを表示", "quit": "終了"},
+    "zh-TW": {"selected_targets": "已勾選對象", "start": "開始", "stop": "停止", "open_management": "開啟管理介面", "quit_app": "結束 App", "show": "顯示 Sweety", "quit": "結束"},
+    "en": {"selected_targets": "Selected targets", "start": "Start", "stop": "Stop", "open_management": "Open management", "quit_app": "Quit App", "show": "Show Sweety", "quit": "Quit"},
+    "ja": {"selected_targets": "選択中の対象", "start": "開始", "stop": "停止", "open_management": "管理画面を開く", "quit_app": "Appを終了", "show": "Sweetyを表示", "quit": "終了"},
 }
 
 
@@ -88,7 +105,7 @@ def _supported_locale(locale: str) -> str:
 
 
 def panel_ui_copy(locale: str) -> dict[str, str]:
-    return PANEL_UI_COPY[_supported_locale(locale)]
+    return {**PANEL_UI_COPY[_supported_locale(locale)], "subtitle": PANEL_SUBTITLE}
 
 
 def permission_alert_copy(locale: str, missing_permissions: list[str] | tuple[str, ...]) -> dict[str, str]:
@@ -139,23 +156,23 @@ def panel_update_copy(locale: str, update: dict[str, Any]) -> dict[str, str]:
     if locale == "zh-TW":
         return {
             "heading": f"新版 {version}，立即下載",
-            "note": "＊Mac OS 版安裝後請重新設定，輔助使用、螢幕與系統錄音以及自動化等三種權限",
-            "emphasis": "螢幕與系統錄音以及自動化等三種權限",
+            "note": "文字功能只需登入 LINE，不需要桌面操作權限。",
+            "emphasis": "不需要桌面操作權限",
             "windows": "Win 版",
             "macos": "Mac OS 版",
         }
     if locale == "ja":
         return {
             "heading": f"バージョン {version} をダウンロードできます",
-            "note": "Mac OS版のインストール後は、アクセシビリティ、画面収録・システムオーディオ録音、オートメーションの権限を再設定してください。",
-            "emphasis": "画面収録・システムオーディオ録音、オートメーションの権限",
+            "note": "文字機能はLINEログインのみで利用できます。",
+            "emphasis": "LINEログイン",
             "windows": "Windows版",
             "macos": "Mac OS版",
         }
     return {
         "heading": f"Version {version} is ready to download",
-        "note": "After installing the Mac OS version, configure Accessibility, Screen & System Audio Recording, and Automation permissions again.",
-        "emphasis": "Screen & System Audio Recording, and Automation permissions",
+        "note": "Text features only require LINE sign-in. No desktop control permissions needed.",
+        "emphasis": "No desktop control permissions needed",
         "windows": "Windows",
         "macos": "Mac OS",
     }
@@ -185,7 +202,7 @@ class PanelBridge:
 
     def snapshot(self) -> dict[str, Any]:
         payload = self.monitor.snapshot()
-        payload["selectedTargetCount"] = len(self.repository.list_monitor_targets())
+        payload.setdefault("selectedTargetCount", len(self.repository.list_monitor_targets()))
         payload["version"] = APP_VERSION
         payload["update"] = (
             self.update_state.snapshot()
@@ -262,16 +279,18 @@ def _panel_button(
     *,
     primary: bool = False,
     symbol_name: str,
+    x: int = 32,
+    width: int = 356,
 ) -> NSButton:
     button = NSButton.buttonWithTitle_target_action_(title, target, action)
-    button.setFrame_(NSMakeRect(32, y, 356, 44))
+    button.setFrame_(NSMakeRect(x, y, width, 44))
     button.setBordered_(False)
     button.setWantsLayer_(True)
     button.layer().setCornerRadius_(6.0)
     button.layer().setBackgroundColor_(
-        (NSColor.controlAccentColor() if primary else NSColor.tertiaryLabelColor().colorWithAlphaComponent_(0.22)).CGColor()
+        (NSColor.controlAccentColor() if primary else NSColor.blackColor().colorWithAlphaComponent_(0.62)).CGColor()
     )
-    button.setContentTintColor_(NSColor.whiteColor() if primary else NSColor.labelColor())
+    button.setContentTintColor_(NSColor.whiteColor())
     button.setFont_(NSFont.boldSystemFontOfSize_(14))
     button.setImage_(_system_symbol(symbol_name, title))
     button.setImagePosition_(NSImageLeading)
@@ -294,20 +313,32 @@ class PanelWindowController(NSObject):
         return self
 
     def build(self) -> None:
-        style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable
+        style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskFullSizeContentView
         self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
-            NSMakeRect(0, 0, 420, 500), style, NSBackingStoreBuffered, False
+            NSMakeRect(0, 0, 500, 500), style, NSBackingStoreBuffered, False
         )
         frame = self.window.frame()
         self.window.setFrame_display_(
-            NSMakeRect(frame.origin.x, frame.origin.y, 420, 500),
+            NSMakeRect(frame.origin.x, frame.origin.y, 500, 500),
             False,
         )
         self.window.setTitle_("Sweety")
+        self.window.setTitlebarAppearsTransparent_(True)
+        self.window.setTitleVisibility_(NSWindowTitleHidden)
+        self.window.setContentAspectRatio_((1, 1))
         self.window.setReleasedWhenClosed_(False)
         self.window.setDelegate_(self)
         self.window.center()
         content = self.window.contentView()
+        self.background_view = NSImageView.alloc().initWithFrame_(NSMakeRect(0, 0, 500, 500))
+        self.background_view.setImage_(NSImage.alloc().initWithContentsOfFile_(str(PANEL_BACKGROUND_PATH)))
+        self.background_view.setImageScaling_(NSImageScaleAxesIndependently)
+        content.addSubview_(self.background_view)
+        for rect in ((0, 308, 500, 192), (0, 0, 500, 184)):
+            shade = NSView.alloc().initWithFrame_(NSMakeRect(*rect))
+            shade.setWantsLayer_(True)
+            shade.layer().setBackgroundColor_(NSColor.blackColor().colorWithAlphaComponent_(0.48).CGColor())
+            content.addSubview_(shade)
 
         logo = NSImage.alloc().initWithContentsOfFile_(str(LOGO_PATH))
         self.logo_view = NSImageView.alloc().initWithFrame_(NSMakeRect(24, 420, 48, 48))
@@ -320,18 +351,20 @@ class PanelWindowController(NSObject):
         ui_copy = panel_ui_copy(self.locale)
         self.subtitle_label = _label(ui_copy["subtitle"], (84, 420, 220, 18), 12)
         content.addSubview_(self.subtitle_label)
-        self.version_label = _label(f"v{APP_VERSION}", (328, 432, 66, 24), 11, True)
+        self.version_label = _label(f"v{APP_VERSION}", (408, 432, 66, 24), 11, True)
         self.version_label.setAlignment_(NSTextAlignmentCenter)
         content.addSubview_(self.version_label)
 
         selected_title = ui_copy["selected_targets"]
-        content.addSubview_(_label(selected_title, (32, 356, 180, 20), 13))
-        self.count_label = _label("0", (32, 304, 180, 52), 42, True)
+        content.addSubview_(_label(selected_title, (32, 372, 240, 20), 13))
+        self.count_label = _label("0", (32, 316, 180, 52), 42, True)
         content.addSubview_(self.count_label)
-        self.status_label = _label("", (32, 270, 356, 28), 13)
+        self.status_label = _label("", (32, 96, 436, 44), 13)
+        self.status_label.setMaximumNumberOfLines_(2)
+        self.status_label.setLineBreakMode_(NSLineBreakByWordWrapping)
         content.addSubview_(self.status_label)
 
-        self.ai_timeout_alert = NSView.alloc().initWithFrame_(NSMakeRect(32, 220, 356, 44))
+        self.ai_timeout_alert = NSView.alloc().initWithFrame_(NSMakeRect(32, 146, 436, 44))
         self.ai_timeout_alert.setWantsLayer_(True)
         self.ai_timeout_alert.layer().setCornerRadius_(8.0)
         self.ai_timeout_alert.layer().setBorderWidth_(1.0)
@@ -342,25 +375,29 @@ class PanelWindowController(NSObject):
         self.ai_timeout_alert.layer().setBackgroundColor_(
             warning_color.colorWithAlphaComponent_(0.14).CGColor()
         )
-        warning_label = _label(ai_timeout_alert_copy(self.locale), (12, 4, 332, 36), 12, True)
+        warning_label = _label(ai_timeout_alert_copy(self.locale), (12, 4, 412, 36), 12, True)
         warning_label.setLineBreakMode_(NSLineBreakByWordWrapping)
         warning_label.setMaximumNumberOfLines_(2)
         self.ai_timeout_alert.addSubview_(warning_label)
         self.ai_timeout_alert.setHidden_(True)
         content.addSubview_(self.ai_timeout_alert)
 
-        self.toggle_button = _panel_button("", self, "toggleMonitor:", 174, primary=True, symbol_name="play.fill")
+        self.toggle_button = _panel_button("", self, "toggleMonitor:", 28, primary=True, symbol_name="play.fill", width=138)
         self.toggle_button.setKeyEquivalent_("\r")
         content.addSubview_(self.toggle_button)
 
         manage_title = ui_copy["open_management"]
-        manage = _panel_button(manage_title, self, "openManagement:", 120, symbol_name="safari")
+        manage = _panel_button(manage_title, self, "openManagement:", 28, symbol_name="safari", x=180, width=138)
         content.addSubview_(manage)
 
         quit_title = ui_copy["quit_app"]
-        quit_button = _panel_button(quit_title, self, "quitApp:", 56, symbol_name="power")
+        quit_button = _panel_button(quit_title, self, "quitApp:", 28, symbol_name="power", x=328, width=140)
         content.addSubview_(quit_button)
 
+        for view in content.subviews():
+            if isinstance(view, NSTextField):
+                view.setTextColor_(NSColor.whiteColor())
+        warning_label.setTextColor_(NSColor.whiteColor())
         self._build_status_item(logo)
         self.refresh_(None)
         self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
@@ -395,17 +432,8 @@ class PanelWindowController(NSObject):
         if self.update_layout_applied or not downloads:
             return
         self.update_layout_applied = True
-        frame = self.window.frame()
-        self.window.setFrame_display_(
-            NSMakeRect(frame.origin.x, frame.origin.y - 150, 420, 650),
-            True,
-        )
-        for view in (self.logo_view, self.title_label, self.subtitle_label, self.version_label):
-            moved = view.frame()
-            moved.origin.y += 150
-            view.setFrame_(moved)
-
-        card = NSView.alloc().initWithFrame_(NSMakeRect(24, 378, 372, 142))
+        self.count_label.setFrame_(NSMakeRect(400, 350, 68, 52))
+        card = NSView.alloc().initWithFrame_(NSMakeRect(24, 196, 452, 142))
         card.setWantsLayer_(True)
         card.layer().setCornerRadius_(10.0)
         card.layer().setBorderWidth_(1.0)
@@ -432,8 +460,14 @@ class PanelWindowController(NSObject):
         else:
             self.bridge.start_monitor()
         self.refresh_(None)
+        status = self.bridge.snapshot().get("status")
+        if status == "api_key_required":
+            alert = NSAlert.alloc().init()
+            alert.setMessageText_(STATUS_COPY[self.locale][status])
+            alert.addButtonWithTitle_("OK")
+            alert.runModal()
 
-    @objc.IBAction
+
     def openManagement_(self, _sender) -> None:
         self.bridge.open_management()
 
@@ -457,6 +491,9 @@ class PanelWindowController(NSObject):
         self.status_label.setStringValue_(status_text(self.locale, snapshot))
         ui_copy = panel_ui_copy(self.locale)
         self.toggle_button.setTitle_(ui_copy["stop"] if enabled else ui_copy["start"])
+        self.toggle_button.layer().setBackgroundColor_(
+            (NSColor.systemRedColor() if enabled else NSColor.controlAccentColor()).CGColor()
+        )
         self.toggle_button.setImage_(
             _system_symbol("stop.fill" if enabled else "play.fill", self.toggle_button.title())
         )

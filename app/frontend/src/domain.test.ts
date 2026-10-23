@@ -41,11 +41,11 @@ describe("detectLocale", () => {
 });
 
 describe("target validation", () => {
-  it("accepts only non-empty ASCII letters and digits", () => {
-    for (const valid of ["Fraud1", "fraud2", "ABC123xyz"]) {
+  it("accepts LINE display names and rejects blank names", () => {
+    for (const valid of ["Fraud1", "fraud2", "ABC123xyz", "Fraud 1", "詐騙1", "Fraud-1", "Fraud_1", "Fraud1😀"]) {
       expect(validateTargetName(valid)).toBe(true);
     }
-    for (const invalid of ["", "  ", "Fraud 1", "詐騙1", "Fraud-1", "Fraud_1", "Fraud1😀"]) {
+    for (const invalid of ["", "  ", "x".repeat(201)]) {
       expect(validateTargetName(invalid)).toBe(false);
     }
   });

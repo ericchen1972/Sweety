@@ -1,9 +1,13 @@
 [project]
 name = "sweety-app"
-version = "1.0.2"
+version = "2.0.0"
 description = "Sweety macOS anti-scam desktop runtime"
 requires-python = ">=3.11,<3.14"
 dependencies = [
+  "okline @ https://github.com/NiceDayZc/OkLine/archive/2e3437977368802edcc2219798b9d5333665ebca.zip",
+  "qrcode[pil]>=7,<9",
+  "keyring>=25.6.0",
+  "cryptography>=46,<47",
   "fastapi>=0.116.0",
   "uvicorn>=0.35.0",
   "requests>=2.32.0",
@@ -13,15 +17,8 @@ dependencies = [
 
 [project.optional-dependencies]
 desktop = [
-  "mss>=10.0.0",
   "Pillow>=11.0.0",
-  "numpy>=2.2.0",
-  "pyautogui>=0.9.54",
-  "rapidocr-onnxruntime>=1.4.4",
-  "pyobjc-framework-Quartz>=11.0; sys_platform == 'darwin'",
   "pyobjc-framework-Cocoa>=11.0; sys_platform == 'darwin'",
-  "pyobjc-framework-ApplicationServices>=11.0; sys_platform == 'darwin'",
-  "pyperclip>=1.9.0",
 ]
 dev = [
   "httpx>=0.28.0",
@@ -39,3 +36,6 @@ packages = ["src/sweety_app"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.hatch.metadata]
+allow-direct-references = true

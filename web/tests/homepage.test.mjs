@@ -18,13 +18,13 @@ const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => ''
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
 const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.2-d1f2664b';
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=1.0.2-7be756f5';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=2.0.0-a165b11e';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
   assert.match(dmgBuildHelper, /dist\/dmg-staging/);
-  assert.match(dmgBuildHelper, /cp -R .*Sweety\.app .*dmg-staging/);
-  assert.match(dmgBuildHelper, /ln -s \/Applications .*dmg-staging\/Applications/);
+  assert.match(dmgBuildHelper, /cp -R .*Sweety\.app["\s].*dmg-staging/);
+  assert.match(dmgBuildHelper, /ln -s \/Applications .*dmg-staging["\/]*Applications/);
   assert.match(dmgBuildHelper, /hdiutil create[\s\S]*?Sweety-macos-latest\.dmg/);
   assert.match(dmgBuildHelper, /hdiutil verify .*Sweety-macos-latest\.dmg/);
   assert.match(dmgBuildHelper, /hdiutil attach[\s\S]*?readonly/);
@@ -37,7 +37,8 @@ test('macOS release helper preserves the metrics environment and verifies the up
   assert.match(macReleaseHelper, /\/sweety\.tw\/\.sweety-runtime-env\.php/);
   assert.match(macReleaseHelper, /SWEETY_METRICS_APP_TOKEN=\(\[a-f0-9\]\{64\}\)/);
   assert.match(macReleaseHelper, /putenv\('SWEETY_METRICS_APP_TOKEN=' \./);
-  assert.match(macReleaseHelper, /build_app\.sh/);
+  assert.match(dmgBuildHelper, /SWEETY_LOG_ENABLED=0.*build_app\.sh/);
+  assert.match(macReleaseHelper, /ftp_rename/);
   assert.match(macReleaseHelper, /build_dmg\.sh/);
   assert.match(macReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-macos-latest\.dmg/);
   assert.match(macReleaseHelper, /FTP_BINARY/);
@@ -61,9 +62,9 @@ test('homepage deployment remains website-only and never rebuilds the desktop ap
   assert.doesNotMatch(deployHelper, /dist\/Sweety\.app/);
 });
 
-test('production update manifest advertises 1.0.2 and deploys publicly', () => {
+test('production update manifest advertises 2.0.0 and deploys publicly', () => {
   assert.deepEqual(updateManifest, {
-    latestVersion: '1.0.2',
+    latestVersion: '2.0.0',
     downloads: {
       windows: expectedWindowsDownload,
       macos: expectedMacDownload,
@@ -620,7 +621,7 @@ test('homepage exposes complete social metadata and machine-readable application
     assert.ok(graph.some((node) => node['@type'] === type), `JSON-LD should include ${type}`);
   }
   const app = graph.find((node) => node['@type'] === 'SoftwareApplication');
-  assert.equal(app.softwareVersion, '1.0.2');
+  assert.equal(app.softwareVersion, '2.0.0');
   assert.equal(app.operatingSystem, 'Windows, macOS');
   assert.equal(app.offers.price, '0');
 });

@@ -18,14 +18,15 @@ from Foundation import NSObject
 from .ai import AiClient
 from .about import AboutContentClient
 from .api import create_app
-from .config import API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, FRONTEND_DIST, LOG_ENABLED, LOGO_PATH, LOG_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, about_url_for_locale, preferred_locale
+from .config import API_HOST, API_PORT, APP_VERSION, BUNDLED_AGNES_KEY, CACHE_DIR, DATABASE_PATH, DATA_DIR, FRONTEND_DIST, LOG_ENABLED, LOGO_PATH, LOG_PATH, REGION_LOOKUP_URL, REMOTE_CATALOG_URL, REMOTE_METRICS_URL, REMOTE_UPDATE_URL, SWEETY_METRICS_APP_TOKEN, about_url_for_locale, preferred_locale
 from .database import Database
 from .diagnostics import configure_diagnostics, log_event
-from .line_mac import LineMacAdapter
+from .okline_store import LineStore
+from .okline_service import LineService
+from .okline_session import SessionVault
 from .monitor import MonitorController
 from .metrics_reporter import start_metrics_reporting
-from .panel import PanelBridge, PanelWindowController, permission_alert_copy
-from .permissions import PermissionStatus, check_permissions
+from .panel import PanelBridge, PanelWindowController, status_text
 from .remote_catalog import sync_remote_catalog
 from .region_access import check_region_access
 from .repositories import Repository
@@ -38,10 +39,9 @@ def detected_locale() -> str:
 
 
 class SweetyAppDelegate(NSObject):
-    def initWithComponents_permissionStatus_locale_updateState_(
+    def initWithComponents_locale_updateState_(
         self,
         components: tuple[Repository, MonitorController, ServerRuntime],
-        permission_status: PermissionStatus,
         locale: str,
         update_state: UpdateState,
     ):
@@ -49,7 +49,6 @@ class SweetyAppDelegate(NSObject):
         if self is None:
             return None
         self.repository, self.monitor, self.runtime = components
-        self.permission_status = permission_status
         self.locale = locale
         self.update_state = update_state
         self.panel = None
@@ -67,20 +66,13 @@ class SweetyAppDelegate(NSObject):
         self.panel = PanelWindowController.alloc().initWithBridge_locale_(bridge, self.locale)
         self.panel.build()
         self.panel.show()
-        if not self.permission_status.ready:
-            copy = permission_alert_copy(self.locale, self.permission_status.missing)
-            alert = NSAlert.alloc().init()
-            alert.setAlertStyle_(NSAlertStyleWarning)
-            alert.setMessageText_(copy["title"])
-            alert.setInformativeText_(copy["message"])
-            alert.runModal()
-
     def applicationShouldTerminateAfterLastWindowClosed_(self, _application) -> bool:
         return False
 
     def applicationWillTerminate_(self, _notification) -> None:
         log_event(logging.getLogger("sweety.app"), "app_stopping")
         self.monitor.stop()
+        self.monitor.line.disconnect(clear=False)
         self.runtime.stop()
 
 
@@ -111,20 +103,21 @@ def main() -> None:
         REMOTE_METRICS_URL,
         SWEETY_METRICS_APP_TOKEN,
     )
-    permission_status = check_permissions(prompt=True)
-    line = LineMacAdapter(CACHE_DIR, retain_chat_capture=LOG_ENABLED)
+    store = LineStore(repository)
+    line = LineService(repository, store, vault=SessionVault(DATA_DIR / "line-sessions", "local"))
     ai = AiClient(agnes_key=BUNDLED_AGNES_KEY, repository=repository)
     monitor = MonitorController(
         repository,
         line,
         ai,
-        automation_allowed=permission_status.ready,
         region_blocked=region_access.blocked,
         on_exchange_committed=metrics_reporter.report_async,
     )
+    line.restore()
     api = create_app(
         database,
         monitor=monitor,
+        line_service=line,
         frontend_dist=FRONTEND_DIST,
         persona_validator=ai,
         about_loader=AboutContentClient(about_url_for_locale(locale)),
@@ -133,13 +126,18 @@ def main() -> None:
     runtime = ServerRuntime(api, API_HOST, API_PORT)
     runtime.start()
 
-    delegate = SweetyAppDelegate.alloc().initWithComponents_permissionStatus_locale_updateState_(
-        (repository, monitor, runtime), permission_status, locale, update_state
+    delegate = SweetyAppDelegate.alloc().initWithComponents_locale_updateState_(
+        (repository, monitor, runtime), locale, update_state
     )
     application.setDelegate_(delegate)
     signal.signal(signal.SIGINT, lambda *_args: application.terminate_(None))
     signal.signal(signal.SIGTERM, lambda *_args: application.terminate_(None))
-    application.run()
+    try:
+        application.run()
+    finally:
+        monitor.stop()
+        line.disconnect(clear=False)
+        runtime.stop()
 
 
 if __name__ == "__main__":

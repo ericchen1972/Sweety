@@ -72,7 +72,8 @@ $root = dirname(__DIR__, 2);
 $runtimePath = '/sweety.tw/.sweety-runtime-env.php';
 $remoteDirectory = '/sweety.tw/downloads';
 $remotePath = '/sweety.tw/downloads/Sweety-macos-latest.dmg';
-$localPath = $root . '/app/desktop/dist/Sweety-macos-latest.dmg';
+$buildRoot = getenv('SWEETY_BUILD_ROOT') ?: '/Users/eric/Documents/Codex-Temp/sweety-build';
+$localPath = $buildRoot . '/dist/Sweety-macos-latest.dmg';
 $config = readConfig($root . '/web/sftp-config.json');
 
 $ftp = connectFtp($config);
@@ -85,10 +86,6 @@ if (!is_string($runtime) || !preg_match("~SWEETY_METRICS_APP_TOKEN=([a-f0-9]{64}
 putenv('SWEETY_METRICS_APP_TOKEN=' . $match[1]);
 
 chdir($root . '/app/desktop');
-passthru('./build_app.sh', $buildExit);
-if ($buildExit !== 0) {
-    fail('macOS app build failed.');
-}
 passthru('./build_dmg.sh', $dmgExit);
 if ($dmgExit !== 0 || !is_file($localPath)) {
     fail('macOS DMG build failed.');
@@ -96,13 +93,16 @@ if ($dmgExit !== 0 || !is_file($localPath)) {
 
 $ftp = connectFtp($config);
 ensureDirectory($ftp, $remoteDirectory);
-if (!ftp_put($ftp, $remotePath, $localPath, FTP_BINARY)) {
+if (!ftp_put($ftp, $remotePath . '.upload', $localPath, FTP_BINARY)) {
     ftp_close($ftp);
     fail('Unable to upload the macOS DMG.');
 }
-if (ftp_size($ftp, $remotePath) !== filesize($localPath)) {
+if (ftp_size($ftp, $remotePath . '.upload') !== filesize($localPath)) {
     ftp_close($ftp);
     fail('Remote DMG size verification failed.');
+}
+if (!ftp_rename($ftp, $remotePath . '.upload', $remotePath)) {
+    fail('Unable to publish the verified macOS DMG.');
 }
 ftp_close($ftp);
 

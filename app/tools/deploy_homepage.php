@@ -107,6 +107,11 @@ foreach (glob($root . '/web/images/home/*.{webp,png}', GLOB_BRACE) ?: [] as $ima
     $files[] = 'images/home/' . basename($image);
 }
 
+$linksOnly = in_array('--links-only', $argv, true);
+if ($linksOnly) {
+    $files = ['index.html', 'homepage.js', 'sweety-update.json'];
+}
+
 foreach ($files as $relative) {
     $local = $root . '/web/' . $relative;
     $remote = $siteRoot . '/' . $relative;
@@ -116,6 +121,12 @@ foreach ($files as $relative) {
     if (ftp_size($ftp, $remote) !== filesize($local)) {
         fail("Remote size verification failed for {$relative}.");
     }
+}
+
+if ($linksOnly) {
+    ftp_close($ftp);
+    echo "Updated and verified download links and update manifest.\n";
+    exit(0);
 }
 
 $runtimePath = $siteRoot . '/.sweety-runtime-env.php';

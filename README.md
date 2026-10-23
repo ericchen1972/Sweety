@@ -1,9 +1,9 @@
 # Sweety
 
-Sweety 是一套完全開源的主動式反詐騙桌面 App。使用者選定 LINE 桌面版中的對象與人設後，Sweety 會讓 AI 被動回覆訊息，持續消耗詐騙者的時間；AI 不會主動聯絡任何人，使用者也可隨時停止並自行接手。
+Sweety 是一套完全開源的主動式反詐騙桌面 App。使用者登入 LINE 並從聯絡人清單選定對象與人設後，Sweety 會讓 AI 被動回覆訊息，持續消耗詐騙者的時間；AI 不會主動聯絡任何人，使用者也可隨時停止並自行接手。
 
 - 官方網站：[sweety.tw](https://sweety.tw)
-- 目前版本：`1.0.2`
+- 目前版本：`2.0.0`
 - 支援平台：macOS、Windows
 - 授權：MIT
 
@@ -146,7 +146,7 @@ docs/           設計與實作規格
 
 ## 本機開發
 
-需求：Node.js 20 以上、Python 3.11–3.13、[uv](https://docs.astral.sh/uv/)；桌面自動化功能需在對應的 macOS 或 Windows 環境執行。
+需求：Node.js 20 以上、Python 3.11–3.13、[uv](https://docs.astral.sh/uv/)；OKLine 收發需要可用的 Node.js 執行環境；macOS 原生面板需在 Mac 執行。
 
 ### 前端
 
@@ -164,7 +164,7 @@ uv sync --extra desktop --extra dev
 uv run python launcher.py
 ```
 
-需要遠端 AI 服務時，請由環境變數提供 `SWEETY_AGNES_KEY`。不要把正式金鑰寫入程式碼或提交到 Git。
+請在基本設定選擇 Agnes 或 OpenAI，填寫該服務的 API Key 與 Model；Agnes 預設模型為 `agnes-3.0-flash`。設定頁提供兩家的 API Key 申請連結。未填寫目前所選服務的 Key 時，面板會提示並禁止開始監控；App 不再打包或使用內建 Agnes Key。不要把正式金鑰寫入程式碼或提交到 Git。
 
 ## 測試
 
@@ -173,6 +173,8 @@ cd app/frontend && npm test
 cd ../desktop && uv run pytest
 cd ../.. && node --test web/tests/*.test.mjs
 ```
+
+桌面面板使用 500×500 方形背景，保留開始／停止、狀態、管理介面與退出控制。
 
 ## 建置 macOS App
 
@@ -183,12 +185,18 @@ cd app/desktop
 ./build_app.sh
 ```
 
-輸出位於 `app/desktop/dist/Sweety.app`。正式金鑰、部署設定、資料庫、執行紀錄、依賴目錄與建置輸出皆不應提交。
+測試 App 預設輸出位於 `/Users/eric/Documents/Codex-Temp/sweety-build/dist/Sweety.app`（可用 `SWEETY_BUILD_ROOT` 指定建置目錄），啟用 `SWEETY_LOG_ENABLED=1`。`build_dmg.sh` 會以 `SWEETY_LOG_ENABLED=0` 重新建置後產生 DMG。正式金鑰、部署設定、資料庫、執行紀錄、依賴目錄與建置輸出皆不應提交。
 
 ## 使用注意事項
 
-- LINE 桌面 App 視窗位置請勿超過螢幕左側或右側邊緣，否則將造成 Sweety 辨識失敗。
-- 一次可設定多個對象，但請保持在 LINE 主視窗聯絡人列表的可視範圍。
+- 到「騙子列表」按「登入 LINE」，用手機掃描 QR Code，依提示確認或輸入驗證碼。
+- 從個人聯絡人或 LINE 群組清單搜尋並選取對象，不需要改名；同名對象以固定 LINE ID 區分。
+- 個人對象可指定人設並勾選回覆；群組可指定人設並勾選監控。到「基本設定」填寫「用戶名稱（選填）」，多個姓名或稱呼以逗號分隔；群組訊息包含其中一個名稱，或 LINE 標註目前登入的帳號時才由 AI 回覆。名稱留空時只回覆真正的 LINE 標註。不提供自訂分類。
+- 舊對象及對話、統計、人設與武器均保留。按「綁定 LINE 對象」明確選擇實際聯絡人，完成綁定後才能監控；不會依名稱自動猜測。
+- 文字功能使用 OKLine，不需桌面 LINE、OCR、螢幕錄製、輔助使用、Apple Events 自動化權限或 BlackHole；不切換系統麥克風。登入 session 加密保存於 Sweety 自己的目錄，金鑰由系統鑰匙圈管理。
+- 個人對象收到圖片或貼圖時，會經 OKLine 下載並交由目前選用的 AI 模型辨識與回覆；群組仍須訊息文字包含用戶名稱或 LINE 標註您。請選用支援圖片的 AI 模型。圖像只在記憶體處理，保留辨識描述作為後續上下文，不保存原圖。單檔上限 12 MB，動態貼圖以靜態預覽辨識，不分析音效；影片與語音仍只記錄類型。群組紀錄包含發送者 ID。
+- 停止期間不接收新訊息；重新開始不集中回覆停用期間訊息。發送結果不確定時不自動重送。
+- OKLine 是非官方整合，固定版本及其第三方元件說明見 [third-party-okline.md](docs/third-party-okline.md)。
 - 如果對方懷疑是 AI，可先按停止鍵並自行接手，情況穩定後再繼續。
 - Sweety 不能取代警方、金融機構或專業反詐單位；遇到疑似詐騙，請停止付款與提供資料，並透過可信任的官方管道查證。
 
@@ -211,3 +219,5 @@ Eric，網站／AI 工程師，20 年開發經驗。
 ## License
 
 [MIT License](LICENSE)
+
+基本設定的「交談歷史筆數」預設為 20，可設定 0–200，包含雙方訊息；0 表示不帶歷史，只送本次新訊息。面板成功開始監控時顯示紅色停止按鈕，停止或啟動失敗時顯示藍色開始按鈕。

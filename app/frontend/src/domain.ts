@@ -23,6 +23,11 @@ export interface Target {
   weaponId: string;
   weaponSource: CatalogSource;
   replyEnabled: boolean;
+  lineBound?: boolean;
+  lineAvailable?: boolean;
+  lineMid?: string;
+  lineKind?: "person" | "group";
+  lineAccount?: string;
   status: TargetStatus;
   roundTrips: number;
   firstReplyAt: string | null;
@@ -41,9 +46,13 @@ export interface CustomCatalogItem {
 }
 
 export interface AppSettings {
+  userNames?: string;
   aiProvider: "sweety" | "openai";
+  agnesApiKey?: string;
+  agnesModel?: string;
   openAiApiKey: string;
   openAiModel: string;
+  historyLimit?: number;
   checkIntervalSeconds: number;
   replyDelayMinSeconds: number;
   replyDelayMaxSeconds: number;
@@ -67,7 +76,7 @@ export function detectLocale(language: string | null | undefined): Locale {
 }
 
 export function validateTargetName(name: string): boolean {
-  return /^[A-Za-z0-9]+$/.test(name);
+  return name.trim().length > 0 && name.length <= 200;
 }
 
 export function validateReplyDelay(minimum: number, maximum: number): boolean {

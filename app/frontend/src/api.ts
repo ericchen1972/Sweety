@@ -39,6 +39,13 @@ export function createApiClient(fetcher: Fetcher = globalThis.fetch.bind(globalT
   }
 
   return {
+    lineStatus: () => request<import("./LineConnection").LineStatus>("/api/line/status"),
+    lineLogin: () => request("/api/line/login", {method:"POST"}),
+    lineLogout: () => request("/api/line/logout", {method:"POST"}),
+    lineContacts: (refresh=false) => request<import("./LineConnection").LineContact[]>(refresh?"/api/line/contacts/refresh":"/api/line/contacts", refresh?{method:"POST"}:{}),
+    updateTarget: (target:import("./domain").Target) => request<import("./domain").Target>(`/api/targets/${encodeURIComponent(target.id)}`,{method:"PUT",body:JSON.stringify(target)}),
+    addLineTarget: (contactId:string, assignment:import("./domain").Target) => request<import("./domain").Target>("/api/line/contacts/add", {method:"POST",body:JSON.stringify({contactId,assignment})}),
+    bindLineTarget: (targetId:string,contactId:string) => request<import("./domain").Target>("/api/line/targets/bind",{method:"POST",body:JSON.stringify({targetId,contactId})}),
     loadState: () => request<AppState>("/api/state"),
     loadAbout: () => request<{ html: string }>("/api/about"),
     updateStatus: () => request<UpdateStatus>("/api/update"),

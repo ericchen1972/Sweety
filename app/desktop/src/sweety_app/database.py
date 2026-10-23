@@ -9,7 +9,7 @@ from typing import Iterator
 from .catalog import BASE_PERSONAS, DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 11
 
 
 SCHEMA = """
@@ -257,6 +257,23 @@ class Database:
                     "UPDATE base_personas SET name_ja = ?, content_ja = ? WHERE id = ?",
                     (persona["name"]["ja"], persona["content"]["ja"], persona["id"]),
                 )
+            settings_columns = {row["name"] for row in connection.execute("PRAGMA table_info(settings)")}
+            if "user_names" not in settings_columns:
+                connection.execute("ALTER TABLE settings ADD COLUMN user_names TEXT NOT NULL DEFAULT ''")
+            for name, definition in (("agnes_api_key", "TEXT NOT NULL DEFAULT ''"),
+                                     ("agnes_model", "TEXT NOT NULL DEFAULT 'agnes-3.0-flash'")):
+                if name not in settings_columns:
+                    connection.execute(f"ALTER TABLE settings ADD COLUMN {name} {definition}")
+            if "history_limit" not in settings_columns:
+                connection.execute("ALTER TABLE settings ADD COLUMN history_limit INTEGER NOT NULL DEFAULT 20")
+            target_columns = {row["name"] for row in connection.execute("PRAGMA table_info(targets)")}
+            for name, definition in (("line_kind", "TEXT NOT NULL DEFAULT 'person'"),
+                                     ("line_account", "TEXT NOT NULL DEFAULT ''"),
+                                     ("line_mid", "TEXT NOT NULL DEFAULT ''"),
+                                     ("line_since", "INTEGER NOT NULL DEFAULT 0")):
+                if name not in target_columns:
+                    connection.execute(f"ALTER TABLE targets ADD COLUMN {name} {definition}")
+            connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_target_line_identity ON targets(line_account,line_mid) WHERE line_mid != ''")
             if previous_version < CURRENT_SCHEMA_VERSION:
                 connection.execute(
                     "UPDATE schema_version SET version = ?",

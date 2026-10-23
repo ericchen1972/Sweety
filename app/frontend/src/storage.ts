@@ -6,9 +6,13 @@ export const defaultState: AppState = {
   version: 1,
   monitoringEnabled: false,
   settings: {
+    userNames: "",
     aiProvider: "sweety",
+    agnesApiKey: "",
+    agnesModel: "agnes-3.0-flash",
     openAiApiKey: "",
     openAiModel: "gpt-5.5",
+    historyLimit: 20,
     checkIntervalSeconds: 10,
     replyDelayMinSeconds: 15,
     replyDelayMaxSeconds: 45,
@@ -49,3 +53,5 @@ export function saveState(state: AppState): Promise<AppState> {
   saveQueue = operation;
   return operation;
 }
+
+export async function flushStateSaves() { await saveQueue; }

@@ -39,9 +39,9 @@ describe("UpdateNotice", () => {
     const html = renderToStaticMarkup(createElement(UpdateNotice, { update: available, copy: getCopy("zh-TW") }));
 
     expect(html).toContain("新版 1.2.0，立即下載");
-    expect(html).toContain("＊Mac OS 版安裝後請重新設定，輔助使用、");
+    expect(html).toContain("文字功能只需登入 LINE。");
     expect(html).toContain("<strong");
-    expect(html).toContain("螢幕與系統錄音以及自動化等三種權限");
+    expect(html).toContain("不需要桌面操作權限。");
     expect(html).toContain("Win 版");
     expect(html).toContain("Mac OS 版");
     expect(html.match(/target="_blank"/g)).toHaveLength(2);
@@ -65,7 +65,7 @@ describe("UpdateNotice", () => {
 
     expect(html).toContain("バージョン 1.2.0 をダウンロードできます");
     expect(html).toContain("新しいバージョンをダウンロードできます");
-    expect(html).toContain("アクセシビリティ");
+    expect(html).toContain("デスクトップ操作権限は不要です。");
   });
 
   it("does not render before a checked update with a usable download", () => {

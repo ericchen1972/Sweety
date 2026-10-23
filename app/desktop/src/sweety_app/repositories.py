@@ -47,9 +47,9 @@ class Repository:
         with self.database.connect() as connection:
             row = connection.execute(
                 """
-                SELECT ai_provider, openai_api_key, openai_model,
+                SELECT ai_provider, openai_api_key, openai_model, agnes_api_key, agnes_model,
                        check_interval_seconds, reply_delay_min_seconds,
-                       reply_delay_max_seconds
+                       reply_delay_max_seconds, user_names, history_limit
                 FROM settings WHERE singleton = 1
                 """
             ).fetchone()
@@ -167,14 +167,14 @@ class Repository:
             connection.execute(
                 """
                 UPDATE settings SET ai_provider = ?, openai_api_key = ?,
-                    openai_model = ?, check_interval_seconds = ?,
-                    reply_delay_min_seconds = ?, reply_delay_max_seconds = ?
+                    openai_model = ?, agnes_api_key = ?, agnes_model = ?, check_interval_seconds = ?,
+                    reply_delay_min_seconds = ?, reply_delay_max_seconds = ?, user_names = ?, history_limit = ?
                 WHERE singleton = 1
                 """,
                 (
                     current["ai_provider"], current["openai_api_key"],
-                    current["openai_model"], current["check_interval_seconds"],
-                    current["reply_delay_min_seconds"], current["reply_delay_max_seconds"],
+                    current["openai_model"], str(current["agnes_api_key"]).strip(), current["agnes_model"], current["check_interval_seconds"],
+                    current["reply_delay_min_seconds"], current["reply_delay_max_seconds"], str(current["user_names"]).strip(), current["history_limit"],
                 ),
             )
         return self.get_settings()
@@ -317,7 +317,7 @@ class Repository:
                         reply_enabled = ?, updated_at = ? WHERE id = ?
                     """,
                     (
-                        name, normalized_name(name), updated["age_group"], updated["gender"],
+                        name, (current["name_key"] if current.get("line_mid") else normalized_name(name)), updated["age_group"], updated["gender"],
                         updated["persona_id"], updated["persona_source"], updated["weapon_id"],
                         updated["weapon_source"], int(bool(updated["reply_enabled"])), utc_now(), target_id,
                     ),

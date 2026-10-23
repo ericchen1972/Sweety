@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 APP_NAME = "Sweety"
-APP_VERSION = "1.0.2"
+APP_VERSION = "2.0.0"
 API_HOST = "127.0.0.1"
 API_PORT = 8891
 MANAGEMENT_URL = f"http://{API_HOST}:{API_PORT}/"
@@ -31,6 +31,8 @@ LOGO_PATH = (
     if getattr(sys, "frozen", False)
     else PROJECT_DIR / "web" / "images" / "logo.png"
 )
+
+PANEL_BACKGROUND_PATH = RESOURCE_DIR / "assets" / "panel-background.png"
 
 if sys.platform == "darwin":
     DATA_DIR = Path.home() / "Library" / "Application Support" / APP_NAME

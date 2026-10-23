@@ -32,6 +32,10 @@ def target_payload(name: str = "LINE 完整名稱", reply_enabled: bool = True) 
 def test_default_settings_are_created(repo):
     assert repo.get_settings() == {
         "ai_provider": "sweety",
+        "user_names": "",
+        "agnes_api_key": "",
+        "agnes_model": "agnes-3.0-flash",
+        "history_limit": 20,
         "openai_api_key": "",
         "openai_model": "gpt-5.5",
         "check_interval_seconds": 10,

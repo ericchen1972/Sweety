@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from AppKit import NSApplication, NSButton, NSFontAttributeName, NSFontBoldTrait, NSStatusBar
+from AppKit import NSApplication, NSColor, NSCalibratedRGBColorSpace, NSButton, NSFontAttributeName, NSFontBoldTrait, NSStatusBar
 
 from sweety_app.database import Database
 from sweety_app.panel import (
@@ -60,7 +60,7 @@ def test_bridge_reports_count_and_controls_monitor(tmp_path):
     changed = []
     bridge = PanelBridge(repo, monitor, opener=opened.append, quit_callback=lambda: None, on_changed=lambda: changed.append(True))
 
-    assert bridge.snapshot()["selectedTargetCount"] == 1
+    assert bridge.snapshot()["selectedTargetCount"] == 0
     assert bridge.start_monitor() is True
     assert bridge.snapshot()["enabled"] is True
     assert bridge.stop_monitor() is True
@@ -71,7 +71,7 @@ def test_bridge_reports_count_and_controls_monitor(tmp_path):
 
 def test_status_text_is_localized():
     assert status_text("zh-TW", {"status": "target_required"}) == "請先勾選至少一個對象"
-    assert status_text("en", {"status": "line_window_required"}) == "Open the LINE main window first"
+    assert status_text("en", {"status": "line_window_required"}) == "Log in to LINE in management first"
     assert status_text("ja", {"status": "target_required"}) == "対象を1人以上選択してください"
     assert status_text("ja", {"status": "processing", "currentTarget": "Fraud1"}) == "処理中: Fraud1"
 
@@ -83,9 +83,14 @@ def test_ai_timeout_alert_copy_is_localized():
     assert ai_timeout_alert_copy("ja") == "AIが応答していません。AIモデルを切り替えるか、しばらくしてから再試行してください。"
 
 
+def test_panel_subtitle_is_fixed_english_across_locales():
+    for locale in ("zh-TW", "en", "ja", "unsupported"):
+        assert panel_ui_copy(locale)["subtitle"] == "Scam Insecticide"
+
+
 def test_panel_and_permission_copy_are_localized_in_japanese():
     copy = panel_ui_copy("ja")
-    assert copy["subtitle"] == "詐欺対策サポートツール"
+    assert copy["subtitle"] == "Scam Insecticide"
     assert copy["selected_targets"] == "選択中の対象"
     assert copy["start"] == "開始"
     assert copy["stop"] == "停止"
@@ -168,22 +173,22 @@ def test_panel_update_copy_and_downloads_are_localized_and_omit_missing_platform
 
     assert panel_update_copy("zh-TW", update) == {
         "heading": "新版 1.1.0，立即下載",
-        "note": "＊Mac OS 版安裝後請重新設定，輔助使用、螢幕與系統錄音以及自動化等三種權限",
-        "emphasis": "螢幕與系統錄音以及自動化等三種權限",
+        "note": "文字功能只需登入 LINE，不需要桌面操作權限。",
+        "emphasis": "不需要桌面操作權限",
         "windows": "Win 版",
         "macos": "Mac OS 版",
     }
     assert panel_update_copy("en", update) == {
         "heading": "Version 1.1.0 is ready to download",
-        "note": "After installing the Mac OS version, configure Accessibility, Screen & System Audio Recording, and Automation permissions again.",
-        "emphasis": "Screen & System Audio Recording, and Automation permissions",
+        "note": "Text features only require LINE sign-in. No desktop control permissions needed.",
+        "emphasis": "No desktop control permissions needed",
         "windows": "Windows",
         "macos": "Mac OS",
     }
     assert panel_update_copy("ja", update) == {
         "heading": "バージョン 1.1.0 をダウンロードできます",
-        "note": "Mac OS版のインストール後は、アクセシビリティ、画面収録・システムオーディオ録音、オートメーションの権限を再設定してください。",
-        "emphasis": "画面収録・システムオーディオ録音、オートメーションの権限",
+        "note": "文字機能はLINEログインのみで利用できます。",
+        "emphasis": "LINEログイン",
         "windows": "Windows版",
         "macos": "Mac OS版",
     }
@@ -218,7 +223,7 @@ def test_native_update_note_boldly_emphasizes_the_permission_phrase():
     assert font.fontDescriptor().symbolicTraits() & NSFontBoldTrait
 
 
-def test_native_panel_keeps_base_size_without_an_update_and_expands_only_once(tmp_path):
+def test_native_panel_uses_square_background_and_preserves_controls_with_update(tmp_path):
     NSApplication.sharedApplication()
     database = Database(tmp_path / "panel-layout.sqlite3")
     database.migrate()
@@ -235,8 +240,29 @@ def test_native_panel_keeps_base_size_without_an_update_and_expands_only_once(tm
     controller.build()
 
     try:
-        assert tuple(controller.window.frame().size) == (420.0, 500.0)
+        assert tuple(controller.window.frame().size) == (500.0, 500.0)
+        assert controller.window.titlebarAppearsTransparent() is True
+        assert tuple(controller.background_view.frame().size) == (500.0, 500.0)
+        assert controller.background_view.image() is not None
+        controls = [view for view in controller.window.contentView().subviews() if isinstance(view, NSButton)]
+        assert len(controls) == 3
+        assert {view.frame().origin.y for view in controls} == {28.0}
+        assert [view.frame().origin.x for view in controls] == [32.0, 180.0, 328.0]
+        assert controller.status_label.frame().size.width == 436
         assert controller.ai_timeout_alert.isHidden() is True
+        stopped_color = NSColor.colorWithCGColor_(controller.toggle_button.layer().backgroundColor())
+        monitor.enabled = True
+        controller.refresh_(None)
+        running_color = NSColor.colorWithCGColor_(controller.toggle_button.layer().backgroundColor())
+        running_rgb = running_color.colorUsingColorSpaceName_(NSCalibratedRGBColorSpace)
+        assert running_rgb.redComponent() > running_rgb.blueComponent()
+        assert not running_color.isEqual_(stopped_color)
+        assert controller.toggle_button.title() == "停止"
+        monitor.enabled = False
+        controller.refresh_(None)
+        restored = NSColor.colorWithCGColor_(controller.toggle_button.layer().backgroundColor()).colorUsingColorSpaceName_(NSCalibratedRGBColorSpace)
+        initial = stopped_color.colorUsingColorSpaceName_(NSCalibratedRGBColorSpace)
+        assert restored.getRed_green_blue_alpha_(None,None,None,None) == initial.getRed_green_blue_alpha_(None,None,None,None)
         monitor.ai_timeout_alert = True
         controller.refresh_(None)
         assert controller.ai_timeout_alert.isHidden() is False
@@ -253,8 +279,8 @@ def test_native_panel_keeps_base_size_without_an_update_and_expands_only_once(tm
 
         controller.refresh_(None)
         first_frame = controller.window.frame()
-        assert tuple(first_frame.size) == (420.0, 650.0)
-        assert controller.logo_view.frame().origin.y == original_header_y + 150
+        assert tuple(first_frame.size) == (500.0, 500.0)
+        assert controller.logo_view.frame().origin.y == original_header_y
         assert len(controller.update_views) == 1
         buttons = [view for view in controller.update_views[0].subviews() if isinstance(view, NSButton)]
         assert [str(button.identifier()) for button in buttons] == ["macos"]
@@ -269,3 +295,8 @@ def test_native_panel_keeps_base_size_without_an_update_and_expands_only_once(tm
             NSStatusBar.systemStatusBar().removeStatusItem_(controller.status_item)
         controller.window.setDelegate_(None)
         controller.window.close()
+
+
+def test_text_panel_has_no_audio_controls():
+    assert not hasattr(PanelBridge, 'open_blackhole_download')
+    assert not hasattr(PanelWindowController, '_show_microphone_alert')

@@ -1,424 +1,182 @@
+"""Serial OKLine text replies. No desktop UI, screenshot, TCC or audio dependencies."""
 from __future__ import annotations
 
+import json
 import logging
 import random
-import re
 import threading
 import time
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any
 
-from .ai import AiTimeoutError, ReplyDecision
+from .ai import AiTimeoutError, AiRateLimitError, validate_visual_descriptions
 from .diagnostics import log_event
-from .repositories import Repository
-
-
-@dataclass(frozen=True)
-class UnreadContact:
-    index: int
-    name: str
-
-
-class LineAdapter(Protocol):
-    def main_window_exists(self) -> bool: ...
-    def unread_contacts(self) -> list[UnreadContact]: ...
-    def prepare_next_chat(self) -> bool: ...
-    def open_chat(self, contact: UnreadContact) -> bool: ...
-    def capture_visible_chat(self, target_name: str) -> Path: ...
-    def discard_chat_capture(self, screenshot_path: Path) -> str: ...
-    def send_message(self, target_name: str, reply: str) -> bool: ...
-    def close_chat(self, target_name: str) -> bool: ...
-    def close_other_chat_windows(self) -> bool: ...
-
-
-class AiAdapter(Protocol):
-    def generate_reply(self, **kwargs: Any) -> ReplyDecision: ...
-
-
-def _match_key(value: str) -> str:
-    return re.sub(r"\s+", " ", value.strip()).casefold()
-
-
-def match_unread_target(contact: UnreadContact, targets: list[dict[str, Any]]) -> dict[str, Any] | None:
-    contact_key = _match_key(contact.name)
-    exact = next((target for target in targets if _match_key(str(target["name"])) == contact_key), None)
-    if exact is not None:
-        return exact
-
-    candidates = [
-        target
-        for target in targets
-        if contact_key and (
-            contact_key in _match_key(str(target["name"]))
-            or _match_key(str(target["name"])) in contact_key
-        )
-    ]
-    return candidates[0] if len(candidates) == 1 else None
+from .okline_errors import SendNotStarted
+from .group_replies import mentions_self
 
 
 class MonitorController:
-    def __init__(
-        self,
-        repository: Repository,
-        line: LineAdapter,
-        ai: AiAdapter,
-        sleeper: Callable[[float], None] = time.sleep,
-        automation_allowed: bool = True,
-        region_blocked: bool = False,
-        on_exchange_committed: Callable[[], None] | None = None,
-        logger: logging.Logger | None = None,
-    ) -> None:
-        self.repository = repository
-        self.line = line
-        self.ai = ai
-        self.sleeper = sleeper
-        self.automation_allowed = automation_allowed
-        self.region_blocked = region_blocked
-        self.on_exchange_committed = on_exchange_committed
-        self.logger = logger or logging.getLogger("sweety.monitor")
-        self._lock = threading.RLock()
-        self._stop_event = threading.Event()
-        self._thread: threading.Thread | None = None
-        self._enabled = False
-        self._status = "stopped"
-        self._message = ""
-        self._current_target: str | None = None
-        self._ai_timeout_alert = False
+    def __init__(self, repository, line, ai, sleeper=time.sleep, region_blocked=False,
+                 on_exchange_committed=None, logger=None):
+        self.repository=repository; self.line=line; self.ai=ai
+        self.store=line.store; self.sleeper=sleeper; self.region_blocked=region_blocked
+        self.on_exchange_committed=on_exchange_committed
+        self.logger=logger or logging.getLogger('sweety.monitor')
+        self._lock=threading.RLock(); self._cycle_lock=threading.Lock()
+        self._stop_event=threading.Event(); self._thread=None
+        self._enabled=False; self._status='stopped'; self._message=''
+        self._current_target=None; self._ai_timeout_alert=False
+        line.allow_receiving=lambda:self._enabled and not self._stop_event.is_set()
 
-    def start(self, background: bool = True) -> bool:
-        self._log("monitor_start_requested", background=background)
+    def start(self, background=True):
         with self._lock:
+            if self._enabled or (self._thread and self._thread.is_alive()):
+                return False
+            settings = self.repository.get_settings()
+            key_field = 'openai_api_key' if settings.get('ai_provider') == 'openai' else 'agnes_api_key'
+            if not str(settings.get(key_field, '')).strip():
+                self._set_status('api_key_required'); return False
             if self.region_blocked:
-                self._enabled = False
-                self._status = "region_blocked"
-                self._message = "region_blocked"
-                self._log("monitor_start_rejected", reason="region_blocked")
-                return False
-            if not self.automation_allowed:
-                self._enabled = False
-                self._status = "permission_required"
-                self._message = "macos_permissions_required"
-                self._log("monitor_start_rejected", reason="macos_permissions_required")
-                return False
+                self._set_status('region_blocked'); return False
+            if not self.line.connected():
+                self._set_status('line_login_required'); return False
+            if not self.store.targets():
+                self._set_status('target_required'); return False
+            self.store.recover()
+            self._stop_event=threading.Event()
+            self.line.prepare_receiving(time.time())
+            self._enabled=True; self._ai_timeout_alert=False
+            self._set_status('monitoring')
             try:
-                if not self.line.main_window_exists():
-                    self._enabled = False
-                    self._status = "line_window_required"
-                    self._message = "line_main_window_not_found"
-                    self._log("monitor_start_rejected", reason="line_main_window_not_found")
-                    return False
+                self.line.start_receiving()
+                if background:
+                    self._thread=threading.Thread(target=self._run_loop,args=(self._stop_event,),daemon=True,name='SweetyTextMonitor')
+                    self._thread.start()
             except Exception as exc:
-                self._enabled = False
-                self._status = "line_window_required"
-                self._message = "line_main_window_not_found"
-                self._log(
-                    "monitor_start_rejected",
-                    level=logging.ERROR,
-                    reason="line_main_window_check_failed",
-                    error_type=type(exc).__name__,
-                    error=str(exc),
-                )
-                return False
-            if not self.repository.list_monitor_targets():
-                self._enabled = False
-                self._status = "target_required"
-                self._message = "no_enabled_targets"
-                self._log("monitor_start_rejected", reason="no_enabled_targets")
-                return False
-            if self._enabled or (self._thread is not None and self._thread.is_alive()):
-                self._log("monitor_start_rejected", reason="already_running")
-                return False
-            self._stop_event = threading.Event()
-            self._enabled = True
-            self._status = "monitoring"
-            self._message = ""
-            self._current_target = None
-            if background:
-                stop_event = self._stop_event
-                self._thread = threading.Thread(
-                    target=self._run_loop,
-                    args=(stop_event,),
-                    name="SweetyLineMonitor",
-                    daemon=True,
-                )
-                self._thread.start()
-        self._log("monitor_started", background=background)
+                self._enabled=False; self._stop_event.set(); self.line.stop_receiving()
+                self._set_status('error',str(exc)); return False
         return True
 
-    def stop(self) -> bool:
-        self._log("monitor_stop_requested")
-        with self._lock:
-            was_enabled = self._enabled
-            self._enabled = False
-            self._stop_event.set()
-            self._ai_timeout_alert = False
-            if was_enabled:
-                self._status = "stopped"
-                self._message = ""
-                self._current_target = None
-            self._log("monitor_stopped", was_enabled=was_enabled)
-            return was_enabled
+    def stop(self):
+        # Set the captured generation's token immediately, even while AI/network is busy.
+        was_enabled=self._enabled
+        self._stop_event.set(); self._enabled=False
+        self.line.stop_receiving(); self.store.archive_pending()
+        self._set_status('stopped'); self._ai_timeout_alert=False
+        return was_enabled
 
-    def snapshot(self) -> dict[str, Any]:
-        with self._lock:
-            return {
-                "enabled": self._enabled,
-                "testMode": False,
-                "status": self._status,
-                "message": self._message,
-                "currentTarget": self._current_target,
-                "aiTimeoutAlert": self._ai_timeout_alert,
-                "selectedTargetCount": len(self.repository.list_monitor_targets()),
-            }
+    def snapshot(self):
+        return dict(enabled=self._enabled,testMode=False,status=self._status,message=self._message,
+                    currentTarget=self._current_target,aiTimeoutAlert=self._ai_timeout_alert,
+                    selectedTargetCount=len(self.store.targets()))
 
-    def run_cycle(self, stop_event: threading.Event | None = None) -> bool:
-        run_stop = stop_event or self._stop_event
-        targets = self.repository.list_monitor_targets()
-        self._log("cycle_started", target_count=len(targets))
-        if not targets:
-            self._set_status("waiting", "no_enabled_targets")
-            self._log("cycle_completed", processed_any=False, reason="no_enabled_targets")
+    def _set_status(self, status, message='', target=None):
+        self._status=status; self._message=message; self._current_target=target
+
+    def _valid(self, stop, scope, target_id):
+        return (self._enabled and not stop.is_set() and self.line.connected()
+                and self.store.scope==scope and any(t['id']==target_id for t in self.store.targets()))
+
+    def run_cycle(self, stop_event=None):
+        stop=stop_event or self._stop_event
+        if not self._enabled or stop.is_set() or not self._cycle_lock.acquire(blocking=False):
             return False
-
-        self._log("chat_cleanup_started")
         try:
-            cleanup_result = self.line.close_other_chat_windows()
-            self._log("chat_cleanup_succeeded", result=bool(cleanup_result))
-        except Exception as exc:
-            self._log(
-                "chat_cleanup_failed",
-                level=logging.ERROR,
-                error_type=type(exc).__name__,
-                error=str(exc),
-            )
-
-        self._log("unread_scan_started")
-        try:
-            contacts = self.line.unread_contacts()
-        except Exception as exc:
-            self._set_status("error", f"unread_scan_failed: {exc}")
-            self._log(
-                "unread_scan_failed",
-                level=logging.ERROR,
-                error_type=type(exc).__name__,
-                error=str(exc),
-            )
-            self._log("cycle_completed", processed_any=False, reason="unread_scan_failed")
-            return False
-        self._log(
-            "unread_scan_succeeded",
-            contact_count=len(contacts),
-            contacts=[contact.name for contact in contacts],
-        )
-
-        processed_any = False
-        matched_contact_count = 0
-        for contact in contacts:
-            if run_stop.is_set():
-                self._log("cycle_interrupted", stage="before_target_match")
-                return False
-            target = match_unread_target(contact, targets)
-            if target is None:
-                self._log("target_not_matched", contact=contact.name, contact_index=contact.index)
-                continue
-
-            target_name = str(target["name"])
-            if matched_contact_count:
-                self._log("next_chat_prepare_started", target=target_name)
-                if not self.line.prepare_next_chat():
-                    self._set_status("error", "prepare_next_chat_failed", target_name)
-                    self._log("next_chat_prepare_failed", level=logging.ERROR, target=target_name)
-                    continue
-                self._log("next_chat_prepare_succeeded", target=target_name)
-            matched_contact_count += 1
-            self._set_status("processing", "", target_name)
-            self._log("target_processing_started", target=target_name, contact_index=contact.index)
-            stage = "target_processing_started"
-            try:
-                stage = "chat_open"
-                self._log("chat_open_started", target=target_name)
-                if not self.line.open_chat(contact):
-                    self._set_status("error", "open_chat_failed", target_name)
-                    self._log("chat_open_failed", level=logging.ERROR, target=target_name)
-                    continue
-                self._log("chat_open_succeeded", target=target_name)
-                if run_stop.is_set():
-                    self._log("target_interrupted", target=target_name, stage="after_chat_open")
-                    self._close_chat(target_name, "stop_after_chat_open")
-                    return False
-                stage = "screenshot_capture"
-                self._log("screenshot_capture_started", target=target_name)
-                screenshot_path = self.line.capture_visible_chat(target_name)
-                self._log("screenshot_capture_succeeded", target=target_name)
-                try:
-                    if run_stop.is_set():
-                        self._log("target_interrupted", target=target_name, stage="after_screenshot_capture")
-                        self._close_chat(target_name, "stop_after_screenshot_capture")
-                        return False
-                    settings = self.repository.get_settings()
-                    history = self.repository.list_messages(str(target["id"]), limit=20)
-                    total_messages = len(self.repository.list_messages(str(target["id"])))
-                    stage = "ai_request"
-                    self._log(
-                        "ai_request_started",
-                        target=target_name,
-                        history_count=len(history),
-                        total_messages=total_messages,
-                    )
-                    with self._lock:
-                        self._ai_timeout_alert = False
-                    decision = self.ai.generate_reply(
-                        target=target,
-                        screenshot_path=screenshot_path,
-                        history=history,
-                        total_messages=total_messages,
-                        settings=settings,
-                    )
-                    self._log(
-                        "ai_request_succeeded",
-                        target=target_name,
-                        incoming_summary=decision.incoming_summary,
-                        msg_reply=decision.msg_reply,
-                    )
-                finally:
-                    capture_cleanup = self.line.discard_chat_capture(screenshot_path)
-                    if capture_cleanup == "retained":
-                        self._log("screenshot_retained", target=target_name, path=str(screenshot_path))
-                    else:
-                        self._log("screenshot_discarded", target=target_name)
-                if run_stop.is_set():
-                    self._log("target_interrupted", target=target_name, stage="after_ai_request")
-                    self._close_chat(target_name, "stop_after_ai_request")
-                    return False
-                delay = random.uniform(
-                    float(settings["reply_delay_min_seconds"]),
-                    float(settings["reply_delay_max_seconds"]),
-                )
-                stage = "reply_delay"
-                self._log("reply_delay_started", target=target_name, seconds=delay)
-                if not self._interruptible_sleep(delay, run_stop):
-                    self._log("reply_delay_interrupted", target=target_name, seconds=delay)
-                    self._close_chat(target_name, "stop_during_reply_delay")
-                    return processed_any
-                self._log("reply_delay_completed", target=target_name, seconds=delay)
-                if run_stop.is_set():
-                    self._log("target_interrupted", target=target_name, stage="after_reply_delay")
-                    self._close_chat(target_name, "stop_after_reply_delay")
-                    return processed_any
-                stage = "message_send"
-                self._log("message_send_started", target=target_name)
-                if not self.line.send_message(target_name, decision.msg_reply):
-                    self._set_status("error", "send_failed", target_name)
-                    self._log("message_send_failed", level=logging.ERROR, target=target_name)
-                    self._close_chat(target_name, "message_send_failed")
-                    continue
-                self._log("message_send_succeeded", target=target_name)
-
-                stage = "exchange_persist"
-                self._log("exchange_persist_started", target=target_name)
-                self.repository.record_exchange(
-                    str(target["id"]),
-                    decision.incoming_summary,
-                    decision.msg_reply,
-                )
-                self._log("exchange_persist_succeeded", target=target_name)
-                processed_any = True
-                if self.on_exchange_committed is not None:
-                    try:
-                        self.on_exchange_committed()
-                    except Exception as exc:
-                        self._log(
-                            "exchange_callback_failed",
-                            level=logging.ERROR,
-                            target=target_name,
-                            error_type=type(exc).__name__,
-                            error=str(exc),
-                        )
-                stage = "chat_close"
-                self._close_chat(target_name, "exchange_completed")
-            except Exception as exc:
-                if isinstance(exc, AiTimeoutError):
-                    with self._lock:
-                        self._ai_timeout_alert = True
-                self._set_status("error", f"processing_failed: {exc}", target_name)
-                self._log(
-                    "target_processing_failed",
-                    level=logging.ERROR,
-                    exc_info=True,
-                    target=target_name,
-                    stage=stage,
-                    error_type=type(exc).__name__,
-                    error=str(exc),
-                )
-                try:
-                    self._close_chat(target_name, "processing_failed")
-                except Exception as close_exc:
-                    self._log(
-                        "chat_close_recovery_failed",
-                        level=logging.ERROR,
-                        target=target_name,
-                        error_type=type(close_exc).__name__,
-                        error=str(close_exc),
-                    )
-                continue
-
-        if processed_any:
-            self._set_status("monitoring")
-        else:
-            self._set_status("waiting", "no_matching_unread")
-        self._log("cycle_completed", processed_any=processed_any)
-        return processed_any
-
-    def _run_loop(self, stop_event: threading.Event) -> None:
-        try:
-            while not stop_event.is_set():
-                processed = self.run_cycle(stop_event)
-                if stop_event.is_set():
-                    self._log("monitor_loop_stopped", stage="after_cycle")
-                    return
-                interval = float(self.repository.get_settings()["check_interval_seconds"])
-                self._log("monitor_interval_started", seconds=interval, previous_cycle_processed=processed)
-                if not self._interruptible_sleep(interval, stop_event):
-                    self._log("monitor_interval_interrupted", seconds=interval)
-                    return
-                self._log("monitor_interval_completed", seconds=interval)
+            return self._cycle(stop)
         finally:
-            with self._lock:
-                if self._thread is threading.current_thread():
-                    self._thread = None
+            self._cycle_lock.release()
 
-    def _close_chat(self, target_name: str, reason: str) -> bool:
-        self._log("chat_close_started", target=target_name, reason=reason)
+    def _cycle(self, stop):
+        scope=self.store.scope; pending={}; processed=False
+        # Save all actual input first, including manual replies and media descriptors.
+        for row in self.store.rows():
+            raw=json.loads(row['raw'])
+            row['incoming_id']=self.store.archive(row)
+            if row['status']=='context':
+                self.store.update(row['id'],'archived')
+            else:
+                pending.setdefault(row['target_id'],[]).append(row)
+        for target_id, queued_rows in pending.items():
+            rows=queued_rows[:8]
+            if not self._valid(stop,scope,target_id):
+                continue
+            target=self.repository.get_target(target_id)
+            self._set_status('processing',target=target['name'])
+            ids={row['incoming_id'] for row in queued_rows}
+            history_limit=int(self.repository.get_settings().get('history_limit',20))
+            history=[m for m in self.repository.list_messages(target_id) if m['id'] not in ids]
+            history=history[-history_limit:] if history_limit>0 else []
+            inputs=[]
+            sending=False
+            try:
+                for row in rows:
+                    self.store.update(row['id'],'processing')
+                    raw=json.loads(row['raw'])
+                    kind=int(raw.get('contentType') or 0)
+                    item={'id':row['id'],'text':str(raw.get('text') or ''),
+                          'createdTime':raw.get('createdTime'),
+                          'senderId':raw.get('from'), 'chatId':raw.get('to'),
+                          'isGroup':int(raw.get('toType') or 0)!=0,
+                          'mentionedSelf':mentions_self(raw,self.store.account),
+                          'relatedMessageId':raw.get('relatedMessageId'), 'contentType':kind}
+                    if kind in (1,7):
+                        item['images']=self.line.image_inputs(raw,allowed=lambda:self._valid(stop,scope,target_id))
+                        if kind==7:
+                            item['stickerText']=str((raw.get('contentMetadata') or {}).get('STKTXT') or '')[:1000]
+                    if not self._valid(stop,scope,target_id):
+                        raise RuntimeError('reply_cancelled')
+                    inputs.append(item)
+                self._ai_timeout_alert=False
+                decision=self.ai.generate_reply(target=target,incoming_messages=inputs,history=history,
+                    total_messages=len(self.repository.list_messages(target_id)),settings=self.repository.get_settings())
+                validate_visual_descriptions(decision,inputs)
+                if not self._valid(stop,scope,target_id):
+                    continue
+                self.store.describe_media(rows,decision.media_descriptions)
+                settings=self.repository.get_settings()
+                delay=random.uniform(settings['reply_delay_min_seconds'],settings['reply_delay_max_seconds'])
+                if self.sleeper is time.sleep:
+                    stop.wait(delay)
+                else:
+                    self.sleeper(delay)
+                if not self._valid(stop,scope,target_id):
+                    for row in rows:self.store.update(row['id'],'archived')
+                    continue
+                # The receipt and its ledger commit share the SDK lock with incoming echoes.
+                with self.line.lock:
+                    if not self._valid(stop,scope,target_id):
+                        continue
+                    for row in rows:self.store.update(row['id'],'sending')
+                    sending=True
+                    receipt=self.line.send(target_id,decision.msg_reply,
+                        allowed=lambda:self._valid(stop,scope,target_id),expected_scope=scope)
+                    self.store.complete(rows,decision.msg_reply,receipt)
+                processed=True
+                log_event(self.logger,'exchange_committed',target_id=target_id,receipt=receipt)
+                if self.on_exchange_committed:
+                    try:self.on_exchange_committed()
+                    except Exception as exc:log_event(self.logger,'metrics_callback_failed',error=type(exc).__name__)
+            except Exception as exc:
+                state='uncertain' if sending and not isinstance(exc,SendNotStarted) else 'failed'
+                for row in rows:self.store.update(row['id'],state,error=type(exc).__name__)
+                if isinstance(exc,AiTimeoutError):self._ai_timeout_alert=True
+                if not stop.is_set():
+                    if isinstance(exc,AiRateLimitError):self._set_status('ai_rate_limited',target=target['name'])
+                    else:self._set_status('error',('line_send_uncertain' if state=='uncertain' else type(exc).__name__),target['name'])
+                log_event(self.logger,'reply_failed',target_id=target_id,status=state,error=type(exc).__name__)
+        if not stop.is_set() and self._status not in ('error','ai_rate_limited'):
+            self._set_status('monitoring' if processed else 'waiting')
+        return processed
+
+    def _run_loop(self, stop):
         try:
-            result = self.line.close_chat(target_name)
+            while not stop.is_set():
+                if not self.line.connected():
+                    self._set_status('line_login_required'); break
+                self.run_cycle(stop)
+                self.line.wake.wait(10.0)  # Event-driven wakeup with a fixed recovery check.
+                self.line.wake.clear()
         except Exception as exc:
-            self._log(
-                "chat_close_failed",
-                level=logging.ERROR,
-                exc_info=True,
-                target=target_name,
-                reason=reason,
-                error_type=type(exc).__name__,
-                error=str(exc),
-            )
-            raise
-        self._log("chat_close_succeeded", target=target_name, reason=reason, result=result)
-        return result
-
-    def _interruptible_sleep(self, seconds: float, stop_event: threading.Event | None = None) -> bool:
-        run_stop = stop_event or self._stop_event
-        seconds = max(0.0, seconds)
-        if self.sleeper is time.sleep:
-            return not run_stop.wait(seconds)
-        self.sleeper(seconds)
-        return not run_stop.is_set()
-
-    def _set_status(self, status: str, message: str = "", target: str | None = None) -> None:
-        with self._lock:
-            self._status = status
-            self._message = message
-            self._current_target = target
-
-    def _log(self, event: str, *, level: int = logging.INFO, exc_info: bool = False, **fields: Any) -> None:
-        log_event(self.logger, event, level=level, exc_info=exc_info, **fields)
+            self._set_status('error',type(exc).__name__)
+            log_event(self.logger,'monitor_worker_failed',error=type(exc).__name__)
+        finally:
+            stop.set();self._enabled=False;self.line.stop_receiving();self.store.archive_pending()

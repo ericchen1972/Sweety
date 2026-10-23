@@ -54,13 +54,17 @@ def test_packaging_injects_build_credentials_without_defaults():
     app_build_source = (DESKTOP_DIR / "build_app.sh").read_text()
     dmg_build_source = (DESKTOP_DIR / "build_dmg.sh").read_text()
 
-    assert '"SWEETY_AGNES_KEY": os.getenv("SWEETY_AGNES_KEY", "").strip()' in spec_source
+    assert "SWEETY_AGNES_KEY" not in spec_source
+    assert "SWEETY_AGNES_KEY" not in app_build_source
     assert '"SWEETY_METRICS_APP_TOKEN": os.getenv("SWEETY_METRICS_APP_TOKEN", "").strip()' in spec_source
     assert '"SWEETY_LOG_ENABLED": os.getenv("SWEETY_LOG_ENABLED", "0").strip()' in spec_source
     assert '"LSEnvironment": app_environment' in spec_source
     assert 'export SWEETY_LOG_ENABLED="${SWEETY_LOG_ENABLED:-1}"' in app_build_source
     assert 'SWEETY_LOG_ENABLED=0 "$DESKTOP_DIR/build_app.sh"' in dmg_build_source
-    assert "LineMacAdapter(CACHE_DIR, retain_chat_capture=LOG_ENABLED)" in main_source
+    assert "LineMacAdapter" not in main_source
+    assert "check_permissions" not in main_source
+    assert "MicrophoneRoute" not in main_source
+    assert "LineService(repository, store" in main_source
     assert "SWEETY_APP_TOKEN" not in spec_source
     assert "_EMBEDDED_AGNES_KEY_B64" not in config_source
     assert "base64.b64decode" not in config_source
@@ -119,14 +123,14 @@ def test_startup_wires_one_shared_update_state_to_background_check_api_and_deleg
         for node in ast.walk(main)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "initWithComponents_permissionStatus_locale_updateState_"
+        and node.func.attr == "initWithComponents_locale_updateState_"
     )
     assert any(isinstance(argument, ast.Name) and argument.id == "update_state" for argument in delegate_init.args)
 
     delegate_initializer = next(
         node
         for node in delegate.body
-        if isinstance(node, ast.FunctionDef) and node.name == "initWithComponents_permissionStatus_locale_updateState_"
+        if isinstance(node, ast.FunctionDef) and node.name == "initWithComponents_locale_updateState_"
     )
     assert any(
         isinstance(node, ast.Assign)

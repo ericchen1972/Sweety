@@ -35,7 +35,7 @@ class AboutLoader(Protocol):
 
 
 def _validate_new_target_name(name: str) -> None:
-    if re.fullmatch(r"[A-Za-z0-9]+", name) is None:
+    if not name.strip() or len(name) > 200:
         raise RepositoryError("invalid_target_name")
 
 
@@ -73,6 +73,10 @@ def _custom_for_api(item: dict[str, Any]) -> dict[str, Any]:
 def _settings_for_api(settings: dict[str, Any]) -> dict[str, Any]:
     return {
         "aiProvider": settings["ai_provider"],
+        "historyLimit": settings.get("history_limit", 20),
+        "userNames": settings.get("user_names", ""),
+        "agnesApiKey": settings.get("agnes_api_key", ""),
+        "agnesModel": settings.get("agnes_model", "agnes-3.0-flash"),
         "openAiApiKey": settings["openai_api_key"],
         "openAiModel": settings["openai_model"],
         "checkIntervalSeconds": settings["check_interval_seconds"],
@@ -97,12 +101,70 @@ def create_app(
     persona_validator: PersonaValidator | None = None,
     about_loader: AboutLoader | None = None,
     update_state: UpdateSource | None = None,
+    line_service=None,
 ) -> FastAPI:
     database.migrate()
     repository = Repository(database)
     app = FastAPI(title="Sweety Local API", version="0.1.0")
     app.state.repository = repository
     app.state.monitor = monitor
+
+    def target_for_api(target):
+        value = _target_for_api(target)
+        value['lineBound'] = bool(target.get('line_mid'))
+        value['lineAccount'] = target.get('line_account', '')
+        value['lineMid'] = target.get('line_mid', '')
+        value['lineKind'] = target.get('line_kind', 'person')
+        value['lineAvailable'] = bool(line_service and line_service.connected()
+            and target.get('line_account') == line_service.store.scope
+            and any(c['id'] == target.get('line_mid') and not c['blocked'] for c in line_service.store.contacts()))
+        return value
+
+    def line_call(action, mutation=False):
+        if line_service is None:
+            raise RepositoryError('line_not_configured')
+        if mutation and monitor is not None and monitor.snapshot().get('enabled'):
+            raise RepositoryError('stop_monitor_first')
+        try:
+            with line_service.lock:
+                return action()
+        except ValueError as exc:
+            raise RepositoryError(str(exc)) from exc
+
+    @app.get('/api/line/status')
+    def line_status():
+        return line_service.snapshot() if line_service else {'status': 'disconnected'}
+
+    @app.post('/api/line/login')
+    def line_login():
+        return line_call(lambda: line_service.login(), mutation=True)
+
+    @app.post('/api/line/logout')
+    def line_logout():
+        line_call(lambda: line_service.disconnect(), mutation=True)
+        return {'ok': True}
+
+    @app.get('/api/line/contacts')
+    def line_contacts():
+        return line_call(lambda: line_service.store.contacts())
+
+    @app.post('/api/line/contacts/refresh')
+    def line_refresh():
+        return line_call(lambda: line_service.refresh_contacts(), mutation=True)
+
+    @app.post('/api/line/contacts/add', status_code=201)
+    def line_add(payload: dict):
+        parsed = TargetPayload.model_validate(payload.get('assignment', {}))
+        if not isinstance(payload.get('contactId'), str):
+            raise RepositoryError('line_contact_required')
+        return line_call(lambda: target_for_api(line_service.store.add(payload['contactId'], parsed.model_dump())), mutation=True)
+
+    @app.post('/api/line/targets/bind')
+    def line_bind(payload: dict):
+        if not all(isinstance(payload.get(key), str) for key in ('targetId','contactId')):
+            raise RepositoryError('line_contact_required')
+        return line_call(lambda: target_for_api(line_service.store.bind(payload['targetId'], payload['contactId'])), mutation=True)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://127.0.0.1:8890", "http://localhost:8890"],
@@ -151,7 +213,8 @@ def create_app(
             "monitoringEnabled": bool(snapshot.get("enabled")),
             "settings": _settings_for_api(repository.get_settings()),
             "basePersonas": repository.list_base_personas(),
-            "targets": [_target_for_api(item) for item in repository.list_targets()],
+            "line": line_service.snapshot() if line_service else {"status":"disconnected"},
+            "targets": [target_for_api(item) for item in repository.list_targets()],
             "customPersonas": [_custom_for_api(item) for item in repository.list_custom_items("persona")],
             "customWeapons": [_custom_for_api(item) for item in repository.list_custom_items("weapon")],
         }
@@ -160,6 +223,9 @@ def create_app(
     def replace_state(payload: dict[str, Any]) -> dict[str, Any]:
         settings = SettingsPayload.model_validate(payload.get("settings", {}))
         settings_values = settings.model_dump()
+        for field in ("user_names", "agnes_api_key", "agnes_model", "history_limit"):
+            if field not in settings.model_fields_set:
+                settings_values.pop(field, None)
         incoming_personas = payload.get("customPersonas", [])
         incoming_weapons = payload.get("customWeapons", [])
         existing_personas = {item["id"]: item for item in repository.list_custom_items("persona")}
@@ -184,7 +250,7 @@ def create_app(
                 target_id = str(item["id"])
                 incoming_target_ids.add(target_id)
                 if target_id in existing_targets:
-                    repository.update_target(target_id, parsed.model_dump())
+                    repository.update_target(target_id, {**parsed.model_dump(), "name": existing_targets[target_id]["name"]})
                 else:
                     _validate_new_target_name(parsed.name)
                     repository.create_target({**parsed.model_dump(), "id": target_id})
@@ -211,28 +277,35 @@ def create_app(
     @app.put("/api/settings")
     def update_settings(payload: SettingsPayload) -> dict[str, Any]:
         values = payload.model_dump()
+        for field in ("user_names", "agnes_api_key", "agnes_model", "history_limit"):
+            if field not in payload.model_fields_set:
+                values.pop(field, None)
         return _settings_for_api(repository.update_settings(values))
 
     @app.post("/api/targets", status_code=201)
     def create_target(payload: TargetPayload) -> dict[str, Any]:
         _validate_new_target_name(payload.name)
-        return _target_for_api(repository.create_target(payload.model_dump()))
+        return target_for_api(repository.create_target(payload.model_dump()))
 
     @app.put("/api/targets/{target_id}")
     def update_target(target_id: str, payload: TargetPayload) -> dict[str, Any]:
-        return _target_for_api(repository.update_target(target_id, payload.model_dump()))
+        current = repository.get_target(target_id)
+        values = payload.model_dump()
+        if current.get('line_mid'):
+            values['name'] = current['name']
+        return target_for_api(repository.update_target(target_id, values))
 
     @app.patch("/api/targets/{target_id}/reply")
     def update_reply(target_id: str, payload: dict[str, bool]) -> dict[str, Any]:
-        return _target_for_api(repository.update_target(target_id, {"reply_enabled": bool(payload.get("replyEnabled"))}))
+        return target_for_api(repository.update_target(target_id, {"reply_enabled": bool(payload.get("replyEnabled"))}))
 
     @app.post("/api/targets/{target_id}/end")
     def end_target(target_id: str) -> dict[str, Any]:
-        return _target_for_api(repository.end_target(target_id))
+        return target_for_api(repository.end_target(target_id))
 
     @app.post("/api/targets/{target_id}/revive")
     def revive_target(target_id: str) -> dict[str, Any]:
-        return _target_for_api(repository.revive_target(target_id))
+        return target_for_api(repository.revive_target(target_id))
 
     @app.delete("/api/targets/{target_id}", status_code=204)
     def delete_target(target_id: str) -> None:
@@ -241,7 +314,7 @@ def create_app(
     @app.get("/api/targets/{target_id}/export")
     def export_target(target_id: str) -> dict[str, Any]:
         return {
-            "target": _target_for_api(repository.get_target(target_id)),
+            "target": target_for_api(repository.get_target(target_id)),
             "messages": repository.list_messages(target_id),
         }
 
