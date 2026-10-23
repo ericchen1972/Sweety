@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import socket
 import tempfile
+import traceback
 import uuid
 
 
@@ -12,7 +13,7 @@ def self_check(output):
     import keyring
     import requests
     from . import bootstrap
-    from .config import LOG_ENABLED, LOG_PATH
+    from .config import LOG_ENABLED
     from .okline_session import SessionVault, node_path, sdk_factory
     from .windows import run_window, single_instance
 
@@ -56,15 +57,15 @@ def self_check(output):
 
             def ready(services, root):
                 base = f'http://127.0.0.1:{bootstrap.API_PORT}'
-                assert requests.get(base + '/api/health', timeout=5).json() == {'ok': True}
+                assert requests.get(base + '/api/health', timeout=5).json() == {'ok': True}, 'health'
                 page = requests.get(base + '/', timeout=5)
-                assert page.status_code == 200 and '<html' in page.text.lower()
+                assert page.status_code == 200 and '<html' in page.text.lower(), 'dashboard HTML'
                 import re
                 scripts = re.findall(r'src="([^"]+\.js)"', page.text)
-                assert scripts
+                assert scripts, 'dashboard scripts'
                 for script in scripts:
-                    assert requests.get(base + '/' + script.lstrip('/'), timeout=5).status_code == 200
-                assert requests.get(base + '/api/settings', timeout=5).status_code == 200
+                    assert requests.get(base + '/' + script.lstrip('/'), timeout=5).status_code == 200, script
+                assert requests.get(base + '/api/state', timeout=5).status_code == 200, 'dashboard state'
                 assert requests.get(base + '/api/line/status', timeout=5).json()['status'] == 'disconnected'
                 assert root.winfo_exists()
                 report.update(gui=True, frontend=True, api=True)
@@ -81,6 +82,7 @@ def self_check(output):
     except Exception as exc:
         report.pop('services', None)
         report['error'] = f'{type(exc).__name__}: {exc}'
+        report['traceback'] = traceback.format_exc()
         raise
     finally:
         destination.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')

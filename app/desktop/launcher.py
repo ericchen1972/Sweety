@@ -3,8 +3,18 @@ import sys
 
 def main():
     if len(sys.argv) == 3 and sys.argv[1] == "--windows-self-check":
-        from sweety_app.portable_checks import self_check
-        self_check(sys.argv[2])
+        # Avoid a modal PyInstaller error dialog trapping unattended CI checks.
+        try:
+            from sweety_app.portable_checks import self_check
+            self_check(sys.argv[2])
+        except Exception:
+            import json
+            from pathlib import Path
+            import traceback
+            report = Path(sys.argv[2])
+            if not report.exists():
+                report.write_text(json.dumps({'ok': False, 'traceback': traceback.format_exc()}), encoding='utf-8')
+            raise SystemExit(1)
         return
     if len(sys.argv) == 3 and sys.argv[1] == "--okline-self-check":
         import json

@@ -55,6 +55,7 @@ def test_portable_backend_serves_dashboard_and_stops_without_macos(tmp_path, mon
         assert requests.get(base + '/api/health', timeout=2).json() == {'ok': True}
         assert 'Sweety portable test' in requests.get(base, timeout=2).text
         assert requests.get(base + '/api/line/status', timeout=2).json()['status'] == 'disconnected'
+        assert requests.get(base + '/api/state', timeout=2).status_code == 200
         assert not services.monitor.snapshot()['enabled']
     finally:
         services.stop()
