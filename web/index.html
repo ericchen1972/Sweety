@@ -29,76 +29,138 @@
   <meta name="twitter:image:alt" content="Sweety 主動反詐：讓 AI 成為我們的武器">
   <title>Sweety｜主動反詐</title>
   <script type="application/ld+json" id="homepage-structured-data">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://sweety.tw/#website",
-        "url": "https://sweety.tw/",
-        "name": "Sweety",
-        "description": "完全開源的主動式反詐騙 App",
-        "inLanguage": ["zh-TW", "en", "ja"]
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://sweety.tw/#website",
+      "url": "https://sweety.tw/",
+      "name": "Sweety",
+      "description": "完全開源的主動式反詐騙 App",
+      "inLanguage": [
+        "zh-TW",
+        "en",
+        "ja"
+      ]
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://sweety.tw/#organization",
+      "name": "Sweety",
+      "url": "https://sweety.tw/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://sweety.tw/images/logo.png",
+        "width": 373,
+        "height": 373
       },
-      {
-        "@type": "Organization",
-        "@id": "https://sweety.tw/#organization",
-        "name": "Sweety",
-        "url": "https://sweety.tw/",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://sweety.tw/images/logo.png",
-          "width": 373,
-          "height": 373
+      "sameAs": [
+        "https://github.com/ericchen1972/Sweety"
+      ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://sweety.tw/#eric",
+      "name": "Eric",
+      "jobTitle": "網站 / AI 工程師",
+      "description": "20 年開發經驗",
+      "email": "mailto:eric.chen1972@gmail.com",
+      "image": "https://sweety.tw/images/eric.png",
+      "url": "https://sweety.tw/about_sweety.html",
+      "sameAs": [
+        "https://slimweb.tw",
+        "https://slimweb.tw/kingjoo/",
+        "https://github.com/ericchen1972/Sweety"
+      ]
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://sweety.tw/#app",
+      "name": "Sweety",
+      "url": "https://sweety.tw/",
+      "description": "Sweety 是完全開源的主動式反詐騙 App，透過 AI 回覆可疑對象、消耗詐騙者的時間。",
+      "applicationCategory": "SecurityApplication",
+      "applicationSubCategory": "Anti-scam software",
+      "operatingSystem": "Windows, macOS",
+      "softwareVersion": "2.0.0",
+      "image": "https://sweety.tw/images/sweety-social-1200x630.png",
+      "author": {
+        "@id": "https://sweety.tw/#eric"
+      },
+      "publisher": {
+        "@id": "https://sweety.tw/#organization"
+      },
+      "license": "https://opensource.org/license/mit",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "TWD"
+      },
+      "sameAs": [
+        "https://github.com/ericchen1972/Sweety"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://sweety.tw/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "如果對方開始懷疑是 AI 在搞他時該怎麼辦？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "可先按停止鍵，由自己接手，待情況穩定後再繼續。"
+          }
         },
-        "sameAs": ["https://github.com/ericchen1972/Sweety"]
-      },
-      {
-        "@type": "Person",
-        "@id": "https://sweety.tw/#eric",
-        "name": "Eric",
-        "jobTitle": "網站 / AI 工程師",
-        "description": "20 年開發經驗",
-        "email": "mailto:eric.chen1972@gmail.com",
-        "image": "https://sweety.tw/images/eric.png",
-        "url": "https://sweety.tw/about_sweety.html",
-        "sameAs": ["https://slimweb.tw", "https://slimweb.tw/kingjoo/", "https://github.com/ericchen1972/Sweety"]
-      },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://sweety.tw/#app",
-        "name": "Sweety",
-        "url": "https://sweety.tw/",
-        "description": "Sweety 是完全開源的主動式反詐騙 App，透過 AI 回覆可疑對象、消耗詐騙者的時間。",
-        "applicationCategory": "SecurityApplication",
-        "applicationSubCategory": "Anti-scam software",
-        "operatingSystem": "Windows, macOS",
-        "softwareVersion": "2.0.0",
-        "image": "https://sweety.tw/images/sweety-social-1200x630.png",
-        "author": { "@id": "https://sweety.tw/#eric" },
-        "publisher": { "@id": "https://sweety.tw/#organization" },
-        "license": "https://opensource.org/license/mit",
-        "isAccessibleForFree": true,
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
-        "sameAs": ["https://github.com/ericchen1972/Sweety"]
-      },
-      {
-        "@type": "FAQPage",
-        "@id": "https://sweety.tw/#faq",
-        "mainEntity": [
-          { "@type": "Question", "name": "如果對方開始懷疑是 AI 在搞他時該怎麼辦？", "acceptedAnswer": { "@type": "Answer", "text": "可先按停止鍵，由自己接手，待情況穩定後再繼續。" } },
-          { "@type": "Question", "name": "我可以一次設定多個對象嗎？", "acceptedAnswer": { "@type": "Answer", "text": "可以，但不要超過 Line 主視窗，聯絡人列表的可視範圍。" } },
-          { "@type": "Question", "name": "Sweety 可用來回覆非詐騙對象嗎？", "acceptedAnswer": { "@type": "Answer", "text": "可以，但不建議。" } },
-          { "@type": "Question", "name": "為什麼叫 Sweety？", "acceptedAnswer": { "@type": "Answer", "text": "被詐騙的人太苦了，吃顆糖吧。" } },
-          { "@type": "Question", "name": "為什麼按下開始後顯示「需要 Mac 權限」？", "acceptedAnswer": { "@type": "Answer", "text": "因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。" } },
-          { "@type": "Question", "name": "Sweety 支援哪些語系？", "acceptedAnswer": { "@type": "Answer", "text": "Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。" } }
-        ]
-      }
-    ]
-  }
+        {
+          "@type": "Question",
+          "name": "我可以一次設定多個對象嗎？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "可以，從聯絡人或群組清單加入多個對象並勾選回覆，不受 LINE 桌面視窗範圍限制。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Sweety 可用來回覆非詐騙對象嗎？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "可以，但不建議。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "為什麼叫 Sweety？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "被詐騙的人太苦了，吃顆糖吧。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "為什麼按「開始」後提示輸入 API Key？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "請到基本設定選擇 Agnes 或 OpenAI，輸入目前所選服務的 API Key。按「儲存設定」後，確認 LINE 已登入並勾選至少一個對象，再開始監控。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Sweety 支援哪些語系？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。"
+          }
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <link rel="stylesheet" href="homepage.css?v=e713ac9f4f62">
-  <script type="module" src="homepage.js?v=e713ac9f4f62"></script>
+  <link rel="stylesheet" href="homepage.css?v=a4daa2551c64">
+  <script type="module" src="homepage.js?v=a4daa2551c64"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content" data-copy="skipLink">Skip to main content</a>
@@ -130,7 +192,7 @@ to take part in “proactive anti-scam” work.</p>
       <div class="time-copy">
         <h2 data-copy="time.title">A scammer’s greatest cost: time</h2>
         <p class="time-subtitle" data-copy="time.subtitle">Time treats everyone equally—scammers also have only 24 hours a day</p>
-        <p data-copy="time.body">You do not need to spend any of your own time on scammers. Set the LINE contact, start Sweety before bed, and the only small cost is leaving the computer and display on, without sleep mode or a screen saver.</p>
+        <p data-copy="time.body">Choose LINE targets and let Sweety handle replies. Keep the computer powered on, online, and awake. The display and LINE desktop window do not need to stay open.</p>
         <p class="time-close" data-copy="time.close">When you wake up, the conversation between the other person and AI may put you in a good mood for the rest of the day.</p>
       </div>
     </section>
@@ -157,7 +219,7 @@ to take part in “proactive anti-scam” work.</p>
     </section>
 
     <section class="instructions section" id="instructions">
-      <div class="section-heading instruction-heading"><h2 data-copy="instructions.title">Instructions</h2><p class="instruction-intro" data-copy="instructions.intro">Sweety uses an idle computer to operate the LINE desktop app. Through a selected persona, AI keeps consuming a scammer’s time. Please note: AI never contacts scammers first and only replies passively. Editing the persona can make the delay more effective.</p><blockquote class="instruction-quote" data-copy="instructions.quote">“The more of their time you delay, the more time and labor they must spend—and the more people you help protect from being scammed.”</blockquote><p class="instruction-intro" data-copy="instructions.openSourceNote">* Sweety is completely free and open source. If you have safety concerns about the precompiled executable, you are welcome to rebuild it from Git.</p></div>
+      <div class="section-heading instruction-heading"><h2 data-copy="instructions.title">Sweety 2.0 instructions</h2><p class="instruction-intro" data-copy="instructions.intro">Sweety 2.0 signs in to LINE through OKLine, receives messages directly, and replies using your selected persona. Configure an AI key, sign in to LINE, then select targets. AI never initiates contact.</p><blockquote class="instruction-quote" data-copy="instructions.quote">“The more of their time you delay, the more time and labor they must spend—and the more people you help protect from being scammed.”</blockquote><p class="instruction-intro" data-copy="instructions.openSourceNote">* Sweety is completely free and open source. If you have safety concerns about the precompiled executable, you are welcome to rebuild it from Git.</p></div>
       <aside class="chatgpt-perspective" aria-labelledby="chatgpt-perspective-title">
         <header class="chatgpt-perspective-header">
           <p class="eyebrow">ChatGPT</p>
@@ -246,55 +308,48 @@ Sweety ❓
       </aside>
       <div class="instruction-guide">
         <article class="instruction-guide-item instruction-guide-item-panel">
-          <figure class="instruction-guide-figure"><img class="instruction-guide-image is-panel" src="images/home/instructions-control-panel.webp" data-alt="instructions.guide.controlPanel.imageAlt" alt="Sweety control panel with Start, Open management interface, and Quit App buttons" width="419" height="499" decoding="async" loading="lazy"></figure>
-          <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.controlPanel.title">Control panel</h3><p data-copy="instructions.guide.controlPanel.body">Before running Sweety, open the main LINE window. Select Open management interface to edit the contacts to reply to. After you select Start, Sweety scans the LINE contact window. When a monitored contact sends a message, Sweety opens that conversation and asks AI to reply.</p></div>
+          <figure class="instruction-guide-figure"><img class="instruction-guide-image is-panel" src="images/home/instructions-control-panel-v2.webp" data-alt="instructions.guide.controlPanel.imageAlt" alt="Sweety control panel with Start, Open management interface, and Quit App buttons" width="500" height="500" decoding="async" loading="lazy"></figure>
+          <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.controlPanel.title">Control panel</h3><p data-copy="instructions.guide.controlPanel.body">Open management to configure AI and LINE, select targets, then press Start. Monitoring turns the button into a red Stop button. Stop at any time to take over. An API key for the selected provider is required to start.</p></div>
         </article>
         <article class="instruction-guide-item">
-          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-dashboard.webp" data-alt="instructions.guide.dashboard.imageAlt" alt="Sweety dashboard showing totals, recent contacts, and monitoring status" width="1325" height="757" decoding="async" loading="lazy"></figure>
+          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-dashboard-v2.webp" data-alt="instructions.guide.dashboard.imageAlt" alt="Sweety dashboard showing totals, recent contacts, and monitoring status" width="1280" height="720" decoding="async" loading="lazy"></figure>
           <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.dashboard.title">Dashboard</h3><p data-copy="instructions.guide.dashboard.body">The dashboard shows the number of contacts, total time consumed, total exchanges, and completed conversations. Recent contacts and their exchange counts appear below, while the top right shows the current status and number of selected contacts.</p></div>
         </article>
         <article class="instruction-guide-item">
-          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-basic-settings.webp" data-alt="instructions.guide.basicSettings.imageAlt" alt="Sweety basic settings for AI provider, scan interval, and reply delay" width="1325" height="757" decoding="async" loading="lazy"></figure>
-          <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.basicSettings.title">Basic settings</h3><p data-copy="instructions.guide.basicSettings.body">Choose Sweety default or OpenAI under AI settings. When using OpenAI, enter an API key and choose a model. Conversation settings control how often Sweety checks for new messages and how long it waits after opening a chat before sending a reply. Select Save settings when finished.</p></div>
+          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-basic-settings-v2.webp" data-alt="instructions.guide.basicSettings.imageAlt" alt="Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history" width="1265" height="967" decoding="async" loading="lazy"></figure>
+          <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.basicSettings.title">Basic settings</h3><p data-copy="instructions.guide.basicSettings.body">Choose Agnes or OpenAI and enter that provider’s API Key and Model. Agnes defaults to agnes-3.0-flash. Links below the fields open both key application pages. Keys and models are saved separately and retained when switching. History defaults to 20 messages, accepts 0–200, and 0 disables history. Set a reply delay and select Save settings.</p></div>
         </article>
         <article class="instruction-guide-item">
-          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-target-list.webp" data-alt="instructions.guide.targetList.imageAlt" alt="Sweety scammer list with reply checkboxes, contacts, personas, and actions" width="1325" height="757" decoding="async" loading="lazy"></figure>
-          <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.targetList.title">Scammer list</h3><p data-copy="instructions.guide.targetList.body">Add and manage monitored contacts in the scammer list. Sweety monitors and replies only to contacts whose Reply checkbox is selected. You can also edit, end, or export an individual conversation. Enter the full LINE name exactly as it appears in the contact list.</p></div>
+          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-target-list-v2.webp" data-alt="instructions.guide.targetList.imageAlt" alt="Sweety 2.0 — LINE connection and monitored targets" width="1280" height="720" decoding="async" loading="lazy"></figure>
+          <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.targetList.title">Scammer list</h3><p data-copy="instructions.guide.targetList.body">In Scammer list, select Log in to LINE. Scan the OKLine QR code with LINE on your phone, then confirm or enter the verification code as prompted. Add target lets you search personal contacts or LINE groups, choose a persona, and enable Reply. No exact-name entry or visible desktop contact list is required.</p></div>
         </article>
         <article class="instruction-guide-item">
-          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-base-personas.webp" data-alt="instructions.guide.basePersonas.imageAlt" alt="Sweety base personas with age and gender filters and persona cards" width="1325" height="757" decoding="async" loading="lazy"></figure>
+          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-base-personas-v2.webp" data-alt="instructions.guide.basePersonas.imageAlt" alt="Sweety base personas with age and gender filters and persona cards" width="1265" height="712" decoding="async" loading="lazy"></figure>
           <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.basePersonas.title">Base personas</h3><p data-copy="instructions.guide.basePersonas.body">On the Base personas tab, filter built-in personas by age and gender. Read the card summary, then select Show full text to review the complete persona. To customize it, add the base persona to Custom personas.</p></div>
         </article>
         <article class="instruction-guide-item">
-          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-persona-details.webp" data-alt="instructions.guide.personaDetails.imageAlt" alt="Sweety persona details dialog with full profile and Add to custom personas button" width="1325" height="757" decoding="async" loading="lazy"></figure>
+          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-persona-details-v2.webp" data-alt="instructions.guide.personaDetails.imageAlt" alt="Sweety persona details dialog with full profile and Add to custom personas button" width="1265" height="712" decoding="async" loading="lazy"></figure>
           <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.personaDetails.title">Persona details</h3><p data-copy="instructions.guide.personaDetails.body">Select Show full text to review the persona’s full background, speaking style, personality, and common phrases. If it fits your needs, select Add to custom personas and adjust it further.</p></div>
         </article>
         <article class="instruction-guide-item">
-          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-custom-personas.webp" data-alt="instructions.guide.customPersonas.imageAlt" alt="Sweety custom personas tab with a Create persona button" width="1325" height="757" decoding="async" loading="lazy"></figure>
+          <figure class="instruction-guide-figure"><img class="instruction-guide-image" src="images/home/instructions-custom-personas-v2.webp" data-alt="instructions.guide.customPersonas.imageAlt" alt="Sweety custom personas tab with a Create persona button" width="1280" height="720" decoding="async" loading="lazy"></figure>
           <div class="instruction-guide-copy"><h3 data-copy="instructions.guide.customPersonas.title">Custom personas</h3><p data-copy="instructions.guide.customPersonas.body">Create and manage your own character settings on the Custom personas tab. Start from a blank persona or copy and edit a base persona. You can then apply the completed persona to a monitored contact in the scammer list.</p></div>
         </article>
       </div>
-      <p class="instruction-trigger-notice" data-copy="instructions.triggerNotice">Sweety never initiates messages. It replies only after the other person sends a message, which means the chat window must contain an unread message from a monitored contact before Sweety is triggered.</p>
+      <p class="instruction-trigger-notice" data-copy="instructions.triggerNotice">Sweety replies only to target messages received while monitoring. Group messages must include a configured name or an actual LINE mention of your account. Separate names with commas; leave blank for mentions only. Images and stickers use the selected vision-capable AI model. Animated stickers currently use a static preview.</p>
       <aside class="notice" aria-labelledby="notice-title">
         <div class="notice-mark" aria-hidden="true">!</div>
-        <div><h3 id="notice-title" data-copy="notice.title">Important notes</h3><p data-copy="notice.intro">On macOS, Sweety requires three permissions:</p><ul class="permission-list" data-list="notice.permissions"><li>Accessibility</li><li>Screen &amp; System Audio Recording</li><li>Automation</li></ul><p class="window-position-warning" data-copy="notice.windowPosition">Keep the LINE desktop app window fully within the left and right edges of the display, or Sweety may fail to recognize it.</p></div>
+        <div><h3 id="notice-title" data-copy="notice.title">Important notes</h3><p data-copy="notice.intro">Before starting Sweety 2.0, complete these steps:</p><ul class="setup-list" data-list="notice.checklist"><li>Configure an Agnes / OpenAI API key</li><li>Scan the LINE login QR code</li><li>Select targets and enable Reply</li></ul><p class="window-position-warning" data-copy="notice.connection">Keep Sweety running and the computer online and awake. Messages are not received while stopped and are not replayed in bulk when monitoring resumes.</p></div>
       </aside>
-
-      <section class="tutorial-video-section" aria-labelledby="tutorial-video-title">
-        <div class="section-heading"><p class="eyebrow" data-copy="tutorialVideo.eyebrow">VIDEO</p><h2 id="tutorial-video-title" data-copy="tutorialVideo.title">Video tutorial</h2></div>
-        <div class="tutorial-video-shell">
-          <iframe class="tutorial-video-frame" data-tutorial-video src="https://www.youtube-nocookie.com/embed/-qS4MGvnsa4" title="Sweety English tutorial" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-        </div>
-      </section>
 
       <section class="faq-section" aria-labelledby="faq-title">
         <div class="section-heading"><p class="eyebrow">FAQ</p><h2 id="faq-title" data-copy="faq.title">Frequently asked questions</h2></div>
         <div class="faq-list">
           <details class="faq-item"><summary data-copy="faq.items.0.question">What should I do if the other person suspects AI is responding?</summary><p data-copy="faq.items.0.answer">Press Stop and take over the conversation yourself. Continue with Sweety after the situation settles.</p></details>
-          <details class="faq-item"><summary data-copy="faq.items.1.question">Can I configure multiple targets at once?</summary><p data-copy="faq.items.1.answer">Yes, but keep them within the visible range of the contact list in the main LINE window.</p></details>
+          <details class="faq-item"><summary data-copy="faq.items.1.question">Can I configure multiple targets at once?</summary><p data-copy="faq.items.1.answer">Yes. Add multiple contacts or groups and enable Reply for each. Targets are not limited by the visible LINE desktop contact list.</p></details>
           <details class="faq-item"><summary data-copy="faq.items.2.question">Can Sweety reply to people who are not scammers?</summary><p data-copy="faq.items.2.answer">Yes, but it is not recommended.</p></details>
           <details class="faq-item"><summary data-copy="faq.items.3.question">Why is it called Sweety?</summary><p data-copy="faq.items.3.answer">Being scammed is bitter enough. Have a piece of candy.</p></details>
-          <details class="faq-item"><summary data-copy="faq.items.4.question">Why does Sweety show “macOS permissions required” after I press Start?</summary><p><span data-copy="faq.items.4.answerPrefix">After an update, macOS may treat Sweety as a new app. In System Settings, </span><strong data-copy="faq.items.4.answerEmphasis">remove Sweety from Accessibility and Screen &amp; System Audio Recording, then add it again.</strong></p></details>
+          <details class="faq-item"><summary data-copy="faq.items.4.question">Why am I asked for an API key when I press Start?</summary><p><span data-copy="faq.items.4.answerPrefix">Choose Agnes or OpenAI in Basic settings and enter an API key for that selected provider. </span><strong data-copy="faq.items.4.answerEmphasis">Save settings, sign in to LINE, and select at least one target before starting.</strong></p></details>
           <details class="faq-item"><summary data-copy="faq.items.5.question">Which languages does Sweety support?</summary><p data-copy="faq.items.5.answer">The Sweety interface supports Traditional Chinese, English, and Japanese. AI replies will primarily use the language spoken by the other person.</p></details>
         </div>
       </section>

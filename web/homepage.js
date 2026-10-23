@@ -12,28 +12,6 @@ export const downloadConfig = Object.freeze({
   macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=2.0.0-a165b11e',
 });
 
-export const tutorialVideos = Object.freeze({
-  'zh-TW': Object.freeze({
-    id: 'w2w5HGmXxwo',
-    src: 'https://www.youtube-nocookie.com/embed/w2w5HGmXxwo',
-    title: 'Sweety 中文使用教學',
-  }),
-  en: Object.freeze({
-    id: '-qS4MGvnsa4',
-    src: 'https://www.youtube-nocookie.com/embed/-qS4MGvnsa4',
-    title: 'Sweety English tutorial',
-  }),
-  ja: Object.freeze({
-    id: 'CLLEgl9tRWA',
-    src: 'https://www.youtube-nocookie.com/embed/CLLEgl9tRWA',
-    title: 'Sweety 日本語使い方ガイド',
-  }),
-});
-
-export function getTutorialVideo(locale) {
-  return tutorialVideos[locale] ?? tutorialVideos.en;
-}
-
 export function parseDownloadTotal(payload) {
   return Number.isSafeInteger(payload?.totalDownloads) && payload.totalDownloads >= 0
     ? payload.totalDownloads
@@ -134,7 +112,7 @@ export const copy = {
     },
     skipLink: '跳至主要內容',
     brandLabel: 'Sweety 首頁',
-    nav: { label: '主要導覽', antiScam: '主動反詐', download: '下載', instructions: '使用說明' },
+    nav: { label: '主要導覽', antiScam: '主動反詐', download: '下載', instructions: "Sweety 2.0 使用說明" },
     hero: {
       title: '面對詐騙，我們永遠只能被動的防禦嗎？',
       subtitle: '讓 AI 成為我們的武器',
@@ -146,15 +124,15 @@ export const copy = {
     time: {
       title: '詐騙最大的成本～時間',
       subtitle: '上帝是公平的、詐騙同樣只有24小時',
-      body: '您不用「花費任何時間」在詐騙身上，您只需設定好 Line 對象，睡覺前開啟 Sweety 即可，唯一要付出的微末成本，電腦及螢幕不要關，不要進入休眠，不要進入螢幕保護。',
+      body: "設定 LINE 對象並開啟 Sweety，讓 AI 代為回覆。請讓電腦保持開機、網路連線與非休眠狀態；不必保持螢幕亮著或開啟 LINE 桌面視窗。",
       close: '當您起床後，相信對方與 AI 之間的對話，會給您帶來一整天的好心情～',
       artAlt: '藍色水彩時鐘',
     },
     counter: { intro: '目前 Sweety 已經消耗了詐騙總計', days: '天', hours: '小時' },
     download: { title: '下載 Sweety', windows: 'Windows', macOS: 'macOS', soon: '稍後提供', actions: { windows: '下載 Windows 版', macos: '下載 macOS 版' } },
     instructions: {
-      title: '使用說明',
-      intro: 'Sweety 使用你閒置的電腦並操作 Line 桌面 App ，透過人物設定，讓 AI 不斷消耗詐騙的時間，請注意 - AI 不會主動與詐騙聯繫，只會被動回覆，你可以透過修改人設，讓 AI 發揮更大的拖延效果。',
+      title: "Sweety 2.0 使用說明",
+      intro: "Sweety 2.0 使用 OKLine 登入 LINE，直接接收訊息並依您選擇的人設被動回覆。先設定 AI Key、登入 LINE，再選取監控對象；AI 不會主動聯絡任何人。",
       quote: '「你拖延對方越多的時間、代表他們要付出更多的時間與人力成本、而你挽救了更多人免於被騙。」',
       openSourceNote: '＊Sweety 是一款完全免費且開源的程式，如果您對以編譯完成的執行檔有安全疑慮，歡迎透過 Git 重新編譯',
       perspective: {
@@ -213,7 +191,7 @@ export const copy = {
       guide: {
         controlPanel: {
           title: '控制面板',
-          body: '執行 Sweety 前請先開啟 LINE 主視窗，點擊開啟管理介面編輯要回覆的對象，點擊開始後 Sweety 將會針對 LINE 聯絡人視窗進行辨識，當監控對象發送訊息來時 Sweety 將自動點開對話匡並交由 AI 進行回覆。',
+          body: "按「開啟管理介面」完成 AI 與 LINE 設定，勾選對象，再按「開始」。監控啟動後按鈕變為紅色「停止」，可隨時停止並自行接手；未填所選 AI 的 API Key 時無法開始。",
           imageAlt: 'Sweety 控制面板，包含開始、開啟管理介面與結束 App 按鈕',
         },
         dashboard: {
@@ -223,13 +201,13 @@ export const copy = {
         },
         basicSettings: {
           title: '基本設定',
-          body: '在 AI 設定選擇 Sweety 預設或 OpenAI；若選擇 OpenAI，請輸入 API Key 並指定模型。對話設定可調整檢查新訊息的間隔，以及開啟視窗後等待多久才送出回覆，完成後點擊儲存設定。',
-          imageAlt: 'Sweety 基本設定，包含 AI 選擇、檢查間隔與回覆等待時間',
+          body: "選擇 Agnes 或 OpenAI，填寫該服務的 API Key 與 Model；Agnes 預設 agnes-3.0-flash，下方提供兩家的 Key 申請連結。兩家的 Key 與模型分開保存，切換時不會清除。交談歷史預設 20 筆，可設 0–200 筆，0 表示不帶歷史；也可設定回覆送出前的等待時間。完成後按「儲存設定」。",
+          imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
           title: '騙子列表',
-          body: '在騙子列表新增或管理監控對象。只有勾選「回覆」的對象會由 Sweety 監控與回覆；你也可以編輯、結束或匯出個別對象的對話。LINE 名稱請輸入聯絡人畫面顯示的完整名稱。',
-          imageAlt: 'Sweety 騙子列表，顯示監控勾選、對象、人設與操作按鈕',
+          body: "到「騙子列表」按「登入 LINE」，透過 OKLine 產生 QR Code，用手機 LINE 掃描並依提示確認登入或輸入驗證碼。「新增對象」可搜尋個人聯絡人或 LINE 群組，選擇人設後建立並勾選「回覆」。不需手動輸入完整 LINE 名稱，也不受桌面視窗範圍限制。",
+          imageAlt: "Sweety 2.0 — LINE connection and monitored targets",
         },
         basePersonas: {
           title: '基礎人設',
@@ -247,26 +225,25 @@ export const copy = {
           imageAlt: 'Sweety 自訂人設頁面，包含建立人設按鈕',
         },
       },
-      triggerNotice: 'Sweety 不會主動傳送訊息給對方，只有當對方傳訊息來時才會進行回覆，也就是視窗內必須有來自監控對象的未讀訊息才會觸發 Sweety',
+      triggerNotice: "Sweety 只回覆監控期間接收的對象訊息。群組訊息須包含基本設定中的用戶名稱，或真正 LINE 標註目前帳號才回覆；多個名稱以逗號分隔，留空時只回覆標註。圖片與貼圖由所選 AI 辨識，請使用支援圖片的模型；動態貼圖目前以靜態預覽辨識。",
     },
     notice: {
       title: '注意事項',
-      intro: 'Mac OS 系統下，需賦予 Sweety 三種權限，分別是',
-      permissions: ['輔助使用', '螢幕與系統錄音', '自動化'],
-      windowPosition: 'Line 桌面 App 視窗位置請勿超過螢幕左側或右側邊緣，否則將造成 Sweety 辨識失敗',
+      intro: "2.0 版開始前，請完成以下設定：",
+      checklist: ["設定 Agnes／OpenAI API Key", "用手機掃碼登入 LINE", "選取對象並勾選回覆"],
+      connection: "請保持 Sweety 執行、電腦連網且不進入休眠。停止監控期間不接收新訊息，重新開始不會集中補回覆。",
     },
-    tutorialVideo: { eyebrow: 'VIDEO', title: '使用教學影片' },
     faq: {
       title: '常見問題',
       items: [
         { question: '如果對方開始懷疑是 AI 在搞他時該怎麼辦？', answer: '可先按停止鍵，由自己接手，待情況穩定後再繼續。' },
-        { question: '我可以一次設定多個對象嗎？', answer: '可以，但不要超過 Line 主視窗，聯絡人列表的可視範圍。' },
+        { question: '我可以一次設定多個對象嗎？', answer: "可以，從聯絡人或群組清單加入多個對象並勾選回覆，不受 LINE 桌面視窗範圍限制。" },
         { question: 'Sweety 可用來回覆非詐騙對象嗎？', answer: '可以，但不建議。' },
         { question: '為什麼叫 Sweety？', answer: '被詐騙的人太苦了，吃顆糖吧。' },
         {
-          question: '為什麼按下開始後顯示「需要 Mac 權限」？',
-          answerPrefix: '因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的',
-          answerEmphasis: '「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。',
+          question: "為什麼按「開始」後提示輸入 API Key？",
+          answerPrefix: "請到基本設定選擇 Agnes 或 OpenAI，輸入目前所選服務的 API Key。",
+          answerEmphasis: "按「儲存設定」後，確認 LINE 已登入並勾選至少一個對象，再開始監控。",
         },
         { question: 'Sweety 支援哪些語系？', answer: 'Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。' },
       ],
@@ -292,7 +269,7 @@ export const copy = {
     },
     skipLink: 'Skip to main content',
     brandLabel: 'Sweety home',
-    nav: { label: 'Primary navigation', antiScam: 'Anti-scam', download: 'Download', instructions: 'Instructions' },
+    nav: { label: 'Primary navigation', antiScam: 'Anti-scam', download: 'Download', instructions: "Sweety 2.0 instructions" },
     hero: {
       title: 'When facing scams, can we only defend ourselves passively?',
       subtitle: 'Let AI become our tool',
@@ -304,15 +281,15 @@ export const copy = {
     time: {
       title: 'A scammer’s greatest cost: time',
       subtitle: 'Time treats everyone equally—scammers also have only 24 hours a day',
-      body: 'You do not need to spend any of your own time on scammers. Set the LINE contact, start Sweety before bed, and the only small cost is leaving the computer and display on, without sleep mode or a screen saver.',
+      body: "Choose LINE targets and let Sweety handle replies. Keep the computer powered on, online, and awake. The display and LINE desktop window do not need to stay open.",
       close: 'When you wake up, the conversation between the other person and AI may put you in a good mood for the rest of the day.',
       artAlt: 'Blue watercolor clock',
     },
     counter: { intro: 'So far, Sweety has consumed a total of', days: 'days', hours: 'hours' },
     download: { title: 'Download Sweety', windows: 'Windows', macOS: 'macOS', soon: 'Coming soon', actions: { windows: 'Download for Windows', macos: 'Download for macOS' } },
     instructions: {
-      title: 'Instructions',
-      intro: 'Sweety uses an idle computer to operate the LINE desktop app. Through a selected persona, AI keeps consuming a scammer’s time. Please note: AI never contacts scammers first and only replies passively. Editing the persona can make the delay more effective.',
+      title: "Sweety 2.0 instructions",
+      intro: "Sweety 2.0 signs in to LINE through OKLine, receives messages directly, and replies using your selected persona. Configure an AI key, sign in to LINE, then select targets. AI never initiates contact.",
       quote: '“The more of their time you delay, the more time and labor they must spend—and the more people you help protect from being scammed.”',
       openSourceNote: '* Sweety is completely free and open source. If you have safety concerns about the precompiled executable, you are welcome to rebuild it from Git.',
       perspective: {
@@ -371,7 +348,7 @@ export const copy = {
       guide: {
         controlPanel: {
           title: 'Control panel',
-          body: 'Before running Sweety, open the main LINE window. Select Open management interface to edit the contacts to reply to. After you select Start, Sweety scans the LINE contact window. When a monitored contact sends a message, Sweety opens that conversation and asks AI to reply.',
+          body: "Open management to configure AI and LINE, select targets, then press Start. Monitoring turns the button into a red Stop button. Stop at any time to take over. An API key for the selected provider is required to start.",
           imageAlt: 'Sweety control panel with Start, Open management interface, and Quit App buttons',
         },
         dashboard: {
@@ -381,13 +358,13 @@ export const copy = {
         },
         basicSettings: {
           title: 'Basic settings',
-          body: 'Choose Sweety default or OpenAI under AI settings. When using OpenAI, enter an API key and choose a model. Conversation settings control how often Sweety checks for new messages and how long it waits after opening a chat before sending a reply. Select Save settings when finished.',
-          imageAlt: 'Sweety basic settings for AI provider, scan interval, and reply delay',
+          body: "Choose Agnes or OpenAI and enter that provider’s API Key and Model. Agnes defaults to agnes-3.0-flash. Links below the fields open both key application pages. Keys and models are saved separately and retained when switching. History defaults to 20 messages, accepts 0–200, and 0 disables history. Set a reply delay and select Save settings.",
+          imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
           title: 'Scammer list',
-          body: 'Add and manage monitored contacts in the scammer list. Sweety monitors and replies only to contacts whose Reply checkbox is selected. You can also edit, end, or export an individual conversation. Enter the full LINE name exactly as it appears in the contact list.',
-          imageAlt: 'Sweety scammer list with reply checkboxes, contacts, personas, and actions',
+          body: "In Scammer list, select Log in to LINE. Scan the OKLine QR code with LINE on your phone, then confirm or enter the verification code as prompted. Add target lets you search personal contacts or LINE groups, choose a persona, and enable Reply. No exact-name entry or visible desktop contact list is required.",
+          imageAlt: "Sweety 2.0 — LINE connection and monitored targets",
         },
         basePersonas: {
           title: 'Base personas',
@@ -405,26 +382,25 @@ export const copy = {
           imageAlt: 'Sweety custom personas tab with a Create persona button',
         },
       },
-      triggerNotice: 'Sweety never initiates messages. It replies only after the other person sends a message, which means the chat window must contain an unread message from a monitored contact before Sweety is triggered.',
+      triggerNotice: "Sweety replies only to target messages received while monitoring. Group messages must include a configured name or an actual LINE mention of your account. Separate names with commas; leave blank for mentions only. Images and stickers use the selected vision-capable AI model. Animated stickers currently use a static preview.",
     },
     notice: {
       title: 'Important notes',
-      intro: 'On macOS, Sweety requires three permissions:',
-      permissions: ['Accessibility', 'Screen & System Audio Recording', 'Automation'],
-      windowPosition: 'Keep the LINE desktop app window fully within the left and right edges of the display, or Sweety may fail to recognize it.',
+      intro: "Before starting Sweety 2.0, complete these steps:",
+      checklist: ["Configure an Agnes / OpenAI API key", "Scan the LINE login QR code", "Select targets and enable Reply"],
+      connection: "Keep Sweety running and the computer online and awake. Messages are not received while stopped and are not replayed in bulk when monitoring resumes.",
     },
-    tutorialVideo: { eyebrow: 'VIDEO', title: 'Video tutorial' },
     faq: {
       title: 'Frequently asked questions',
       items: [
         { question: 'What should I do if the other person suspects AI is responding?', answer: 'Press Stop and take over the conversation yourself. Continue with Sweety after the situation settles.' },
-        { question: 'Can I configure multiple targets at once?', answer: 'Yes, but keep them within the visible range of the contact list in the main LINE window.' },
+        { question: 'Can I configure multiple targets at once?', answer: "Yes. Add multiple contacts or groups and enable Reply for each. Targets are not limited by the visible LINE desktop contact list." },
         { question: 'Can Sweety reply to people who are not scammers?', answer: 'Yes, but it is not recommended.' },
         { question: 'Why is it called Sweety?', answer: 'Being scammed is bitter enough. Have a piece of candy.' },
         {
-          question: 'Why does Sweety show “macOS permissions required” after I press Start?',
-          answerPrefix: 'After an update, macOS may treat Sweety as a new app. In System Settings, ',
-          answerEmphasis: 'remove Sweety from Accessibility and Screen & System Audio Recording, then add it again.',
+          question: "Why am I asked for an API key when I press Start?",
+          answerPrefix: "Choose Agnes or OpenAI in Basic settings and enter an API key for that selected provider. ",
+          answerEmphasis: "Save settings, sign in to LINE, and select at least one target before starting.",
         },
         { question: 'Which languages does Sweety support?', answer: 'The Sweety interface supports Traditional Chinese, English, and Japanese. AI replies will primarily use the language spoken by the other person.' },
       ],
@@ -450,7 +426,7 @@ export const copy = {
     },
     skipLink: 'メインコンテンツへ移動',
     brandLabel: 'Sweety ホーム',
-    nav: { label: 'メインナビゲーション', antiScam: '攻める詐欺対策', download: 'ダウンロード', instructions: '使い方' },
+    nav: { label: 'メインナビゲーション', antiScam: '攻める詐欺対策', download: 'ダウンロード', instructions: "Sweety 2.0 の使い方" },
     hero: {
       title: '詐欺に対して、私たちは受け身で防ぐことしかできないのでしょうか？',
       subtitle: 'AIを私たちの武器に',
@@ -462,15 +438,15 @@ export const copy = {
     time: {
       title: '詐欺業者にとって最大のコストは「時間」',
       subtitle: '誰にとっても1日は24時間。詐欺業者も例外ではありません。',
-      body: 'あなた自身が詐欺業者のために時間を使う必要はありません。LINEの対象を設定し、寝る前にSweetyを起動するだけです。必要なのは、パソコンとディスプレイを付けたままにし、スリープやスクリーンセーバーを無効にすることだけです。',
+      body: "LINEの対象を選び、Sweetyに返信を任せます。パソコンの電源とネット接続を維持し、スリープさせないでください。画面やLINEデスクトップのウィンドウを開く必要はありません。",
       close: '朝になれば、相手とAIのやり取りが一日を楽しい気分にしてくれるかもしれません。',
       artAlt: '青い水彩画の時計',
     },
     counter: { intro: 'Sweetyが詐欺業者に使わせた時間', days: '日', hours: '時間' },
     download: { title: 'Sweetyをダウンロード', windows: 'Windows', macOS: 'macOS', soon: '近日公開', actions: { windows: 'Windows版をダウンロード', macos: 'macOS版をダウンロード' } },
     instructions: {
-      title: '使い方',
-      intro: 'Sweetyは、使っていないパソコンからLINEデスクトップアプリを操作し、設定した人物像に基づいてAIが詐欺業者の時間を消費させます。AIから相手へ連絡することはなく、受信したメッセージにだけ返信します。人物設定を調整すると、より効果的に会話を長引かせることができます。',
+      title: "Sweety 2.0 の使い方",
+      intro: "Sweety 2.0はOKLine経由でLINEにログインし、メッセージを直接受信して選択した人物設定で返信します。AI Keyを設定し、LINEにログインして対象を選んでください。AIから先に連絡することはありません。",
       quote: '「相手の時間を長く奪うほど、詐欺業者はより多くの時間と人件費を費やすことになり、その分だけ被害に遭う人を減らせます。」',
       openSourceNote: '※ Sweetyは完全無料のオープンソースソフトウェアです。配布済み実行ファイルの安全性が気になる場合は、Gitからご自身でビルドできます。',
       perspective: {
@@ -529,7 +505,7 @@ export const copy = {
       guide: {
         controlPanel: {
           title: 'コントロールパネル',
-          body: 'Sweetyを起動する前に、LINEのメインウィンドウを開いてください。「管理画面を開く」から返信対象を編集し、「開始」を押すと、SweetyがLINEの連絡先画面を確認します。監視対象からメッセージが届くと、そのトークを開いてAIが返信します。',
+          body: "「管理画面を開く」でAIとLINEを設定し、対象を選んで「開始」を押します。監視中は赤い「停止」ボタンになります。いつでも停止して自分で対応できます。選択したAIのAPI Keyが未設定の場合は開始できません。",
           imageAlt: '開始、管理画面を開く、アプリを終了するボタンがあるSweetyのコントロールパネル',
         },
         dashboard: {
@@ -539,13 +515,13 @@ export const copy = {
         },
         basicSettings: {
           title: '基本設定',
-          body: 'AI設定でSweety標準またはOpenAIを選択します。OpenAIを使う場合はAPI Keyとモデルを指定してください。会話設定では、新着メッセージの確認間隔と、トークを開いてから返信するまでの待ち時間を調整できます。設定後は「保存」を押します。',
-          imageAlt: 'AI、確認間隔、返信待ち時間を設定するSweetyの基本設定画面',
+          body: "AgnesまたはOpenAIを選び、そのサービスのAPI KeyとModelを入力します。Agnesの初期モデルはagnes-3.0-flashです。各社のKey取得リンクもあります。切り替えても両社のKeyとモデルは個別に保持されます。会話履歴は初期値20件、設定範囲0～200件で、0は履歴なしです。返信の待ち時間を設定し「保存」を押してください。",
+          imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
           title: '詐欺業者リスト',
-          body: '監視対象を追加・管理します。「返信」にチェックを入れた対象だけをSweetyが監視して返信します。対象ごとに編集、終了、会話のエクスポートもできます。LINE名は連絡先画面に表示される完全な名前を入力してください。',
-          imageAlt: '返信チェック、対象、人物設定、操作ボタンを表示するSweetyの詐欺業者リスト',
+          body: "「詐欺業者リスト」で「LINEにログイン」を選び、OKLineのQRコードをスマートフォンのLINEで読み取ります。指示に従って確認または認証コードを入力してください。「対象を追加」で個人連絡先やLINEグループを検索し、人物設定を選んで返信を有効にします。完全な名前の手入力やデスクトップ表示範囲は不要です。",
+          imageAlt: "Sweety 2.0 — LINE connection and monitored targets",
         },
         basePersonas: {
           title: '基本人物設定',
@@ -563,26 +539,25 @@ export const copy = {
           imageAlt: '人物設定の作成ボタンがあるSweetyのカスタム人物設定画面',
         },
       },
-      triggerNotice: 'Sweetyから相手へ先にメッセージを送ることはありません。監視対象からメッセージが届いた場合だけ返信します。つまり、Sweetyを動作させるには、画面内に監視対象からの未読メッセージが必要です。',
+      triggerNotice: "監視中に受信した対象のメッセージにだけ返信します。グループでは設定した呼び名を含むか、自分への実際のLINEメンションがある場合のみ返信します。呼び名はカンマで区切り、空欄ならメンションのみです。画像とスタンプには画像対応AIを使用します。アニメーションスタンプは現在静止プレビューで認識します。",
     },
     notice: {
       title: '注意事項',
-      intro: 'macOSでは、Sweetyに次の3つの権限を許可してください。',
-      permissions: ['アクセシビリティ', '画面収録とシステムオーディオ録音', 'オートメーション'],
-      windowPosition: 'LINEデスクトップアプリのウィンドウを画面の左右端からはみ出させないでください。はみ出すとSweetyが正しく認識できません。',
+      intro: "Sweety 2.0の開始前に、次の設定を完了してください。",
+      checklist: ["Agnes／OpenAIのAPI Keyを設定", "LINEのQRコードでログイン", "対象を選んで返信を有効化"],
+      connection: "Sweetyを実行し、パソコンのネット接続を維持してスリープを避けてください。停止中のメッセージは受信せず、再開後にまとめて返信することもありません。",
     },
-    tutorialVideo: { eyebrow: 'VIDEO', title: '使い方動画' },
     faq: {
       title: 'よくある質問',
       items: [
         { question: '相手がAIとの会話だと疑い始めた場合はどうすればよいですか？', answer: 'いったん停止し、ご自身で会話を引き継いでください。状況が落ち着いてから再開できます。' },
-        { question: '複数の対象を同時に設定できますか？', answer: 'はい。ただし、LINEのメインウィンドウに表示できる連絡先の範囲を超えないようにしてください。' },
+        { question: '複数の対象を同時に設定できますか？', answer: "はい。個人連絡先やグループを複数追加し、それぞれ返信を有効にできます。LINEデスクトップの表示範囲には制限されません。" },
         { question: '詐欺業者ではない相手への返信にSweetyを使えますか？', answer: '使用できますが、おすすめしません。' },
         { question: 'なぜ「Sweety」という名前なのですか？', answer: '詐欺被害は苦いものです。そんな時こそ、ひと粒のキャンディーを。' },
         {
-          question: '開始後に「macOSの権限が必要です」と表示されるのはなぜですか？',
-          answerPrefix: 'アップデート後、macOSがSweetyを新しいアプリとして認識する場合があります。システム設定の',
-          answerEmphasis: '「アクセシビリティ」と「画面収録とシステムオーディオ録音」からSweetyを一度削除し、再度追加してください。',
+          question: "「開始」でAPI Keyの入力を求められるのはなぜですか？",
+          answerPrefix: "基本設定でAgnesまたはOpenAIを選び、選択したサービスのAPI Keyを入力してください。",
+          answerEmphasis: "保存後、LINEログインと対象の選択を確認してから開始してください。",
         },
         { question: 'Sweetyはどの言語に対応していますか？', answer: 'Sweetyのインターフェースは繁体字中国語、英語、日本語に対応しています。ただし、AIは主に相手が使用している言語で返信します。' },
       ],
@@ -802,13 +777,7 @@ function initializePage() {
     const value = valueAt(strings, element.dataset.ariaLabel);
     if (typeof value === 'string') element.setAttribute('aria-label', value);
   });
-  const tutorialVideo = document.querySelector('[data-tutorial-video]');
-  if (tutorialVideo) {
-    const video = getTutorialVideo(locale);
-    tutorialVideo.setAttribute('src', video.src);
-    tutorialVideo.setAttribute('title', video.title);
-  }
-  renderList(document.querySelector('[data-list="notice.permissions"]'), strings.notice.permissions);
+  renderList(document.querySelector('[data-list="notice.checklist"]'), strings.notice.checklist);
   const downloadCount = document.querySelector('[data-download-count]');
   const renderDownloadTotal = (total) => {
     if (downloadCount) downloadCount.textContent = formatDownloadCount(locale, total);

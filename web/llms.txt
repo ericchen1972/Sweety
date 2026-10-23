@@ -6,18 +6,18 @@
 
 - 官方網站：https://sweety.tw/
 - 開源程式碼：https://github.com/ericchen1972/Sweety
-- 最新版本：1.0.2
+- 最新版本：2.0.0（macOS）；Windows 載點為 1.0.2
 - 授權：MIT License
 - 目前下載：Windows、macOS
 - 作者：Eric，網站與 AI 工程師，20 年開發經驗
 
 ## Sweety 如何運作
 
-使用者在 LINE 桌面 App 中選定要回覆的對象，指定人設並啟動 Sweety。AI 不會主動聯絡任何人，只會被動回覆已勾選的對象。使用者可隨時停止並自行接手對話。
+使用者透過 OKLine 登入 LINE，在 Sweety 聯絡人或群組清單選定要回覆的對象，指定人設並啟動監控。AI 不會主動聯絡任何人，只會被動回覆已勾選的對象。使用者可隨時停止並自行接手對話。
 
 ## 使用限制
 
-LINE 桌面 App 視窗必須完整位於螢幕左右邊緣之內，聯絡人也必須位於主視窗可視範圍，否則可能辨識失敗。
+Sweety 2.0 使用 OKLine：先在基本設定選擇 Agnes 或 OpenAI 並填寫 API Key 與 Model，再到騙子列表掃描 QR Code 登入 LINE、搜尋聯絡人或群組並勾選回覆。Agnes 預設 agnes-3.0-flash，交談歷史預設 20 筆、可設 0–200 筆。群組只在包含用戶名稱或真正標註目前帳號時回覆。不需開啟 LINE 桌面視窗。
 
 ## 更多資料
 

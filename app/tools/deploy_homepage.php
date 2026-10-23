@@ -108,6 +108,14 @@ foreach (glob($root . '/web/images/home/*.{webp,png}', GLOB_BRACE) ?: [] as $ima
 }
 
 $linksOnly = in_array('--links-only', $argv, true);
+$docsOnly = in_array('--docs-only', $argv, true);
+if ($docsOnly) {
+    $files = [];
+    foreach (glob($root . '/web/images/home/instructions-*-v2.webp') ?: [] as $image) {
+        $files[] = 'images/home/' . basename($image);
+    }
+    $files = array_merge($files, ['homepage.css', 'homepage.js', 'llms.txt', 'index.html']);
+}
 if ($linksOnly) {
     $files = ['index.html', 'homepage.js', 'sweety-update.json'];
 }
@@ -123,9 +131,9 @@ foreach ($files as $relative) {
     }
 }
 
-if ($linksOnly) {
+if ($linksOnly || $docsOnly) {
     ftp_close($ftp);
-    echo "Updated and verified download links and update manifest.\n";
+    echo "Updated and verified scoped homepage files.\n";
     exit(0);
 }
 

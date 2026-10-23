@@ -75,7 +75,7 @@ test('production update manifest advertises 2.0.0 and deploys publicly', () => {
 });
 
 test('machine-readable homepage copy lists both desktop downloads', () => {
-  assert.match(llms, /最新版本：1\.0\.2/);
+  assert.match(llms, /最新版本：2\.0\.0/);
   assert.match(llms, /目前下載：Windows、macOS/);
   assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
@@ -98,30 +98,8 @@ test('resolveLocale follows browser language preference order and fallback', () 
   assert.equal(resolveLocale([], 'zh-HK'), 'zh-TW');
 });
 
-test('tutorial video follows the resolved locale and appears immediately before FAQ', () => {
-  assert.deepEqual(homepage.getTutorialVideo('zh-TW'), {
-    id: 'w2w5HGmXxwo',
-    src: 'https://www.youtube-nocookie.com/embed/w2w5HGmXxwo',
-    title: 'Sweety 中文使用教學',
-  });
-  assert.deepEqual(homepage.getTutorialVideo('en'), {
-    id: '-qS4MGvnsa4',
-    src: 'https://www.youtube-nocookie.com/embed/-qS4MGvnsa4',
-    title: 'Sweety English tutorial',
-  });
-  assert.deepEqual(homepage.getTutorialVideo('ja'), {
-    id: 'CLLEgl9tRWA',
-    src: 'https://www.youtube-nocookie.com/embed/CLLEgl9tRWA',
-    title: 'Sweety 日本語使い方ガイド',
-  });
-
-  const videoIndex = html.indexOf('class="tutorial-video-section"');
-  const faqIndex = html.indexOf('class="faq-section"');
-  assert.ok(videoIndex >= 0, 'tutorial video section should exist');
-  assert.ok(videoIndex < faqIndex, 'tutorial video should appear before FAQ');
-  assert.equal((html.match(/data-tutorial-video/g) ?? []).length, 1);
-  assert.match(html, /<iframe[^>]+data-tutorial-video[^>]+loading="lazy"[^>]+allowfullscreen/);
-  assert.match(css, /\.tutorial-video-frame\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9/s);
+test('2.0 removes obsolete video instructions', () => {
+  assert.doesNotMatch(html, /data-tutorial-video|youtube-nocookie/);
 });
 
 test('splitWholeHours converts non-negative whole hours to days and hours', () => {
@@ -176,9 +154,8 @@ test('Japanese copy covers the complete homepage and uses Japanese formatting', 
   );
   assert.equal(homepage.copy.ja.faq.items.length, 6);
   assert.equal(homepage.copy.ja.hero.title, '詐欺に対して、私たちは受け身で防ぐことしかできないのでしょうか？');
-  assert.equal(homepage.copy.ja.instructions.title, '使い方');
+  assert.equal(homepage.copy.ja.instructions.title, "Sweety 2.0 の使い方");
   assert.equal(homepage.copy.ja.notice.title, '注意事項');
-  assert.equal(homepage.copy.ja.tutorialVideo.title, '使い方動画');
   assert.equal(homepage.formatDownloadCount('ja', 42), 'ダウンロード数：42回');
   assert.equal(homepage.formatDownloadCount('ja', null), 'ダウンロード数：—回');
   assert.equal(homepage.formatCounterText('ja', 12, 7), 'Sweetyが詐欺業者に使わせた時間：12日7時間');
@@ -221,7 +198,7 @@ test('Japanese metadata and FAQ structured data come from the localized copy', (
   assert.equal(faq.mainEntity[5].acceptedAnswer.text, homepage.copy.ja.faq.items[5].answer);
   assert.match(html, /<meta property="og:locale:alternate" content="ja_JP">/);
   assert.match(html, /<script[^>]+type="application\/ld\+json"[^>]+id="homepage-structured-data"[^>]*>/);
-  assert.match(html, /"inLanguage": \["zh-TW", "en", "ja"\]/);
+  assert.match(html, /"inLanguage":\s*\[\s*"zh-TW",\s*"en",\s*"ja"\s*\]/);
   assert.match(javascript, /applyMetadata\(document,\s*locale\)/);
 });
 
@@ -284,13 +261,13 @@ test('Chinese copy preserves every supplied block and step verbatim', () => {
   }, {
     title: '詐騙最大的成本～時間',
     subtitle: '上帝是公平的、詐騙同樣只有24小時',
-    body: '您不用「花費任何時間」在詐騙身上，您只需設定好 Line 對象，睡覺前開啟 Sweety 即可，唯一要付出的微末成本，電腦及螢幕不要關，不要進入休眠，不要進入螢幕保護。',
+    body: "設定 LINE 對象並開啟 Sweety，讓 AI 代為回覆。請讓電腦保持開機、網路連線與非休眠狀態；不必保持螢幕亮著或開啟 LINE 桌面視窗。",
     close: '當您起床後，相信對方與 AI 之間的對話，會給您帶來一整天的好心情～',
   });
   assert.equal(copy['zh-TW'].counter.intro, '目前 Sweety 已經消耗了詐騙總計');
   assert.equal(copy['zh-TW'].download.title, '下載 Sweety');
-  assert.equal(copy['zh-TW'].instructions.title, '使用說明');
-  assert.equal(copy['zh-TW'].instructions.intro, 'Sweety 使用你閒置的電腦並操作 Line 桌面 App ，透過人物設定，讓 AI 不斷消耗詐騙的時間，請注意 - AI 不會主動與詐騙聯繫，只會被動回覆，你可以透過修改人設，讓 AI 發揮更大的拖延效果。');
+  assert.equal(copy['zh-TW'].instructions.title, "Sweety 2.0 使用說明");
+  assert.equal(copy['zh-TW'].instructions.intro, "Sweety 2.0 使用 OKLine 登入 LINE，直接接收訊息並依您選擇的人設被動回覆。先設定 AI Key、登入 LINE，再選取監控對象；AI 不會主動聯絡任何人。");
   assert.equal(copy['zh-TW'].instructions.quote, '「你拖延對方越多的時間、代表他們要付出更多的時間與人力成本、而你挽救了更多人免於被騙。」');
   assert.equal(copy['zh-TW'].instructions.openSourceNote, '＊Sweety 是一款完全免費且開源的程式，如果您對以編譯完成的執行檔有安全疑慮，歡迎透過 Git 重新編譯');
   assert.deepEqual(Object.keys(copy['zh-TW'].instructions.guide), [
@@ -305,8 +282,8 @@ test('Chinese copy preserves every supplied block and step verbatim', () => {
   assert.equal(copy['zh-TW'].instructions.guide.personaDetails.title, '人設詳細內容');
   assert.equal(copy['zh-TW'].instructions.guide.customPersonas.title, '自訂人設');
   assert.equal(copy['zh-TW'].notice.title, '注意事項');
-  assert.equal(copy['zh-TW'].notice.intro, 'Mac OS 系統下，需賦予 Sweety 三種權限，分別是');
-  assert.deepEqual(copy['zh-TW'].notice.permissions, ['輔助使用', '螢幕與系統錄音', '自動化']);
+  assert.equal(copy['zh-TW'].notice.intro, "2.0 版開始前，請完成以下設定：");
+  assert.deepEqual(copy['zh-TW'].notice.checklist, ["設定 Agnes／OpenAI API Key", "用手機掃碼登入 LINE", "選取對象並勾選回覆"]);
 });
 
 test('copy contains no extra hero lead-in or unsupplied Chinese slogans', () => {
@@ -323,13 +300,13 @@ test('copy contains no extra hero lead-in or unsupplied Chinese slogans', () => 
 
 test('homepage instructions use seven single-column illustrated guide items', () => {
   const guideItems = [
-    ['controlPanel', 'instructions-control-panel.webp', 419, 499],
-    ['dashboard', 'instructions-dashboard.webp', 1325, 757],
-    ['basicSettings', 'instructions-basic-settings.webp', 1325, 757],
-    ['targetList', 'instructions-target-list.webp', 1325, 757],
-    ['basePersonas', 'instructions-base-personas.webp', 1325, 757],
-    ['personaDetails', 'instructions-persona-details.webp', 1325, 757],
-    ['customPersonas', 'instructions-custom-personas.webp', 1325, 757],
+    ['controlPanel', 'instructions-control-panel-v2.webp', 500, 500],
+    ['dashboard', 'instructions-dashboard-v2.webp', 1280, 720],
+    ['basicSettings', 'instructions-basic-settings-v2.webp', 1265, 967],
+    ['targetList', 'instructions-target-list-v2.webp', 1280, 720],
+    ['basePersonas', 'instructions-base-personas-v2.webp', 1265, 712],
+    ['personaDetails', 'instructions-persona-details-v2.webp', 1265, 712],
+    ['customPersonas', 'instructions-custom-personas-v2.webp', 1280, 720],
   ];
 
   assert.equal((html.match(/class="instruction-guide-item/g) ?? []).length, 7);
@@ -342,7 +319,7 @@ test('homepage instructions use seven single-column illustrated guide items', ()
   }
   assert.equal(
     homepage.copy['zh-TW'].instructions.triggerNotice,
-    'Sweety 不會主動傳送訊息給對方，只有當對方傳訊息來時才會進行回覆，也就是視窗內必須有來自監控對象的未讀訊息才會觸發 Sweety',
+    "Sweety 只回覆監控期間接收的對象訊息。群組訊息須包含基本設定中的用戶名稱，或真正 LINE 標註目前帳號才回覆；多個名稱以逗號分隔，留空時只回覆標註。圖片與貼圖由所選 AI 辨識，請使用支援圖片的模型；動態貼圖目前以靜態預覽辨識。",
   );
   assert.match(html, /data-copy="instructions\.triggerNotice"/);
   assert.match(css, /\.instruction-guide\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
@@ -414,26 +391,26 @@ test('ChatGPT perspective styles keep the expandable article readable on mobile'
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.chatgpt-perspective\s*\{[^}]*padding:/);
 });
 
-test('homepage includes the LINE window warning and six independent localized FAQs', () => {
+test('homepage includes 2.0 setup notes and six independent localized FAQs', () => {
   const permissionFaqZh = homepage.copy['zh-TW'].faq.items[4];
   const permissionFaqEn = homepage.copy.en.faq.items[4];
   const languageFaqZh = homepage.copy['zh-TW'].faq.items[5];
   const languageFaqEn = homepage.copy.en.faq.items[5];
   const languageFaqJa = homepage.copy.ja.faq.items[5];
 
-  assert.equal(homepage.copy['zh-TW'].notice.windowPosition, 'Line 桌面 App 視窗位置請勿超過螢幕左側或右側邊緣，否則將造成 Sweety 辨識失敗');
+  assert.equal(homepage.copy['zh-TW'].notice.connection, "請保持 Sweety 執行、電腦連網且不進入休眠。停止監控期間不接收新訊息，重新開始不會集中補回覆。");
   assert.equal(homepage.copy['zh-TW'].faq.items.length, 6);
   assert.equal(homepage.copy.en.faq.items.length, 6);
   assert.equal(homepage.copy.ja.faq.items.length, 6);
   assert.deepEqual(permissionFaqZh, {
-    question: '為什麼按下開始後顯示「需要 Mac 權限」？',
-    answerPrefix: '因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的',
-    answerEmphasis: '「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。',
+    question: "為什麼按「開始」後提示輸入 API Key？",
+    answerPrefix: "請到基本設定選擇 Agnes 或 OpenAI，輸入目前所選服務的 API Key。",
+    answerEmphasis: "按「儲存設定」後，確認 LINE 已登入並勾選至少一個對象，再開始監控。",
   });
   assert.deepEqual(permissionFaqEn, {
-    question: 'Why does Sweety show “macOS permissions required” after I press Start?',
-    answerPrefix: 'After an update, macOS may treat Sweety as a new app. In System Settings, ',
-    answerEmphasis: 'remove Sweety from Accessibility and Screen & System Audio Recording, then add it again.',
+    question: "Why am I asked for an API key when I press Start?",
+    answerPrefix: "Choose Agnes or OpenAI in Basic settings and enter an API key for that selected provider. ",
+    answerEmphasis: "Save settings, sign in to LINE, and select at least one target before starting.",
   });
   assert.deepEqual(languageFaqZh, {
     question: 'Sweety 支援哪些語系？',
@@ -461,14 +438,12 @@ test('homepage includes the LINE window warning and six independent localized FA
     'faq.items.5.question',
     'faq.items.5.answer',
     'instructions.openSourceNote',
-    'notice.windowPosition',
+    'notice.connection',
   ]) {
     assert.match(html, new RegExp(`data-copy="${hook.replaceAll('.', '\\.')}`));
   }
   assert.match(html, /<span data-copy="faq\.items\.4\.answerPrefix">/);
   assert.match(html, /<strong data-copy="faq\.items\.4\.answerEmphasis">/);
-  assert.match(html, /"name": "為什麼按下開始後顯示「需要 Mac 權限」？"/);
-  assert.match(html, /"text": "因為程式更新後可能被系統判斷為新的程式，所以請到偏好設定的「輔助使用」及「螢幕與系統錄音」內，移除 Sweety 後再重新加入。"/);
   assert.match(html, /"name": "Sweety 支援哪些語系？"/);
   assert.match(html, /"text": "Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。"/);
   assert.doesNotMatch(html, /\*\*「輔助使用」/);
@@ -672,13 +647,13 @@ test('landing page has semantic sections, required assets, and no dead download 
   assert.match(html, /images\/home\/hero-helpless\.png/);
   assert.match(html, /images\/home\/time-clock-blue\.png/);
   for (const asset of [
-    'instructions-control-panel.webp',
-    'instructions-dashboard.webp',
-    'instructions-basic-settings.webp',
-    'instructions-target-list.webp',
-    'instructions-base-personas.webp',
-    'instructions-persona-details.webp',
-    'instructions-custom-personas.webp',
+    'instructions-control-panel-v2.webp',
+    'instructions-dashboard-v2.webp',
+    'instructions-basic-settings-v2.webp',
+    'instructions-target-list-v2.webp',
+    'instructions-base-personas-v2.webp',
+    'instructions-persona-details-v2.webp',
+    'instructions-custom-personas-v2.webp',
   ]) assert.match(html, new RegExp(`images/home/${asset}`));
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /homepage\.js/);
@@ -702,7 +677,7 @@ test('static HTML is a complete default-English document without JavaScript', ()
     'Many people share this question. Beyond public awareness campaigns, repeated again and again,',
     'Now, users can run Sweety on an idle computer',
     'A scammer’s greatest cost: time',
-    'You do not need to spend any of your own time on scammers.',
+    'Choose LINE targets and let Sweety handle replies.',
     'When you wake up, the conversation between the other person and AI may put you in a good mood for the rest of the day.',
     'Control panel',
     'Dashboard',
@@ -711,12 +686,12 @@ test('static HTML is a complete default-English document without JavaScript', ()
     'Base personas',
     'Persona details',
     'Custom personas',
-    'Sweety never initiates messages.',
-    'Accessibility',
-    'Screen &amp; System Audio Recording',
-    'Automation',
+    'Sweety replies only to target messages received while monitoring.',
+    'Configure an Agnes / OpenAI API key',
+    'Scan the LINE login QR code',
+    'Select targets and enable Reply',
   ]) assert.match(html, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  const permissions = html.match(/data-list="notice\.permissions"[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? '';
+  const permissions = html.match(/data-list="notice\.checklist"[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? '';
   assert.equal((html.match(/class="instruction-guide-item/g) ?? []).length, 7);
   assert.equal((permissions.match(/<li>/g) ?? []).length, 3);
   assert.doesNotMatch(html, /data-copy="(?:hero\.body|hero\.closing|time\.subtitle|time\.body|time\.close)"\s*><\/p>/);
@@ -760,13 +735,13 @@ test('images declare intrinsic dimensions and compressed WebP sources', async ()
     if (lazy) assert.match(tag, /loading="lazy"/);
   }
   const webpAssets = [
-    ['images/home/instructions-control-panel.webp', 419, 499],
-    ['images/home/instructions-dashboard.webp', 1325, 757],
-    ['images/home/instructions-basic-settings.webp', 1325, 757],
-    ['images/home/instructions-target-list.webp', 1325, 757],
-    ['images/home/instructions-base-personas.webp', 1325, 757],
-    ['images/home/instructions-persona-details.webp', 1325, 757],
-    ['images/home/instructions-custom-personas.webp', 1325, 757],
+    ['images/home/instructions-control-panel-v2.webp', 500, 500],
+    ['images/home/instructions-dashboard-v2.webp', 1280, 720],
+    ['images/home/instructions-basic-settings-v2.webp', 1265, 967],
+    ['images/home/instructions-target-list-v2.webp', 1280, 720],
+    ['images/home/instructions-base-personas-v2.webp', 1265, 712],
+    ['images/home/instructions-persona-details-v2.webp', 1265, 712],
+    ['images/home/instructions-custom-personas-v2.webp', 1280, 720],
   ];
   for (const [path, width, height] of webpAssets) {
     const webp = await readFile(new URL(path, webRoot));
@@ -860,4 +835,20 @@ test('homepage deployment manifest includes public pages, endpoints, discovery f
 test('navigation observer targets only sections represented by header links', () => {
   assert.match(javascript, /const sections = links\s*\.map\(\(link\) => document\.querySelector\(link\.hash\)\)\s*\.filter\(Boolean\)/);
   assert.doesNotMatch(javascript, /querySelectorAll\(['"]main section\[id\]['"]\)/);
+});
+
+
+test('2.0 guides document OKLine, user keys, history and groups without legacy setup', () => {
+  for (const locale of ['zh-TW','en','ja']) {
+    const section=homepage.copy[locale].instructions;
+    assert.match(section.intro,/OKLine/);
+    assert.match(section.guide.basicSettings.body,/Agnes/);
+    assert.match(section.guide.basicSettings.body,/OpenAI/);
+    assert.match(section.guide.basicSettings.body,/agnes-3.0-flash/);
+    assert.match(section.guide.basicSettings.body,/20/);
+    assert.match(section.guide.targetList.body,/QR/);
+    assert.match(section.triggerNotice,/LINE/);
+  }
+  assert.doesNotMatch(javascript+html,/需要 Mac 權限|Screen &amp; System Audio Recording|Sweety 預設|檢查新訊息的間隔|youtube-nocookie/);
+  assert.match(deployHelper,/--docs-only/);
 });
