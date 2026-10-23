@@ -20,7 +20,7 @@ REGION_LOOKUP_URL = os.getenv("SWEETY_REGION_LOOKUP_URL", "https://api.country.i
 ABOUT_SWEETY_URL = os.getenv("SWEETY_ABOUT_URL", "https://sweety.tw/about_sweety.html")
 ABOUT_SWEETY_JA_URL = os.getenv("SWEETY_ABOUT_JA_URL", "https://sweety.tw/about_sweety_ja.html")
 
-PROJECT_DIR = Path(__file__).resolve().parents[4]
+PROJECT_DIR = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[4]
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", PROJECT_DIR))
 FRONTEND_DIST = (
     RESOURCE_DIR / "frontend"

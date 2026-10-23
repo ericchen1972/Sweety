@@ -95,3 +95,32 @@ def test_launcher_routes_windows_without_importing_macos(monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['Sweety.exe'])
     launcher.main()
     assert calls == ['windows']
+
+
+def test_service_shutdown_releases_diagnostic_file(tmp_path):
+    from sweety_app.bootstrap import Services
+    from sweety_app.diagnostics import configure_diagnostics
+    from types import SimpleNamespace
+    logger = configure_diagnostics(tmp_path / 'sweety.log', enabled=True)
+    services = Services(None, SimpleNamespace(stop=lambda: None),
+        SimpleNamespace(disconnect=lambda **kw: None), SimpleNamespace(stop=lambda: None), None, 'en')
+    services.stop()
+    assert not any(getattr(handler, '_sweety_diagnostics', False) for handler in logger.handlers)
+
+
+def test_frozen_config_supports_shallow_extraction_path():
+    # A drive-root extraction has fewer parents than the source checkout.
+    code = (SOURCE / 'sweety_app/config.py').read_text()
+    import types
+    fake_sys = types.ModuleType('sys')
+    fake_sys.frozen = True
+    fake_sys._MEIPASS = '/Sweety/_internal'
+    fake_sys.platform = 'win32'
+    import builtins
+    real_import = builtins.__import__
+    def frozen_import(name, *args, **kwargs):
+        return fake_sys if name == 'sys' else real_import(name, *args, **kwargs)
+    namespace = {'__file__': '/Sweety/_internal/sweety_app/config.py',
+        '__builtins__': dict(vars(builtins), __import__=frozen_import)}
+    exec(compile(code, namespace['__file__'], 'exec'), namespace)
+    assert namespace['RESOURCE_DIR'] == Path('/Sweety/_internal')

@@ -17,7 +17,7 @@ def test_release_version_is_2_0_0_across_product_surfaces():
     frontend_package = json.loads((FRONTEND_DIR / "package.json").read_text())
     frontend_lock = json.loads((FRONTEND_DIR / "package-lock.json").read_text())
     spec = (DESKTOP_DIR / "Sweety.spec").read_text()
-    readme = (ROOT / "README.md").read_text()
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     windows_deploy = (ROOT / "app" / "tools" / "deploy_windows_release.php").read_text()
 
     assert config.APP_VERSION == "2.0.0"

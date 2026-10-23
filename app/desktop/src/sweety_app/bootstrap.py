@@ -40,7 +40,10 @@ class Services:
             try:
                 self.line.disconnect(clear=False)
             finally:
-                self.runtime.stop()
+                try:
+                    self.runtime.stop()
+                finally:
+                    configure_diagnostics(LOG_PATH, enabled=False)
 
 
 def start_services(*, external: bool = True) -> Services:
