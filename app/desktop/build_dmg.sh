@@ -2,14 +2,15 @@
 set -euo pipefail
 
 DESKTOP_DIR="$(cd "$(dirname "$0")" && pwd)"
-export SWEETY_BUILD_ROOT="${SWEETY_BUILD_ROOT:-/Users/eric/Documents/Codex-Temp/sweety-build}"
+source "$DESKTOP_DIR/build_compat_env.sh"
+DMG_PATH="$SWEETY_BUILD_ROOT/dist/Sweety-2.0.0-macos12.7-$SWEETY_TARGET_ARCH-test.dmg"
 cd "$DESKTOP_DIR"
 
 SWEETY_LOG_ENABLED=0 "$DESKTOP_DIR/build_app.sh"
 
 codesign --verify --deep --strict "$SWEETY_BUILD_ROOT/dist/Sweety.app"
 
-rm -rf "$SWEETY_BUILD_ROOT/dist/dmg-staging" "$SWEETY_BUILD_ROOT/dist/Sweety-macos-latest.dmg"
+rm -rf "$SWEETY_BUILD_ROOT/dist/dmg-staging" "$DMG_PATH"
 mkdir -p "$SWEETY_BUILD_ROOT/dist/dmg-staging"
 cp -R "$SWEETY_BUILD_ROOT/dist/Sweety.app" "$SWEETY_BUILD_ROOT/dist/dmg-staging"/
 ln -s /Applications "$SWEETY_BUILD_ROOT/dist/dmg-staging"/Applications
@@ -19,8 +20,8 @@ hdiutil create \
   -srcfolder "$SWEETY_BUILD_ROOT/dist/dmg-staging" \
   -ov \
   -format UDZO \
-  "$SWEETY_BUILD_ROOT/dist/Sweety-macos-latest.dmg"
-hdiutil verify "$SWEETY_BUILD_ROOT/dist/Sweety-macos-latest.dmg"
+  "$DMG_PATH"
+hdiutil verify "$DMG_PATH"
 
 MOUNT_DIR="$(mktemp -d "$SWEETY_BUILD_ROOT/sweety-dmg.XXXXXX")"
 ATTACHED=0
@@ -32,7 +33,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-hdiutil attach "$SWEETY_BUILD_ROOT/dist/Sweety-macos-latest.dmg" \
+hdiutil attach "$DMG_PATH" \
   -mountpoint "$MOUNT_DIR" \
   -nobrowse \
   -readonly \
@@ -46,5 +47,5 @@ ATTACHED=1
 hdiutil detach "$MOUNT_DIR" -quiet
 ATTACHED=0
 
-shasum -a 256 "$SWEETY_BUILD_ROOT/dist/Sweety-macos-latest.dmg"
-stat -f %z "$SWEETY_BUILD_ROOT/dist/Sweety-macos-latest.dmg"
+shasum -a 256 "$DMG_PATH"
+stat -f %z "$DMG_PATH"

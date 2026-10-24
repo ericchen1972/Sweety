@@ -7,10 +7,15 @@ from PyInstaller.utils.hooks import collect_all
 
 
 ROOT = Path(SPECPATH).parents[1]
-BUILD_ROOT = Path(os.getenv("SWEETY_BUILD_ROOT", "/Users/eric/Documents/Codex-Temp/sweety-build"))
+BUILD_ROOT = Path(os.getenv("SWEETY_BUILD_ROOT", "/Users/eric/Documents/Codex-Temp/sweety-macos12"))
 BUILD_ROOT.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(Path(SPECPATH) / "src"))
-from sweety_app.okline_session import node_path
+TARGET_ARCH = os.environ["SWEETY_TARGET_ARCH"]
+if TARGET_ARCH not in {"arm64", "x86_64"}:
+    raise ValueError("SWEETY_TARGET_ARCH must be arm64 or x86_64")
+NODE_PATH = Path(os.environ["SWEETY_NODE_PATH"]).resolve()
+if not NODE_PATH.is_file():
+    raise ValueError("SWEETY_NODE_PATH must be a supplied Node executable")
 app_environment = {
     key: value
     for key, value in {
@@ -24,9 +29,9 @@ datas = [
     (str(ROOT / "web" / "images" / "logo.png"), "."),
     (str(ROOT / "assets" / "panel-background.png"), "assets"),
 ]
-binaries = [(node_path(), "runtime")]
+binaries = [(str(NODE_PATH), "runtime")]
 node_license = BUILD_ROOT / "Node-LICENSE.txt"
-node_license.write_bytes((Path(node_path()).resolve().parent.parent / "LICENSE").read_bytes())
+node_license.write_bytes((NODE_PATH.parent.parent / "LICENSE").read_bytes())
 datas += [(str(node_license), "third-party"), (str(ROOT / "docs" / "third-party-okline.md"), "third-party")]
 okline_data, okline_binaries, okline_hidden = collect_all("okline")
 datas += okline_data
@@ -61,7 +66,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch="arm64",
+    target_arch=TARGET_ARCH,
     codesign_identity=None,
     entitlements_file="Sweety.entitlements",
     icon=str(BUILD_ROOT / "Sweety.icns"),
@@ -84,7 +89,7 @@ app = BUNDLE(
         "CFBundleName": "Sweety",
         "CFBundleShortVersionString": "2.0.0",
         "CFBundleVersion": "200",
-        "LSMinimumSystemVersion": "13.0",
+        "LSMinimumSystemVersion": "12.7",
         "NSHighResolutionCapable": True,
         **(
             {"LSEnvironment": app_environment}
