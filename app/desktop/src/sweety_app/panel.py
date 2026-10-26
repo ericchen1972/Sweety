@@ -46,6 +46,7 @@ from .updates import SUPPORTED_PLATFORMS, is_valid_https_url
 STATUS_COPY = {
     "zh-TW": {
         "api_key_required": "請到基本設定輸入所選 AI 的 API Key",
+        "codex_not_ready": "請到基本設定檢查 Codex 連線並登入 ChatGPT",
         "stopped": "已停止",
         "monitoring": "正在監控新訊息",
         "waiting": "等待新訊息",
@@ -59,6 +60,7 @@ STATUS_COPY = {
     },
     "en": {
         "api_key_required": "Enter the selected AI API key in Settings",
+        "codex_not_ready": "Check Codex and sign in to ChatGPT in Settings",
         "stopped": "Stopped",
         "monitoring": "Monitoring for new messages",
         "waiting": "Waiting for new messages",
@@ -72,6 +74,7 @@ STATUS_COPY = {
     },
     "ja": {
         "api_key_required": "設定で選択したAIのAPI Keyを入力してください",
+        "codex_not_ready": "設定でCodex接続を確認し、ChatGPTにログインしてください",
         "stopped": "停止中",
         "monitoring": "新着メッセージを監視中",
         "waiting": "新着メッセージを待っています",

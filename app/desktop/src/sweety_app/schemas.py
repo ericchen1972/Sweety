@@ -12,7 +12,7 @@ class ApiModel(BaseModel):
 class SettingsPayload(ApiModel):
     history_limit: int = Field(default=6, ge=4, le=30, alias="historyLimit")
     user_names: str = Field(default="", alias="userNames", max_length=500)
-    ai_provider: Literal["sweety", "openai"] = Field(alias="aiProvider")
+    ai_provider: Literal["sweety", "openai", "codex"] = Field(alias="aiProvider")
     agnes_api_key: str = Field(default="", alias="agnesApiKey")
     agnes_model: str = Field(default="agnes-3.0-flash", min_length=1, alias="agnesModel")
     openai_api_key: str = Field(default="", alias="openAiApiKey")

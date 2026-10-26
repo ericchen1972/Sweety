@@ -34,6 +34,9 @@ export function createApiClient(fetcher: Fetcher = globalThis.fetch.bind(globalT
   }
 
   return {
+    codexStatus: (refresh=false) => request<import('./CodexSettings').CodexStatus>(`/api/codex/status${refresh ? '?refresh=true' : ''}`),
+    codexLogin: () => request<{authUrl: string}>('/api/codex/login', {method:'POST'}),
+    codexTest: () => request<{ready: boolean; status: string}>('/api/codex/test', {method:'POST'}),
     lineStatus: () => request<import("./LineConnection").LineStatus>("/api/line/status"),
     lineLogin: () => request("/api/line/login", {method:"POST"}),
     lineLogout: () => request("/api/line/logout", {method:"POST"}),

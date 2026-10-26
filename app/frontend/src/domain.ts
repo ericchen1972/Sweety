@@ -47,7 +47,7 @@ export interface CustomCatalogItem {
 
 export interface AppSettings {
   userNames?: string;
-  aiProvider: "sweety" | "openai";
+  aiProvider: "sweety" | "openai" | "codex";
   agnesApiKey?: string;
   agnesModel?: string;
   openAiApiKey: string;

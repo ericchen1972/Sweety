@@ -16,6 +16,7 @@ from .about import AboutContentError
 from .persona_safety import PersonaReviewUnavailable, PersonaSafetyError
 from .repositories import ConflictError, NotFoundError, Repository, RepositoryError
 from .schemas import CustomItemPayload, SettingsPayload, TargetPayload
+from .codex import CodexError, CodexService
 
 
 class MonitorController(Protocol):
@@ -104,12 +105,30 @@ def create_app(
     about_loader: AboutLoader | None = None,
     update_state: UpdateSource | None = None,
     line_service=None,
+    codex_service=None,
 ) -> FastAPI:
     database.migrate()
     repository = Repository(database)
     app = FastAPI(title="Sweety Local API", version="0.1.0")
     app.state.repository = repository
     app.state.monitor = monitor
+    codex = codex_service if codex_service is not None else CodexService()
+
+    @app.exception_handler(CodexError)
+    async def handle_codex_error(_request: Request, exc: CodexError):
+        return JSONResponse(status_code=503, content={'code': str(exc), 'message': str(exc)})
+
+    @app.get('/api/codex/status')
+    def codex_status(refresh: bool = False):
+        return codex.status(refresh=refresh)
+
+    @app.post('/api/codex/login')
+    def codex_login():
+        return codex.login()
+
+    @app.post('/api/codex/test')
+    def codex_test():
+        return codex.test()
 
     def target_for_api(target):
         value = _target_for_api(target)

@@ -1,5 +1,6 @@
 import {LineConnection,UserNamesField,ContactPicker,lineCopy,reloadLineState,type LineContact} from "./LineConnection";
 import {flushStateSaves} from "./storage";
+import {CodexOption, CodexSettings, useCodexStatus} from './CodexSettings';
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import {
   Archive,
@@ -365,6 +366,7 @@ function Dashboard({ state, locale, copy, updateStatus }: { state: AppState; loc
 function SettingsPage({ state, setState, copy, onToast }: { state: AppState; setState: StateSetter; copy: Copy; onToast: (message: string) => void }) {
   const [form, setForm] = useState(state.settings);
   const [error, setError] = useState("");
+  const codex = useCodexStatus(form.aiProvider === 'codex');
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -386,6 +388,7 @@ function SettingsPage({ state, setState, copy, onToast }: { state: AppState; set
           <select className="form-input" value={form.aiProvider} onChange={(event) => setForm({ ...form, aiProvider: event.target.value as AppState["settings"]["aiProvider"] })}>
             <option value="sweety">{copy.sweetyDefault}</option>
             <option value="openai">{copy.openAI}</option>
+            <CodexOption status={codex.status} selected={form.aiProvider === 'codex'} copy={copy}/>
           </select>
         </label>
         {form.aiProvider === "openai" ? (
@@ -399,6 +402,8 @@ function SettingsPage({ state, setState, copy, onToast }: { state: AppState; set
               <input className="form-input" value={form.openAiModel} onChange={(event) => setForm({ ...form, openAiModel: event.target.value })} />
             </label>
           </div>
+        ) : form.aiProvider === 'codex' ? (
+          <CodexSettings status={codex.status} copy={copy} refresh={codex.refresh}/>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block"><span className="mb-2 block text-sm font-medium">Agnes API Key</span>

@@ -8,7 +8,7 @@ import threading
 import time
 from typing import Any
 
-from .ai import AiTimeoutError, AiRateLimitError, validate_visual_descriptions
+from .ai import AiError, AiTimeoutError, AiRateLimitError, validate_visual_descriptions
 from .diagnostics import log_event
 from .okline_errors import SendNotStarted, LineHistoryError
 from .group_replies import mentions_self
@@ -32,9 +32,14 @@ class MonitorController:
             if self._enabled or (self._thread and self._thread.is_alive()):
                 return False
             settings = self.repository.get_settings()
-            key_field = 'openai_api_key' if settings.get('ai_provider') == 'openai' else 'agnes_api_key'
-            if not str(settings.get(key_field, '')).strip():
-                self._set_status('api_key_required'); return False
+            if settings.get('ai_provider') == 'codex':
+                status = self.ai.codex.status(refresh=True)
+                if not status.get('ready'):
+                    self._set_status('codex_not_ready', status.get('status', 'codex_unavailable')); return False
+            else:
+                key_field = 'openai_api_key' if settings.get('ai_provider') == 'openai' else 'agnes_api_key'
+                if not str(settings.get(key_field, '')).strip():
+                    self._set_status('api_key_required'); return False
             if self.region_blocked:
                 self._set_status('region_blocked'); return False
             if not self.line.connected():
@@ -60,6 +65,8 @@ class MonitorController:
         # Set the captured generation's token immediately, even while AI/network is busy.
         was_enabled=self._enabled
         self._stop_event.set(); self._enabled=False
+        if hasattr(self.ai, 'cancel'):
+            self.ai.cancel()
         self.line.stop_receiving(); self.store.archive_pending()
         self._set_status('stopped'); self._ai_timeout_alert=False
         return was_enabled
@@ -156,7 +163,7 @@ class MonitorController:
                 if isinstance(exc,AiTimeoutError):self._ai_timeout_alert=True
                 if not stop.is_set():
                     if isinstance(exc,AiRateLimitError):self._set_status('ai_rate_limited',target=target['name'])
-                    else:self._set_status('error',('LINE 交談歷史讀取失敗，本次未回覆。' if isinstance(exc,LineHistoryError) else 'line_send_uncertain' if state=='uncertain' else type(exc).__name__),target['name'])
+                    else:self._set_status('error',('LINE 交談歷史讀取失敗，本次未回覆。' if isinstance(exc,LineHistoryError) else 'line_send_uncertain' if state=='uncertain' else str(exc) if isinstance(exc,AiError) and str(exc).startswith('codex_') else type(exc).__name__),target['name'])
                 log_event(self.logger,'reply_failed',target_id=target_id,status=state,error=type(exc).__name__)
         if not stop.is_set() and self._status not in ('error','ai_rate_limited'):
             self._set_status('monitoring' if processed else 'waiting')

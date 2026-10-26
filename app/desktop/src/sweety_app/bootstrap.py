@@ -69,6 +69,7 @@ def start_services(*, external: bool = True) -> Services:
     monitor = MonitorController(repository, line, ai, region_blocked=region_blocked,
         on_exchange_committed=metrics_reporter.report_async)
     api = create_app(database, monitor=monitor, line_service=line,
+        codex_service=ai.codex,
         frontend_dist=FRONTEND_DIST, persona_validator=ai,
         about_loader=AboutContentClient(about_url_for_locale(locale)), update_state=update_state)
     runtime = ServerRuntime(api, API_HOST, API_PORT)

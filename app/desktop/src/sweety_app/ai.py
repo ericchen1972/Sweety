@@ -11,6 +11,7 @@ from .catalog import BASE_PERSONA_TEXT, REPLY_LANGUAGE_CONTRACT
 from .diagnostics import log_event
 from .persona_safety import PersonaReviewUnavailable, PersonaSafetyGuard, contains_external_link
 from .repositories import Repository
+from .codex import CodexError, CodexService
 
 
 AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1"
@@ -51,6 +52,10 @@ class AiTimeoutError(AiError):
 
 
 class AiRateLimitError(AiError):
+    pass
+
+
+class AiCancelledError(AiError):
     pass
 
 
@@ -143,11 +148,33 @@ class AiClient:
         agnes_key: str = "",
         repository: Repository | None = None,
         client_factory: Any | None = None,
+        codex_service: Any | None = None,
     ) -> None:
         self.agnes_key = agnes_key
         self.repository = repository
         self.client_factory = client_factory or OpenAI
         self.persona_guard = PersonaSafetyGuard()
+        self.codex = codex_service if codex_service is not None else CodexService()
+
+    def cancel(self):
+        self.codex.cancel()
+
+    def _codex_result(self, messages, response_type):
+        try:
+            result = self.codex.decide(messages=messages, schema=response_type.model_json_schema())
+            log_event(logging.getLogger('sweety.ai'), 'ai_raw_response',
+                      purpose='codex_' + response_type.__name__, content=json.dumps(result, ensure_ascii=False))
+            return response_type.model_validate(result)
+        except CodexError as exc:
+            if str(exc) == 'codex_cancelled':
+                raise AiCancelledError(str(exc)) from exc
+            if str(exc) == 'codex_rate_limited':
+                raise AiRateLimitError(str(exc)) from exc
+            if str(exc) == 'codex_timeout':
+                raise AiTimeoutError(str(exc)) from exc
+            raise AiError(str(exc)) from exc
+        except (ValueError, TypeError) as exc:
+            raise AiError('codex_invalid_result') from exc
 
     def generate_reply(
         self,
@@ -158,7 +185,9 @@ class AiClient:
         total_messages: int,
         settings: dict[str, Any],
     ) -> ReplyDecision:
-        base_url, key, model = self._provider(settings)
+        is_codex = settings.get('ai_provider') == 'codex'
+        if not is_codex:
+            base_url, key, model = self._provider(settings)
 
         persona_text = self._catalog_text("persona", target)
         if str(target.get("persona_source")) == "custom":
@@ -175,14 +204,14 @@ class AiClient:
         last_error: AiError | None = None
         for attempt in range(2):
             try:
-                decision = self._request_decision(
+                decision = self._codex_result(messages, ReplyDecision) if is_codex else self._request_decision(
                     base_url,
                     key,
                     model,
                     messages,
                 )
                 validate_visual_descriptions(decision, incoming_messages)
-            except AiRateLimitError:
+            except (AiRateLimitError, AiCancelledError):
                 raise
             except AiError as exc:
                 last_error = exc
@@ -197,6 +226,14 @@ class AiClient:
         self.persona_guard.validate(text, lambda normalized: self._classify_persona(normalized, settings))
 
     def _classify_persona(self, text: str, settings: dict[str, Any]) -> bool:
+        if settings.get('ai_provider') == 'codex':
+            try:
+                return self._codex_result([
+                    {'role': 'system', 'content': PERSONA_CLASSIFIER_PROMPT},
+                    {'role': 'user', 'content': json.dumps({'persona': text}, ensure_ascii=False)},
+                ], PersonaClassification).allowed
+            except Exception as exc:
+                raise PersonaReviewUnavailable() from exc
         base_url, key, model = self._provider(settings)
         try:
             client = self.client_factory(api_key=key, base_url=base_url, timeout=45)
