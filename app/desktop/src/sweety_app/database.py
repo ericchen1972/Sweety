@@ -9,7 +9,7 @@ from typing import Iterator
 from .catalog import BASE_PERSONAS, DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
-CURRENT_SCHEMA_VERSION = 11
+CURRENT_SCHEMA_VERSION = 12
 
 
 SCHEMA = """
@@ -118,6 +118,7 @@ class Database:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA secure_delete = ON")
         self._local.connection = connection
         try:
             yield connection
@@ -265,7 +266,11 @@ class Database:
                 if name not in settings_columns:
                     connection.execute(f"ALTER TABLE settings ADD COLUMN {name} {definition}")
             if "history_limit" not in settings_columns:
-                connection.execute("ALTER TABLE settings ADD COLUMN history_limit INTEGER NOT NULL DEFAULT 20")
+                connection.execute("ALTER TABLE settings ADD COLUMN history_limit INTEGER NOT NULL DEFAULT 6")
+            if previous_version < 12:
+                connection.execute("UPDATE settings SET history_limit=6 WHERE history_limit=20 OR history_limit<4 OR history_limit>30")
+            from .history import prune_context
+            prune_context(connection)
             target_columns = {row["name"] for row in connection.execute("PRAGMA table_info(targets)")}
             for name, definition in (("line_kind", "TEXT NOT NULL DEFAULT 'person'"),
                                      ("line_account", "TEXT NOT NULL DEFAULT ''"),

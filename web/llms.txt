@@ -6,7 +6,7 @@
 
 - 官方網站：https://sweety.tw/
 - 開源程式碼：https://github.com/ericchen1972/Sweety
-- 最新版本：2.0.0（macOS）；Windows 載點為 1.0.2
+- 最新版本：2.0.1（macOS）；Windows 載點為 1.0.2
 - 授權：MIT License
 - 目前下載：Windows、macOS
 - 作者：Eric，網站與 AI 工程師，20 年開發經驗
@@ -17,9 +17,13 @@
 
 ## 使用限制
 
-Sweety 2.0 使用 OKLine：先在基本設定選擇 Agnes 或 OpenAI 並填寫 API Key 與 Model，再到騙子列表掃描 QR Code 登入 LINE、搜尋聯絡人或群組並勾選回覆。Agnes 預設 agnes-3.0-flash，交談歷史預設 20 筆、可設 0–200 筆。群組只在包含用戶名稱或真正標註目前帳號時回覆。不需開啟 LINE 桌面視窗。
+Sweety 2.0 使用 OKLine：先在基本設定選擇 Agnes 或 OpenAI 並填寫 API Key 與 Model，再到騙子列表掃描 QR Code 登入 LINE、搜尋聯絡人或群組並勾選回覆。Agnes 預設 agnes-3.0-flash，交談歷史預設 6 筆、可設 4–30 筆；僅保留最近 AI 上下文，不長期保存完整交談或提供匯出。群組只在包含用戶名稱或真正標註目前帳號時回覆。不需開啟 LINE 桌面視窗。
 
 ## 更多資料
 
 - 關於 Sweety：https://sweety.tw/about_sweety.html
 - 首頁常見問題：https://sweety.tw/#instructions
+
+macOS 12.7 以上：Apple Silicon 與 Intel 分開下載。
+- Apple Silicon: https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.1-20261026
+- Intel: https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.1-20261026

@@ -12,7 +12,7 @@ export const defaultState: AppState = {
     agnesModel: "agnes-3.0-flash",
     openAiApiKey: "",
     openAiModel: "gpt-5.5",
-    historyLimit: 20,
+    historyLimit: 6,
     checkIntervalSeconds: 10,
     replyDelayMinSeconds: 15,
     replyDelayMaxSeconds: 45,

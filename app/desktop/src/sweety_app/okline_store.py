@@ -37,6 +37,14 @@ class LineStore:
                     incoming_id INTEGER,error TEXT NOT NULL DEFAULT '',created INTEGER NOT NULL,
                     PRIMARY KEY(account,id));
             """)
+            # A newly constructed store has no live work. Finalize interrupted
+            # journals for every account before a stopped app can retain them.
+            db.execute("DELETE FROM line_inbox WHERE target_id NOT IN (SELECT id FROM targets)")
+            accounts=[r[0] for r in db.execute("SELECT DISTINCT account FROM line_inbox WHERE status IN ('pending','processing','sending','context')")]
+        for account in accounts:
+            self.account=account
+            self.recover()
+        self.account=''
 
     @property
     def scope(self):
@@ -184,10 +192,15 @@ class LineStore:
         with self.repo.database.connect() as db:
             db.execute("UPDATE line_inbox SET status='uncertain',error='interrupted_during_send' WHERE account=? AND status='sending'",(self.scope,))
             db.execute("UPDATE line_inbox SET status='context' WHERE account=? AND status IN ('pending','processing')",(self.scope,))
+            self.archive_pending()
 
     def archive_pending(self):
         with self.repo.database.connect() as db:
             db.execute("UPDATE line_inbox SET status='context' WHERE account=? AND status IN ('pending','processing')",(self.scope,))
+            for row in self.rows(('context',)):
+                self.archive(row)
+                self.update(row['id'],'archived')
+            self.repo.prune_context()
 
     def complete(self, rows, reply, receipt):
         with self.repo.database.connect() as db:

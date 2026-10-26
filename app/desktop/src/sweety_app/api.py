@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -73,7 +75,7 @@ def _custom_for_api(item: dict[str, Any]) -> dict[str, Any]:
 def _settings_for_api(settings: dict[str, Any]) -> dict[str, Any]:
     return {
         "aiProvider": settings["ai_provider"],
-        "historyLimit": settings.get("history_limit", 20),
+        "historyLimit": settings.get("history_limit", 6),
         "userNames": settings.get("user_names", ""),
         "agnesApiKey": settings.get("agnes_api_key", ""),
         "agnesModel": settings.get("agnes_model", "agnes-3.0-flash"),
@@ -221,7 +223,10 @@ def create_app(
 
     @app.put("/api/state")
     def replace_state(payload: dict[str, Any]) -> dict[str, Any]:
-        settings = SettingsPayload.model_validate(payload.get("settings", {}))
+        try:
+            settings = SettingsPayload.model_validate(payload.get("settings", {}))
+        except ValidationError as exc:
+            raise RequestValidationError(exc.errors()) from exc
         settings_values = settings.model_dump()
         for field in ("user_names", "agnes_api_key", "agnes_model", "history_limit"):
             if field not in settings.model_fields_set:
@@ -310,13 +315,6 @@ def create_app(
     @app.delete("/api/targets/{target_id}", status_code=204)
     def delete_target(target_id: str) -> None:
         repository.delete_target(target_id)
-
-    @app.get("/api/targets/{target_id}/export")
-    def export_target(target_id: str) -> dict[str, Any]:
-        return {
-            "target": target_for_api(repository.get_target(target_id)),
-            "messages": repository.list_messages(target_id),
-        }
 
     @app.post("/api/catalog/custom/{kind}", status_code=201)
     def create_custom(kind: str, payload: CustomItemPayload) -> dict[str, Any]:

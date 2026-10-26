@@ -106,7 +106,7 @@ h3 { font-size: clamp(1.65rem, 2.4vw, 2.4rem); }
 .perspective-funnel, .perspective-diagram, .perspective-formula { max-width: 100%; overflow-x: auto; margin: 22px 0; padding: 20px 22px; border: 1px solid #c9ddeb; border-radius: 16px; color: #d9efff; background: #17324a; font: 750 .96rem/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .perspective-layers { display: grid; gap: 10px; margin: 22px 0; padding-left: 28px; color: var(--ink); font-weight: 780; }
 .chatgpt-perspective-article .perspective-final { margin-top: 28px; color: var(--blue); font-size: clamp(1.25rem, 2vw, 1.6rem); font-weight: 900; }
-.download-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.download-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .download-card { padding: clamp(30px, 4vw, 54px); border: 1px solid #d7e8f3; border-radius: 24px; background: #fff; }
 .platform-icon { display: block; width: 58px; height: 58px; margin-bottom: 28px; padding: 14px; border-radius: 16px; fill: #fff; background: var(--blue); }
 .platform-icon.apple { fill: #fff; background: var(--ink); }

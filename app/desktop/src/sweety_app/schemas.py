@@ -10,7 +10,7 @@ class ApiModel(BaseModel):
 
 
 class SettingsPayload(ApiModel):
-    history_limit: int = Field(default=20, ge=0, le=200, alias="historyLimit")
+    history_limit: int = Field(default=6, ge=4, le=30, alias="historyLimit")
     user_names: str = Field(default="", alias="userNames", max_length=500)
     ai_provider: Literal["sweety", "openai"] = Field(alias="aiProvider")
     agnes_api_key: str = Field(default="", alias="agnesApiKey")

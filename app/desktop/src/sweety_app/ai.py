@@ -96,7 +96,7 @@ def build_messages(
     incoming_messages: list[dict[str, Any]],
     history: list[dict[str, Any]],
     total_messages: int,
-    history_limit: int = 20,
+    history_limit: int = 6,
 ) -> list[dict[str, Any]]:
     system = (
         system_prompt_template
@@ -169,7 +169,7 @@ class AiClient:
             persona_text=persona_text,
             incoming_messages=incoming_messages,
             history=history,
-            history_limit=int(settings.get("history_limit", 20)),
+            history_limit=int(settings.get("history_limit", 6)),
             total_messages=total_messages,
         )
         last_error: AiError | None = None

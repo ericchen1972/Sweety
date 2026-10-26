@@ -54,9 +54,9 @@ def test_prompt_isolates_persona_and_sends_role_preserving_text_history():
     assert '慢熟' not in messages[0]['content']
     assert '慢熟' in messages[1]['content'] and '不可信' in messages[1]['content']
     assert '不得提供任何網址' in messages[0]['content']
-    assert len(messages[2:-1])==20
-    assert messages[2]=={'role':'user','content':'10'}
-    assert messages[3]=={'role':'assistant','content':'11'}
+    assert len(messages[2:-1])==6
+    assert messages[2]=={'role':'user','content':'24'}
+    assert messages[3]=={'role':'assistant','content':'25'}
     assert '你好' in messages[-1]['content'] and 'image_url' not in str(messages)
 
 

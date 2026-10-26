@@ -162,7 +162,7 @@ def test_start_requires_selected_provider_key_even_if_other_key_exists(tmp_path,
     assert monitor.start(background=False)
     monitor.stop()
 
-@pytest.mark.parametrize('limit',[0,5,30])
+@pytest.mark.parametrize('limit',[4,6,30])
 def test_worker_respects_history_setting(tmp_path,limit):
     repo,store,service,target,monitor,calls=ready(tmp_path)
     repo.update_settings({'history_limit':limit})

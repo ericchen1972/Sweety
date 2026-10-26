@@ -71,9 +71,14 @@ function downloadContents(FTP\Connection $ftp, string $remotePath): ?string
 $root = dirname(__DIR__, 2);
 $runtimePath = '/sweety.tw/.sweety-runtime-env.php';
 $remoteDirectory = '/sweety.tw/downloads';
-$remotePath = '/sweety.tw/downloads/Sweety-macos-latest.dmg';
-$buildRoot = getenv('SWEETY_BUILD_ROOT') ?: '/Users/eric/Documents/Codex-Temp/sweety-build';
-$localPath = $buildRoot . '/dist/Sweety-macos-latest.dmg';
+$targetArch = getenv('SWEETY_TARGET_ARCH');
+if (!in_array($targetArch, ['arm64', 'x86_64'], true)) {
+    fail('Set SWEETY_TARGET_ARCH to arm64 or x86_64 and supply SWEETY_PYTHON and SWEETY_NODE_PATH.');
+}
+$filename = 'Sweety-macos12.7-' . $targetArch . '-latest.dmg';
+$remotePath = $remoteDirectory . '/' . $filename;
+$buildRoot = getenv('SWEETY_BUILD_ROOT') ?: '/Users/eric/Documents/Codex-Temp/sweety-macos12/build-' . $targetArch;
+$localPath = $buildRoot . '/dist/' . $filename;
 $config = readConfig($root . '/web/sftp-config.json');
 
 $ftp = connectFtp($config);

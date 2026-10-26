@@ -18,15 +18,15 @@ const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => ''
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
 const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.2-d1f2664b';
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=2.0.0-a165b11e';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.1-20261026';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
   assert.match(dmgBuildHelper, /dist\/dmg-staging/);
   assert.match(dmgBuildHelper, /cp -R .*Sweety\.app["\s].*dmg-staging/);
   assert.match(dmgBuildHelper, /ln -s \/Applications .*dmg-staging["\/]*Applications/);
-  assert.match(dmgBuildHelper, /hdiutil create[\s\S]*?Sweety-macos-latest\.dmg/);
-  assert.match(dmgBuildHelper, /hdiutil verify .*Sweety-macos-latest\.dmg/);
+  assert.match(dmgBuildHelper, /hdiutil create[\s\S]*?\$DMG_PATH/);
+  assert.match(dmgBuildHelper, /hdiutil verify .*\$DMG_PATH/);
   assert.match(dmgBuildHelper, /hdiutil attach[\s\S]*?readonly/);
   assert.match(dmgBuildHelper, /\[\[ -d [^\n]*Sweety\.app[^\n]*\]\]/);
   assert.match(dmgBuildHelper, /\[\[ -L [^\n]*Applications[^\n]*\]\]/);
@@ -40,7 +40,8 @@ test('macOS release helper preserves the metrics environment and verifies the up
   assert.match(dmgBuildHelper, /SWEETY_LOG_ENABLED=0.*build_app\.sh/);
   assert.match(macReleaseHelper, /ftp_rename/);
   assert.match(macReleaseHelper, /build_dmg\.sh/);
-  assert.match(macReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-macos-latest\.dmg/);
+  assert.match(macReleaseHelper, /Sweety-macos12\.7-/);
+  assert.match(macReleaseHelper, /SWEETY_TARGET_ARCH/);
   assert.match(macReleaseHelper, /FTP_BINARY/);
   assert.match(macReleaseHelper, /ftp_size\([^)]*\)[^;]*filesize\(/s);
   assert.doesNotMatch(macReleaseHelper, /echo[^;]*(?:password|metricsToken)/i);
@@ -62,12 +63,12 @@ test('homepage deployment remains website-only and never rebuilds the desktop ap
   assert.doesNotMatch(deployHelper, /dist\/Sweety\.app/);
 });
 
-test('production update manifest advertises 2.0.0 and deploys publicly', () => {
+test('production update manifest advertises 2.0.1 and deploys publicly', () => {
   assert.deepEqual(updateManifest, {
-    latestVersion: '2.0.0',
+    latestVersion: '2.0.1',
     downloads: {
       windows: expectedWindowsDownload,
-      macos: expectedMacDownload,
+      macos: "https://sweety.tw/#download",
     },
   });
   const manifest = deployHelper.match(/\$files\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
@@ -75,7 +76,7 @@ test('production update manifest advertises 2.0.0 and deploys publicly', () => {
 });
 
 test('machine-readable homepage copy lists both desktop downloads', () => {
-  assert.match(llms, /最新版本：2\.0\.0/);
+  assert.match(llms, /最新版本：2\.0\.1/);
   assert.match(llms, /目前下載：Windows、macOS/);
   assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
@@ -152,7 +153,7 @@ test('Japanese copy covers the complete homepage and uses Japanese formatting', 
     Object.keys(homepage.copy.ja.instructions.guide),
     Object.keys(homepage.copy.en.instructions.guide),
   );
-  assert.equal(homepage.copy.ja.faq.items.length, 6);
+  assert.equal(homepage.copy.ja.faq.items.length, 7);
   assert.equal(homepage.copy.ja.hero.title, '詐欺に対して、私たちは受け身で防ぐことしかできないのでしょうか？');
   assert.equal(homepage.copy.ja.instructions.title, "Sweety 2.0 の使い方");
   assert.equal(homepage.copy.ja.notice.title, '注意事項');
@@ -167,7 +168,7 @@ test('Japanese copy covers the complete homepage and uses Japanese formatting', 
   assert.deepEqual(homepage.getDownloadDecision('macos', 'ja'), {
     enabled: true,
     href: expectedMacDownload,
-    label: 'macOS版をダウンロード',
+    label: 'Apple Silicon版をダウンロード',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'ja'), {
     enabled: true,
@@ -188,7 +189,7 @@ test('Japanese metadata and FAQ structured data come from the localized copy', (
   const faq = homepage.buildFaqStructuredData('ja');
   assert.equal(faq['@type'], 'FAQPage');
   assert.equal(faq['@id'], 'https://sweety.tw/#faq');
-  assert.equal(faq.mainEntity.length, 6);
+  assert.equal(faq.mainEntity.length, 7);
   assert.equal(faq.mainEntity[0].name, homepage.copy.ja.faq.items[0].question);
   assert.equal(
     faq.mainEntity[4].acceptedAnswer.text,
@@ -311,11 +312,11 @@ test('homepage instructions use seven single-column illustrated guide items', ()
 
   assert.equal((html.match(/class="instruction-guide-item/g) ?? []).length, 7);
   for (const [key, filename, width, height] of guideItems) {
-    assert.match(html, new RegExp(`src="images/home/${filename}"`));
+    assert.match(html, new RegExp(`src="images/home/${filename}(?:\\?v=[^"]+)?"`));
     assert.match(html, new RegExp(`data-copy="instructions\\.guide\\.${key}\\.title"`));
     assert.match(html, new RegExp(`data-copy="instructions\\.guide\\.${key}\\.body"`));
     assert.match(html, new RegExp(`data-alt="instructions\\.guide\\.${key}\\.imageAlt"`));
-    assert.match(html, new RegExp(`src="images/home/${filename}"[^>]+width="${width}"[^>]+height="${height}"`));
+    assert.match(html, new RegExp(`src="images/home/${filename}(?:\\?v=[^"]+)?"[^>]+width="${width}"[^>]+height="${height}"`));
   }
   assert.equal(
     homepage.copy['zh-TW'].instructions.triggerNotice,
@@ -391,7 +392,7 @@ test('ChatGPT perspective styles keep the expandable article readable on mobile'
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.chatgpt-perspective\s*\{[^}]*padding:/);
 });
 
-test('homepage includes 2.0 setup notes and six independent localized FAQs', () => {
+test('homepage includes 2.0 setup notes and seven independent localized FAQs', () => {
   const permissionFaqZh = homepage.copy['zh-TW'].faq.items[4];
   const permissionFaqEn = homepage.copy.en.faq.items[4];
   const languageFaqZh = homepage.copy['zh-TW'].faq.items[5];
@@ -399,9 +400,9 @@ test('homepage includes 2.0 setup notes and six independent localized FAQs', () 
   const languageFaqJa = homepage.copy.ja.faq.items[5];
 
   assert.equal(homepage.copy['zh-TW'].notice.connection, "請保持 Sweety 執行、電腦連網且不進入休眠。停止監控期間不接收新訊息，重新開始不會集中補回覆。");
-  assert.equal(homepage.copy['zh-TW'].faq.items.length, 6);
-  assert.equal(homepage.copy.en.faq.items.length, 6);
-  assert.equal(homepage.copy.ja.faq.items.length, 6);
+  assert.equal(homepage.copy['zh-TW'].faq.items.length, 7);
+  assert.equal(homepage.copy.en.faq.items.length, 7);
+  assert.equal(homepage.copy.ja.faq.items.length, 7);
   assert.deepEqual(permissionFaqZh, {
     question: "為什麼按「開始」後提示輸入 API Key？",
     answerPrefix: "請到基本設定選擇 Agnes 或 OpenAI，輸入目前所選服務的 API Key。",
@@ -424,9 +425,9 @@ test('homepage includes 2.0 setup notes and six independent localized FAQs', () 
     question: 'Sweetyはどの言語に対応していますか？',
     answer: 'Sweetyのインターフェースは繁体字中国語、英語、日本語に対応しています。ただし、AIは主に相手が使用している言語で返信します。',
   });
-  assert.equal((html.match(/<details class="faq-item"/g) ?? []).length, 6);
-  assert.equal((html.match(/<details\b/g) ?? []).length, 7);
-  assert.equal((html.match(/<summary\b/g) ?? []).length, 7);
+  assert.equal((html.match(/<details class="faq-item"/g) ?? []).length, 7);
+  assert.equal((html.match(/<details\b/g) ?? []).length, 8);
+  assert.equal((html.match(/<summary\b/g) ?? []).length, 8);
   assert.doesNotMatch(html, /<details[^>]+\bname=/);
   for (const hook of [
     'faq.title',
@@ -476,11 +477,12 @@ test('download configuration enables Windows and macOS', () => {
   assert.deepEqual(homepage.downloadConfig, {
     windows: expectedWindowsDownload,
     macos: expectedMacDownload,
+    macosIntel: 'https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.1-20261026',
   });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
     enabled: true,
     href: expectedMacDownload,
-    label: '下載 macOS 版',
+    label: '下載 Apple Silicon 版',
   });
   assert.deepEqual(homepage.getDownloadDecision('windows', 'zh-TW'), {
     enabled: true,
@@ -492,8 +494,8 @@ test('download configuration enables Windows and macOS', () => {
     href: expectedWindowsDownload,
     label: 'Download for Windows',
   });
-  assert.equal((html.match(/data-platform="(?:windows|macos)"/g) ?? []).length, 2);
-  assert.equal((html.match(/class="platform-icon[^"]*"[^>]*aria-hidden="true"/g) ?? []).length, 3);
+  assert.equal((html.match(/data-platform="(?:windows|macos|macosIntel)"/g) ?? []).length, 3);
+  assert.equal((html.match(/class="platform-icon[^"]*"[^>]*aria-hidden="true"/g) ?? []).length, 4);
   assert.equal((html.match(/class="download-action"[^>]*disabled/g) ?? []).length, 0);
   assert.match(html, new RegExp(`href="${expectedWindowsDownload.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
   assert.match(html, new RegExp(`href="${expectedMacDownload.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
@@ -564,12 +566,12 @@ test('download count sits right on large screens and stacks left on mobile', () 
   assert.match(mobile, /\.download-heading\s*\{[^}]*align-items:\s*flex-start[^}]*flex-direction:\s*column/s);
 });
 
-test('download section adds a third Git card with a safe new-tab repository link', () => {
-  assert.equal((html.match(/class="download-card/g) ?? []).length, 3);
+test('download section includes a Git card beside architecture-specific downloads with a safe new-tab repository link', () => {
+  assert.equal((html.match(/class="download-card/g) ?? []).length, 4);
   assert.match(html, /class="download-card git-card"/);
   assert.match(html, /class="platform-icon github"[^>]*aria-hidden="true"/);
   assert.match(html, /href="https:\/\/github\.com\/ericchen1972\/Sweety"[^>]+target="_blank"[^>]+rel="noopener noreferrer"[^>]*>Git<\/a>/);
-  assert.match(css, /\.download-grid[^}]*grid-template-columns:\s*repeat\(3,/s);
+  assert.match(css, /\.download-grid[^}]*grid-template-columns:\s*repeat\(2,/s);
   const mobile = css.match(/@media \(max-width:\s*768px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
   assert.match(mobile, /\.download-grid\s*\{[^}]*grid-template-columns:\s*1fr/);
 });
@@ -728,7 +730,7 @@ test('images declare intrinsic dimensions and compressed WebP sources', async ()
     assert.equal(png.readUInt32BE(16), width);
     assert.equal(png.readUInt32BE(20), height);
     const escaped = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const tag = html.match(new RegExp(`<img[^>]+src="${escaped}"[^>]*>`))?.[0] ?? '';
+    const tag = html.match(new RegExp(`<img[^>]+src="${escaped}(?:\\?v=[^"]+)?"[^>]*>`))?.[0] ?? '';
     assert.match(tag, new RegExp(`width="${width}"`));
     assert.match(tag, new RegExp(`height="${height}"`));
     assert.match(tag, /decoding="async"/);
@@ -748,7 +750,7 @@ test('images declare intrinsic dimensions and compressed WebP sources', async ()
     assert.equal(webp.toString('ascii', 0, 4), 'RIFF');
     assert.equal(webp.toString('ascii', 8, 12), 'WEBP');
     const escaped = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const tag = html.match(new RegExp(`<img[^>]+src="${escaped}"[^>]*>`))?.[0] ?? '';
+    const tag = html.match(new RegExp(`<img[^>]+src="${escaped}(?:\\?v=[^"]+)?"[^>]*>`))?.[0] ?? '';
     assert.match(tag, new RegExp(`width="${width}"`));
     assert.match(tag, new RegExp(`height="${height}"`));
     assert.match(tag, /decoding="async"/);
@@ -845,7 +847,8 @@ test('2.0 guides document OKLine, user keys, history and groups without legacy s
     assert.match(section.guide.basicSettings.body,/Agnes/);
     assert.match(section.guide.basicSettings.body,/OpenAI/);
     assert.match(section.guide.basicSettings.body,/agnes-3.0-flash/);
-    assert.match(section.guide.basicSettings.body,/20/);
+    assert.match(section.guide.basicSettings.body,/6/);
+    assert.match(section.guide.basicSettings.body,/4[–～]30/);
     assert.match(section.guide.targetList.body,/QR/);
     assert.match(section.triggerNotice,/LINE/);
   }

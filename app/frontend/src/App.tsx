@@ -6,7 +6,6 @@ import {
   Bot,
   Check,
   Clock3,
-  Download,
   Gauge,
   Info,
   LayoutDashboard,
@@ -421,7 +420,7 @@ function SettingsPage({ state, setState, copy, onToast }: { state: AppState; set
         <UserNamesField copy={copy} value={form.userNames ?? ""} onChange={userNames=>setForm({...form,userNames})}/>
         <label className="block max-w-sm">
           <span className="mb-2 block text-sm font-medium">{copy.historyLimit}</span>
-          <input type="number" min={0} max={200} step={1} required className="form-input" value={form.historyLimit ?? 20} onChange={event=>setForm({...form,historyLimit:Number(event.target.value)})} />
+          <input type="number" min={4} max={30} step={1} required className="form-input" value={form.historyLimit ?? 6} onChange={event=>setForm({...form,historyLimit:Number(event.target.value)})} />
           <span className="mt-2 block text-xs leading-5 text-slate-500 dark:text-zinc-400">{copy.historyLimitHint}</span>
         </label>
         <div>
@@ -461,28 +460,6 @@ function TargetsPage({ state, setState, locale, copy, onToast }: { state: AppSta
   const [deleting, setDeleting] = useState<Target | null>(null);
   const targets = state.targets.filter((target) => target.status === tab);
 
-  async function exportTarget(target: Target) {
-    try {
-      const exported = await api.exportTarget(target.id);
-      const payload = {
-      exported_at: new Date().toISOString(),
-      target: {
-        ...exported.target,
-        persona_name: personaName(target, state, locale),
-      },
-        messages: exported.messages,
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${safeFilename(target.name)}-conversation.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      onToast(error instanceof Error ? error.message : copy.exportFailed);
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -515,14 +492,14 @@ function TargetsPage({ state, setState, locale, copy, onToast }: { state: AppSta
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {targets.map((target) => (
-                  <TargetTableRow key={target.id} target={target} state={state} locale={locale} copy={copy} setState={setState} onEdit={setEditing} onEnd={setEnding} onRevive={(item) => setState((current) => ({ ...current, targets: current.targets.map((targetItem) => targetItem.id === item.id ? reviveTarget(targetItem) : targetItem) }))} onDelete={setDeleting} onExport={exportTarget} />
+                  <TargetTableRow key={target.id} target={target} state={state} locale={locale} copy={copy} setState={setState} onEdit={setEditing} onEnd={setEnding} onRevive={(item) => setState((current) => ({ ...current, targets: current.targets.map((targetItem) => targetItem.id === item.id ? reviveTarget(targetItem) : targetItem) }))} onDelete={setDeleting} />
                 ))}
               </tbody>
             </table>
           </div>
           <div className="grid gap-4 md:hidden">
             {targets.map((target) => (
-              <TargetMobileCard key={target.id} target={target} state={state} locale={locale} copy={copy} setState={setState} onEdit={setEditing} onEnd={setEnding} onRevive={(item) => setState((current) => ({ ...current, targets: current.targets.map((targetItem) => targetItem.id === item.id ? reviveTarget(targetItem) : targetItem) }))} onDelete={setDeleting} onExport={exportTarget} />
+              <TargetMobileCard key={target.id} target={target} state={state} locale={locale} copy={copy} setState={setState} onEdit={setEditing} onEnd={setEnding} onRevive={(item) => setState((current) => ({ ...current, targets: current.targets.map((targetItem) => targetItem.id === item.id ? reviveTarget(targetItem) : targetItem) }))} onDelete={setDeleting} />
             ))}
           </div>
         </>
@@ -548,7 +525,6 @@ interface TargetActionsProps {
   onEnd: (target: Target) => void;
   onRevive: (target: Target) => void;
   onDelete: (target: Target) => void;
-  onExport: (target: Target) => void;
 }
 
 function TargetTableRow(props: TargetActionsProps) {
@@ -598,7 +574,7 @@ function ReplyCheckbox({ target, setState, copy, locale }: { target: Target; set
   );
 }
 
-function TargetActionButtons({ target, locale, copy, onEdit, onEnd, onRevive, onDelete, onExport }: TargetActionsProps) {
+function TargetActionButtons({ target, locale, copy, onEdit, onEnd, onRevive, onDelete }: TargetActionsProps) {
   return (
     <div className="flex justify-end gap-2">
       {target.status === "active" ? (
@@ -609,7 +585,6 @@ function TargetActionButtons({ target, locale, copy, onEdit, onEnd, onRevive, on
       ) : (
         <button type="button" className="icon-button" title={copy.revive} onClick={() => onRevive(target)}><RotateCcw className="h-4 w-4" /></button>
       )}
-      <button type="button" className="icon-button" title={copy.exportLog} onClick={() => onExport(target)}><Download className="h-4 w-4" /></button>
       {target.status === "ended" ? <button type="button" className="icon-button text-red-600 dark:text-red-400" title={copy.deleteForever} onClick={() => onDelete(target)}><Trash2 className="h-4 w-4" /></button> : null}
     </div>
   );
@@ -918,8 +893,5 @@ function saveCustomItem(state: AppState, kind: CatalogKind, item: CustomCatalogI
   return { ...state, [key]: exists ? list.map((entry) => entry.id === item.id ? item : entry) : [...list, item] };
 }
 
-function safeFilename(value: string): string {
-  return value.trim().replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/^-+|-+$/gu, "") || "sweety-target";
-}
 
 export default App;

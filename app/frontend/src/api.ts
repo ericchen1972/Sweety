@@ -2,11 +2,6 @@ import type { AppState } from "./domain";
 
 type Fetcher = typeof fetch;
 
-export interface TargetExport {
-  target: Record<string, unknown>;
-  messages: Array<Record<string, unknown>>;
-}
-
 export interface UpdateStatus {
   checked: boolean;
   updateAvailable: boolean;
@@ -50,7 +45,6 @@ export function createApiClient(fetcher: Fetcher = globalThis.fetch.bind(globalT
     loadAbout: () => request<{ html: string }>("/api/about"),
     updateStatus: () => request<UpdateStatus>("/api/update"),
     saveState: (state: AppState) => request<AppState>("/api/state", { method: "PUT", body: JSON.stringify(state) }),
-    exportTarget: (targetId: string) => request<TargetExport>(`/api/targets/${encodeURIComponent(targetId)}/export`),
     monitorStatus: () => request<{ enabled: boolean; testMode: boolean; status: string }>("/api/monitor/status"),
   };
 }

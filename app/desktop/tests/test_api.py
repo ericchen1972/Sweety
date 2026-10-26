@@ -249,15 +249,6 @@ def test_rejected_persona_in_state_snapshot_leaves_state_unchanged(tmp_path):
     assert reloaded["customPersonas"] == []
 
 
-def test_export_is_json_and_dashboard_uses_persisted_data(client):
-    created = client.post("/api/targets", json=target_payload()).json()
-    exported = client.get(f"/api/targets/{created['id']}/export").json()
-    metrics = client.get("/api/dashboard").json()
-
-    assert exported["target"]["name"] == "Fraud1"
-    assert exported["messages"] == []
-    assert metrics["targetCount"] == 1
-
 
 def test_monitor_endpoints_use_controller(client):
     assert client.get("/api/monitor/status").json()["enabled"] is False

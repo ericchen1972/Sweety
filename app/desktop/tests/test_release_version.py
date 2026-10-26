@@ -12,7 +12,7 @@ DESKTOP_DIR = ROOT / "app" / "desktop"
 FRONTEND_DIR = ROOT / "app" / "frontend"
 
 
-def test_release_version_is_2_0_0_across_product_surfaces():
+def test_release_version_is_2_0_1_across_product_surfaces():
     pyproject = tomllib.loads((DESKTOP_DIR / "pyproject.toml").read_text())
     frontend_package = json.loads((FRONTEND_DIR / "package.json").read_text())
     frontend_lock = json.loads((FRONTEND_DIR / "package-lock.json").read_text())
@@ -20,12 +20,12 @@ def test_release_version_is_2_0_0_across_product_surfaces():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     windows_deploy = (ROOT / "app" / "tools" / "deploy_windows_release.php").read_text()
 
-    assert config.APP_VERSION == "2.0.0"
-    assert pyproject["project"]["version"] == "2.0.0"
-    assert frontend_package["version"] == "2.0.0"
-    assert frontend_lock["version"] == "2.0.0"
-    assert frontend_lock["packages"][""]["version"] == "2.0.0"
-    assert '"CFBundleShortVersionString": "2.0.0"' in spec
-    assert '"CFBundleVersion": "200"' in spec
-    assert "目前版本：`2.0.0`" in readme
+    assert config.APP_VERSION == "2.0.1"
+    assert pyproject["project"]["version"] == "2.0.1"
+    assert frontend_package["version"] == "2.0.1"
+    assert frontend_lock["version"] == "2.0.1"
+    assert frontend_lock["packages"][""]["version"] == "2.0.1"
+    assert '"CFBundleShortVersionString": "2.0.1"' in spec
+    assert '"CFBundleVersion": "201"' in spec
+    assert "目前版本：`2.0.1`" in readme
     assert "Sweety-Setup-1.0.2-Windows-x64.exe" in windows_deploy  # Existing Windows release remains unchanged.

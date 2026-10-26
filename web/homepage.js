@@ -9,7 +9,8 @@ export function resolveLocale(locales, fallbackLocale) {
 
 export const downloadConfig = Object.freeze({
   windows: 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.2-d1f2664b',
-  macos: 'https://sweety.tw/downloads/Sweety-macos-latest.dmg?release=2.0.0-a165b11e',
+  macos: 'https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.1-20261026',
+  macosIntel: 'https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.1-20261026',
 });
 
 export function parseDownloadTotal(payload) {
@@ -129,7 +130,7 @@ export const copy = {
       artAlt: '藍色水彩時鐘',
     },
     counter: { intro: '目前 Sweety 已經消耗了詐騙總計', days: '天', hours: '小時' },
-    download: { title: '下載 Sweety', windows: 'Windows', macOS: 'macOS', soon: '稍後提供', actions: { windows: '下載 Windows 版', macos: '下載 macOS 版' } },
+    download: { title: '下載 Sweety', windows: 'Windows', macOS: 'macOS 12.7+', soon: '稍後提供', actions: { windows: '下載 Windows 版', macos: '下載 Apple Silicon 版', macosIntel: '下載 Intel 版' } },
     instructions: {
       title: "Sweety 2.0 使用說明",
       intro: "Sweety 2.0 使用 OKLine 登入 LINE，直接接收訊息並依您選擇的人設被動回覆。先設定 AI Key、登入 LINE，再選取監控對象；AI 不會主動聯絡任何人。",
@@ -201,7 +202,7 @@ export const copy = {
         },
         basicSettings: {
           title: '基本設定',
-          body: "選擇 Agnes 或 OpenAI，填寫該服務的 API Key 與 Model；Agnes 預設 agnes-3.0-flash，下方提供兩家的 Key 申請連結。兩家的 Key 與模型分開保存，切換時不會清除。交談歷史預設 20 筆，可設 0–200 筆，0 表示不帶歷史；也可設定回覆送出前的等待時間。完成後按「儲存設定」。",
+          body: "選擇 Agnes 或 OpenAI，填寫該服務的 API Key 與 Model；Agnes 預設 agnes-3.0-flash，下方提供兩家的 Key 申請連結。兩家的 Key 與模型分開保存，切換時不會清除。交談歷史預設 6 筆，可設 4–30 筆；只保留最近訊息供 AI 參考，不長期保存完整交談，也不提供交談匯出；也可設定回覆送出前的等待時間。完成後按「儲存設定」。",
           imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
@@ -246,6 +247,7 @@ export const copy = {
           answerEmphasis: "按「儲存設定」後，確認 LINE 已登入並勾選至少一個對象，再開始監控。",
         },
         { question: 'Sweety 支援哪些語系？', answer: 'Sweety 介面支援繁中、英文及日文，但是 AI 的回覆將以對方使用的語言為主。' },
+        { question: "我是否需要保持電腦版的 LINE 登入？", answer: "不用，你只需在 Sweety 內用 QRCode 登入至 LINE 即可，不需安裝電腦版的 LINE。如有需要，電腦版的 LINE 可同時並存使用。" },
       ],
     },
     author: {
@@ -286,7 +288,7 @@ export const copy = {
       artAlt: 'Blue watercolor clock',
     },
     counter: { intro: 'So far, Sweety has consumed a total of', days: 'days', hours: 'hours' },
-    download: { title: 'Download Sweety', windows: 'Windows', macOS: 'macOS', soon: 'Coming soon', actions: { windows: 'Download for Windows', macos: 'Download for macOS' } },
+    download: { title: 'Download Sweety', windows: 'Windows', macOS: 'macOS 12.7+', soon: 'Coming soon', actions: { windows: 'Download for Windows', macos: 'Download for Apple Silicon', macosIntel: 'Download for Intel' } },
     instructions: {
       title: "Sweety 2.0 instructions",
       intro: "Sweety 2.0 signs in to LINE through OKLine, receives messages directly, and replies using your selected persona. Configure an AI key, sign in to LINE, then select targets. AI never initiates contact.",
@@ -358,7 +360,7 @@ export const copy = {
         },
         basicSettings: {
           title: 'Basic settings',
-          body: "Choose Agnes or OpenAI and enter that provider’s API Key and Model. Agnes defaults to agnes-3.0-flash. Links below the fields open both key application pages. Keys and models are saved separately and retained when switching. History defaults to 20 messages, accepts 0–200, and 0 disables history. Set a reply delay and select Save settings.",
+          body: "Choose Agnes or OpenAI and enter that provider’s API Key and Model. Agnes defaults to agnes-3.0-flash. Links below the fields open both key application pages. Keys and models are saved separately and retained when switching. History defaults to 6 messages and accepts 4–30. Only recent AI context is retained; full conversations are not archived or exported. Set a reply delay and select Save settings.",
           imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
@@ -403,6 +405,7 @@ export const copy = {
           answerEmphasis: "Save settings, sign in to LINE, and select at least one target before starting.",
         },
         { question: 'Which languages does Sweety support?', answer: 'The Sweety interface supports Traditional Chinese, English, and Japanese. AI replies will primarily use the language spoken by the other person.' },
+        { question: "Do I need to keep the LINE desktop app signed in?", answer: "No. Simply scan the QR code in Sweety to sign in to LINE. You do not need to install the LINE desktop app. If needed, you can also use the LINE desktop app alongside Sweety." },
       ],
     },
     author: {
@@ -443,7 +446,7 @@ export const copy = {
       artAlt: '青い水彩画の時計',
     },
     counter: { intro: 'Sweetyが詐欺業者に使わせた時間', days: '日', hours: '時間' },
-    download: { title: 'Sweetyをダウンロード', windows: 'Windows', macOS: 'macOS', soon: '近日公開', actions: { windows: 'Windows版をダウンロード', macos: 'macOS版をダウンロード' } },
+    download: { title: 'Sweetyをダウンロード', windows: 'Windows', macOS: 'macOS 12.7+', soon: '近日公開', actions: { windows: 'Windows版をダウンロード', macos: 'Apple Silicon版をダウンロード', macosIntel: 'Intel版をダウンロード' } },
     instructions: {
       title: "Sweety 2.0 の使い方",
       intro: "Sweety 2.0はOKLine経由でLINEにログインし、メッセージを直接受信して選択した人物設定で返信します。AI Keyを設定し、LINEにログインして対象を選んでください。AIから先に連絡することはありません。",
@@ -515,7 +518,7 @@ export const copy = {
         },
         basicSettings: {
           title: '基本設定',
-          body: "AgnesまたはOpenAIを選び、そのサービスのAPI KeyとModelを入力します。Agnesの初期モデルはagnes-3.0-flashです。各社のKey取得リンクもあります。切り替えても両社のKeyとモデルは個別に保持されます。会話履歴は初期値20件、設定範囲0～200件で、0は履歴なしです。返信の待ち時間を設定し「保存」を押してください。",
+          body: "AgnesまたはOpenAIを選び、そのサービスのAPI KeyとModelを入力します。Agnesの初期モデルはagnes-3.0-flashです。各社のKey取得リンクもあります。切り替えても両社のKeyとモデルは個別に保持されます。会話履歴は初期値6件、設定範囲4～30件です。AI用の最新メッセージのみを保持し、会話全体の長期保存やエクスポートは行いません。返信の待ち時間を設定し「保存」を押してください。",
           imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
@@ -560,6 +563,7 @@ export const copy = {
           answerEmphasis: "保存後、LINEログインと対象の選択を確認してから開始してください。",
         },
         { question: 'Sweetyはどの言語に対応していますか？', answer: 'Sweetyのインターフェースは繁体字中国語、英語、日本語に対応しています。ただし、AIは主に相手が使用している言語で返信します。' },
+        { question: "パソコン版LINEにログインしたままにする必要はありますか？", answer: "いいえ。Sweety内のQRコードを読み取ってLINEにログインするだけで利用できます。パソコン版LINEのインストールは不要です。必要に応じて、パソコン版LINEをSweetyと同時に利用することもできます。" },
       ],
     },
     author: {

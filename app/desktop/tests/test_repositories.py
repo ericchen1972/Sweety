@@ -35,7 +35,7 @@ def test_default_settings_are_created(repo):
         "user_names": "",
         "agnes_api_key": "",
         "agnes_model": "agnes-3.0-flash",
-        "history_limit": 20,
+        "history_limit": 6,
         "openai_api_key": "",
         "openai_model": "gpt-5.5",
         "check_interval_seconds": 10,

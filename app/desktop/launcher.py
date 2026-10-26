@@ -2,6 +2,13 @@ import sys
 
 
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--macos-self-check":
+        try:
+            from sweety_app.macos_checks import self_check
+            self_check(sys.argv[2])
+        except Exception:
+            raise SystemExit(1)
+        return
     if len(sys.argv) == 3 and sys.argv[1] == "--windows-self-check":
         # Avoid a modal PyInstaller error dialog trapping unattended CI checks.
         try:

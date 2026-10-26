@@ -83,7 +83,10 @@ class MonitorController:
         try:
             return self._cycle(stop)
         finally:
-            self._cycle_lock.release()
+            try:
+                self.repository.prune_context()
+            finally:
+                self._cycle_lock.release()
 
     def _cycle(self, stop):
         scope=self.store.scope; pending={}; processed=False
@@ -102,7 +105,7 @@ class MonitorController:
             target=self.repository.get_target(target_id)
             self._set_status('processing',target=target['name'])
             ids={row['incoming_id'] for row in queued_rows}
-            history_limit=int(self.repository.get_settings().get('history_limit',20))
+            history_limit=int(self.repository.get_settings().get('history_limit',6))
             history=[m for m in self.repository.list_messages(target_id) if m['id'] not in ids]
             history=history[-history_limit:] if history_limit>0 else []
             inputs=[]

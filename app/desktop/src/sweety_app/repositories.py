@@ -8,6 +8,7 @@ from typing import Any
 
 from .catalog import BASE_WEAPON_TEXT
 from .database import Database
+from .history import prune_context
 
 
 class RepositoryError(Exception):
@@ -163,6 +164,8 @@ class Repository:
     def update_settings(self, values: dict[str, Any]) -> dict[str, Any]:
         current = self.get_settings()
         current.update(values)
+        if not 4 <= int(current["history_limit"]) <= 30:
+            raise ValueError("history_limit_out_of_range")
         with self.database.connect() as connection:
             connection.execute(
                 """
@@ -177,6 +180,7 @@ class Repository:
                     current["reply_delay_min_seconds"], current["reply_delay_max_seconds"], str(current["user_names"]).strip(), current["history_limit"],
                 ),
             )
+            prune_context(connection)
         return self.get_settings()
 
     def get_system_prompt_template(self) -> str:
@@ -448,6 +452,7 @@ class Repository:
                     (created_at, created_at, utc_now(), target_id),
                 )
             row = connection.execute("SELECT * FROM messages WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            prune_context(connection)
         return dict(row)
 
     def record_exchange(self, target_id: str, incoming: str, reply: str) -> None:
@@ -471,6 +476,12 @@ class Repository:
             )
             if cursor.rowcount == 0:
                 raise NotFoundError("target_not_found")
+
+            prune_context(connection)
+
+    def prune_context(self):
+        with self.database.connect() as connection:
+            prune_context(connection)
 
     def list_messages(self, target_id: str, limit: int | None = None) -> list[dict[str, Any]]:
         with self.database.connect() as connection:
