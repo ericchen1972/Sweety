@@ -19,14 +19,17 @@ def test_codex_selection_persists_without_api_keys(tmp_path):
     assert client.get('/api/state').json()['settings']['aiProvider'] == 'codex'
 
 
-def test_detection_requires_an_executable_not_just_an_app(tmp_path):
+def test_detection_requires_an_executable_not_just_an_app(tmp_path, monkeypatch):
     from sweety_app.codex import discover_codex
     path = tmp_path / 'ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex'
     path.parent.mkdir(parents=True)
     assert discover_codex(candidates=[path], which=lambda _: None) is None
     path.write_text('#!/bin/sh\n')
+    # Windows has no POSIX executable bit; exercise the access gate explicitly.
+    monkeypatch.setattr('sweety_app.codex.os.access', lambda *_: False)
     assert discover_codex(candidates=[path], which=lambda _: None) is None
     path.chmod(0o755)
+    monkeypatch.setattr('sweety_app.codex.os.access', lambda *_: True)
     assert discover_codex(candidates=[path], which=lambda _: None) == str(path)
 
 

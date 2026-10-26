@@ -9,7 +9,7 @@ SOURCE_DIR = DESKTOP_DIR / "src" / "sweety_app"
 
 
 def test_monitor_has_no_ai_skip_branch():
-    monitor_source = (SOURCE_DIR / "monitor.py").read_text()
+    monitor_source = (SOURCE_DIR / "monitor.py").read_text(encoding='utf-8')
 
     assert "decision.should_reply" not in monitor_source
     assert "ai_decision_skipped" not in monitor_source
@@ -17,7 +17,7 @@ def test_monitor_has_no_ai_skip_branch():
 
 
 def test_startup_schedules_catalog_sync_before_metrics_report():
-    module = ast.parse((SOURCE_DIR / "bootstrap.py").read_text())
+    module = ast.parse((SOURCE_DIR / "bootstrap.py").read_text(encoding='utf-8'))
     main = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "start_services")
 
     catalog_sync_line = next(
@@ -35,7 +35,7 @@ def test_startup_schedules_catalog_sync_before_metrics_report():
 
 
 def test_metrics_config_has_no_catalog_token_fallback():
-    config_source = (SOURCE_DIR / "config.py").read_text()
+    config_source = (SOURCE_DIR / "config.py").read_text(encoding='utf-8')
     metrics_assignment = next(
         line.strip()
         for line in config_source.splitlines()
@@ -48,11 +48,11 @@ def test_metrics_config_has_no_catalog_token_fallback():
 
 
 def test_packaging_injects_build_credentials_without_defaults():
-    spec_source = (DESKTOP_DIR / "Sweety.spec").read_text()
-    config_source = (SOURCE_DIR / "config.py").read_text()
-    main_source = (SOURCE_DIR / "bootstrap.py").read_text()
-    app_build_source = (DESKTOP_DIR / "build_app.sh").read_text()
-    dmg_build_source = (DESKTOP_DIR / "build_dmg.sh").read_text()
+    spec_source = (DESKTOP_DIR / "Sweety.spec").read_text(encoding='utf-8')
+    config_source = (SOURCE_DIR / "config.py").read_text(encoding='utf-8')
+    main_source = (SOURCE_DIR / "bootstrap.py").read_text(encoding='utf-8')
+    app_build_source = (DESKTOP_DIR / "build_app.sh").read_text(encoding='utf-8')
+    dmg_build_source = (DESKTOP_DIR / "build_dmg.sh").read_text(encoding='utf-8')
 
     assert "SWEETY_AGNES_KEY" not in spec_source
     assert "SWEETY_AGNES_KEY" not in app_build_source
@@ -72,9 +72,9 @@ def test_packaging_injects_build_credentials_without_defaults():
 
 
 def test_startup_wires_one_shared_update_state_to_background_check_api_and_delegate():
-    module = ast.parse((SOURCE_DIR / "bootstrap.py").read_text())
+    module = ast.parse((SOURCE_DIR / "bootstrap.py").read_text(encoding='utf-8'))
     main = next(node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == "start_services")
-    mac_module = ast.parse((SOURCE_DIR / "__main__.py").read_text())
+    mac_module = ast.parse((SOURCE_DIR / "__main__.py").read_text(encoding='utf-8'))
     delegate = next(node for node in mac_module.body if isinstance(node, ast.ClassDef) and node.name == "SweetyAppDelegate")
 
     update_state_assignments = [

@@ -85,7 +85,7 @@ def test_text_without_desktop_audio_and_deduplicated_confirmed_stats(tmp_path):
 
 def test_manual_outgoing_is_context_only(tmp_path):
     repo,store,service,t,monitor,calls=ready(tmp_path)
-    store.ingest(incoming('own',text='manual',**{'from':'self','to':'u1'}))
+    store.ingest(incoming('own',text='manual',**{'from':'self','to':'u1','createdTime':int(time.time()*1000)-1000}))
     monitor.run_cycle(); assert calls==[]
     assert repo.get_target(t['id'])['round_trips']==0
     store.ingest(incoming('text'))
