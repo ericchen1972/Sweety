@@ -8,7 +8,7 @@ from typing import Any
 
 from .catalog import BASE_WEAPON_TEXT
 from .database import Database
-from .history import prune_context
+from .history import purge_legacy_content
 
 
 class RepositoryError(Exception):
@@ -180,7 +180,7 @@ class Repository:
                     current["reply_delay_min_seconds"], current["reply_delay_max_seconds"], str(current["user_names"]).strip(), current["history_limit"],
                 ),
             )
-            prune_context(connection)
+            purge_legacy_content(connection)
         return self.get_settings()
 
     def get_system_prompt_template(self) -> str:
@@ -435,70 +435,15 @@ class Repository:
             if cursor.rowcount == 0:
                 raise NotFoundError("custom_item_not_found")
 
-    def add_message(self, target_id: str, role: str, content: str, created_at: str | None = None) -> dict[str, Any]:
-        created_at = created_at or utc_now()
+    def record_reply(self, target_id: str, created_at: str | None = None) -> None:
+        """Count a receipt-confirmed reply without retaining its content."""
+        stamp = created_at or utc_now()
         with self.database.connect() as connection:
-            cursor = connection.execute(
-                "INSERT INTO messages(target_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-                (target_id, role, content, created_at),
-            )
-            if role == "assistant":
-                connection.execute(
-                    """
-                    UPDATE targets SET round_trips = round_trips + 1,
-                        first_reply_at = COALESCE(first_reply_at, ?), last_reply_at = ?, updated_at = ?
-                    WHERE id = ?
-                    """,
-                    (created_at, created_at, utc_now(), target_id),
-                )
-            row = connection.execute("SELECT * FROM messages WHERE id = ?", (cursor.lastrowid,)).fetchone()
-            prune_context(connection)
-        return dict(row)
-
-    def record_exchange(self, target_id: str, incoming: str, reply: str) -> None:
-        created_at = utc_now()
-        with self.database.connect() as connection:
-            connection.execute(
-                "INSERT INTO messages(target_id, role, content, created_at) VALUES (?, 'scammer', ?, ?)",
-                (target_id, incoming, created_at),
-            )
-            connection.execute(
-                "INSERT INTO messages(target_id, role, content, created_at) VALUES (?, 'assistant', ?, ?)",
-                (target_id, reply, created_at),
-            )
-            cursor = connection.execute(
-                """
-                UPDATE targets SET round_trips = round_trips + 1,
-                    first_reply_at = COALESCE(first_reply_at, ?), last_reply_at = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (created_at, created_at, created_at, target_id),
-            )
+            cursor = connection.execute("""UPDATE targets SET round_trips=round_trips+1,
+                first_reply_at=COALESCE(first_reply_at,?),last_reply_at=?,updated_at=?
+                WHERE id=?""", (stamp,stamp,utc_now(),target_id))
             if cursor.rowcount == 0:
-                raise NotFoundError("target_not_found")
-
-            prune_context(connection)
-
-    def prune_context(self):
-        with self.database.connect() as connection:
-            prune_context(connection)
-
-    def list_messages(self, target_id: str, limit: int | None = None) -> list[dict[str, Any]]:
-        with self.database.connect() as connection:
-            if limit is None:
-                rows = connection.execute(
-                    "SELECT * FROM messages WHERE target_id = ? ORDER BY created_at, id", (target_id,)
-                ).fetchall()
-            else:
-                rows = connection.execute(
-                    """
-                    SELECT * FROM (
-                        SELECT * FROM messages WHERE target_id = ? ORDER BY created_at DESC, id DESC LIMIT ?
-                    ) ORDER BY created_at, id
-                    """,
-                    (target_id, limit),
-                ).fetchall()
-        return [dict(row) for row in rows]
+                raise NotFoundError('target_not_found')
 
     def dashboard_metrics(self) -> dict[str, int]:
         with self.database.connect() as connection:

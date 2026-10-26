@@ -13,7 +13,7 @@ def png_bytes():
 
 
 @pytest.mark.parametrize('kind',[1,7])
-def test_visual_input_triggers_reply_and_stores_description(tmp_path,kind):
+def test_visual_input_triggers_reply_without_persisting_description(tmp_path,kind):
     repo,store,service,t,monitor,calls=ready(tmp_path)
     service.image_inputs=lambda raw,**kw:['data:image/jpeg;base64,'+base64.b64encode(png_bytes()).decode()]
     def ai(**kw):
@@ -23,7 +23,8 @@ def test_visual_input_triggers_reply_and_stores_description(tmp_path,kind):
     store.ingest(incoming('visual','',contentType=kind,contentMetadata={'STKID':'52002734'}))
     assert monitor.run_cycle()
     assert len(calls)==1 and calls[0]['incoming_messages'][0]['images']
-    assert any('紅色畫面' in m['content'] for m in repo.list_messages(t['id']))
+    with repo.database.connect() as c:
+        assert c.execute('SELECT COUNT(*) FROM messages').fetchone()[0]==0
     assert repo.get_target(t['id'])['round_trips']==1
     assert not store.ingest(incoming('visual','',contentType=kind))
 
@@ -49,7 +50,7 @@ def test_stop_during_download_never_calls_ai(tmp_path):
 def test_group_image_requires_existing_mention_or_name_gate(tmp_path):
     repo,store,service,t,monitor,calls,sent=group_ready(tmp_path)
     service.image_inputs=lambda *a,**kw:['data:image/jpeg;base64,abc']
-    for mid,meta,status in [('no',{},'context'),('yes',{'MENTION':json.dumps({'MENTIONEES':[{'M':'self'}]})},'pending')]:
+    for mid,meta,status in [('no',{},'archived'),('yes',{'MENTION':json.dumps({'MENTIONEES':[{'M':'self'}]})},'pending')]:
         message={**group_message('',mid=mid),'contentType':1,'contentMetadata':meta}
         store.ingest(message);assert store.row(mid)['status']==status
 

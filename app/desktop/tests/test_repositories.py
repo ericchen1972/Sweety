@@ -130,34 +130,15 @@ def test_referenced_custom_item_cannot_be_deleted_even_when_target_ended(repo):
         repo.delete_custom_item("persona", persona["id"])
 
 
-def test_messages_are_ordered_and_metrics_use_first_and_last_ai_reply(repo):
-    target = repo.create_target(target_payload())
-    start = datetime(2026, 7, 21, 8, tzinfo=timezone.utc)
-    repo.add_message(target["id"], "scammer", "你好", start.isoformat())
-    repo.add_message(target["id"], "assistant", "你好", start.isoformat())
-    repo.add_message(target["id"], "scammer", "在嗎", (start + timedelta(hours=2)).isoformat())
-    repo.add_message(target["id"], "assistant", "在", (start + timedelta(hours=2)).isoformat())
-
-    messages = repo.list_messages(target["id"])
-    refreshed = repo.get_target(target["id"])
-    metrics = repo.dashboard_metrics()
-
-    assert [message["role"] for message in messages] == ["scammer", "assistant", "scammer", "assistant"]
-    assert refreshed["round_trips"] == 2
-    assert metrics["total_round_trips"] == 2
-    assert metrics["total_duration_ms"] == 2 * 60 * 60 * 1000
-
-
-def test_record_exchange_writes_both_messages_and_counts_one_round_trip(repo):
-    target = repo.create_target(target_payload())
-
-    repo.record_exchange(target["id"], "對方訊息", "AI 回覆")
-
-    assert [(item["role"], item["content"]) for item in repo.list_messages(target["id"])] == [
-        ("scammer", "對方訊息"),
-        ("assistant", "AI 回覆"),
-    ]
-    assert repo.get_target(target["id"])["round_trips"] == 1
+def test_metrics_use_first_and_last_confirmed_reply_without_storing_content(repo):
+    target=repo.create_target(target_payload())
+    start=datetime(2026,7,21,8,tzinfo=timezone.utc)
+    repo.record_reply(target['id'],start.isoformat())
+    repo.record_reply(target['id'],(start+timedelta(hours=2)).isoformat())
+    assert repo.get_target(target['id'])['round_trips']==2
+    assert repo.dashboard_metrics()['total_duration_ms']==2*60*60*1000
+    with repo.database.connect() as c:
+        assert c.execute('SELECT COUNT(*) FROM messages').fetchone()[0]==0
 
 
 def test_installation_id_is_stable_and_is_a_uuid(repo):
@@ -171,12 +152,7 @@ def test_installation_id_is_stable_and_is_a_uuid(repo):
 def test_whole_duration_hours_truncates_successful_reply_duration(repo):
     target = repo.create_target(target_payload())
     start = datetime(2026, 7, 21, 8, tzinfo=timezone.utc)
-    repo.add_message(target["id"], "assistant", "第一則成功回覆", start.isoformat())
-    repo.add_message(
-        target["id"],
-        "assistant",
-        "最後一則成功回覆",
-        (start + timedelta(hours=2, minutes=59, seconds=59)).isoformat(),
-    )
+    repo.record_reply(target['id'],start.isoformat())
+    repo.record_reply(target['id'],(start+timedelta(hours=2,minutes=59,seconds=59)).isoformat())
 
     assert repo.whole_duration_hours() == 2

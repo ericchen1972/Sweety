@@ -18,7 +18,7 @@ const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => ''
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
 const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.2-d1f2664b';
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.1-20261026';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.2-20261026';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -63,9 +63,9 @@ test('homepage deployment remains website-only and never rebuilds the desktop ap
   assert.doesNotMatch(deployHelper, /dist\/Sweety\.app/);
 });
 
-test('production update manifest advertises 2.0.1 and deploys publicly', () => {
+test('production update manifest advertises 2.0.2 and deploys publicly', () => {
   assert.deepEqual(updateManifest, {
-    latestVersion: '2.0.1',
+    latestVersion: '2.0.2',
     downloads: {
       windows: expectedWindowsDownload,
       macos: "https://sweety.tw/#download",
@@ -76,7 +76,7 @@ test('production update manifest advertises 2.0.1 and deploys publicly', () => {
 });
 
 test('machine-readable homepage copy lists both desktop downloads', () => {
-  assert.match(llms, /最新版本：2\.0\.1/);
+  assert.match(llms, /最新版本：2\.0\.2/);
   assert.match(llms, /目前下載：Windows、macOS/);
   assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
@@ -477,7 +477,7 @@ test('download configuration enables Windows and macOS', () => {
   assert.deepEqual(homepage.downloadConfig, {
     windows: expectedWindowsDownload,
     macos: expectedMacDownload,
-    macosIntel: 'https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.1-20261026',
+    macosIntel: 'https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.2-20261026',
   });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
     enabled: true,

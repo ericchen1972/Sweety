@@ -10,7 +10,7 @@ from typing import Any
 
 from .ai import AiTimeoutError, AiRateLimitError, validate_visual_descriptions
 from .diagnostics import log_event
-from .okline_errors import SendNotStarted
+from .okline_errors import SendNotStarted, LineHistoryError
 from .group_replies import mentions_self
 
 
@@ -83,34 +83,27 @@ class MonitorController:
         try:
             return self._cycle(stop)
         finally:
-            try:
-                self.repository.prune_context()
-            finally:
-                self._cycle_lock.release()
+            self._cycle_lock.release()
 
     def _cycle(self, stop):
         scope=self.store.scope; pending={}; processed=False
-        # Save all actual input first, including manual replies and media descriptors.
+        # Pending payloads are RAM-only; the durable journal contains IDs/status only.
         for row in self.store.rows():
-            raw=json.loads(row['raw'])
-            row['incoming_id']=self.store.archive(row)
-            if row['status']=='context':
-                self.store.update(row['id'],'archived')
-            else:
-                pending.setdefault(row['target_id'],[]).append(row)
+            pending.setdefault(row['target_id'],[]).append(row)
         for target_id, queued_rows in pending.items():
             rows=queued_rows[:8]
             if not self._valid(stop,scope,target_id):
                 continue
             target=self.repository.get_target(target_id)
             self._set_status('processing',target=target['name'])
-            ids={row['incoming_id'] for row in queued_rows}
-            history_limit=int(self.repository.get_settings().get('history_limit',6))
-            history=[m for m in self.repository.list_messages(target_id) if m['id'] not in ids]
-            history=history[-history_limit:] if history_limit>0 else []
             inputs=[]
             sending=False
             try:
+                history=self.line.history_for_reply(target_id,
+                    int(self.repository.get_settings().get('history_limit',6)),
+                    exclude_ids={row['id'] for row in queued_rows},
+                    before=min(row['created'] for row in rows),
+                    allowed=lambda:self._valid(stop,scope,target_id))
                 for row in rows:
                     self.store.update(row['id'],'processing')
                     raw=json.loads(row['raw'])
@@ -130,11 +123,10 @@ class MonitorController:
                     inputs.append(item)
                 self._ai_timeout_alert=False
                 decision=self.ai.generate_reply(target=target,incoming_messages=inputs,history=history,
-                    total_messages=len(self.repository.list_messages(target_id)),settings=self.repository.get_settings())
+                    total_messages=target["round_trips"]*2+len(inputs),settings=self.repository.get_settings())
                 validate_visual_descriptions(decision,inputs)
                 if not self._valid(stop,scope,target_id):
                     continue
-                self.store.describe_media(rows,decision.media_descriptions)
                 settings=self.repository.get_settings()
                 delay=random.uniform(settings['reply_delay_min_seconds'],settings['reply_delay_max_seconds'])
                 if self.sleeper is time.sleep:
@@ -152,7 +144,7 @@ class MonitorController:
                     sending=True
                     receipt=self.line.send(target_id,decision.msg_reply,
                         allowed=lambda:self._valid(stop,scope,target_id),expected_scope=scope)
-                    self.store.complete(rows,decision.msg_reply,receipt)
+                    self.store.complete(rows,receipt)
                 processed=True
                 log_event(self.logger,'exchange_committed',target_id=target_id,receipt=receipt)
                 if self.on_exchange_committed:
@@ -164,7 +156,7 @@ class MonitorController:
                 if isinstance(exc,AiTimeoutError):self._ai_timeout_alert=True
                 if not stop.is_set():
                     if isinstance(exc,AiRateLimitError):self._set_status('ai_rate_limited',target=target['name'])
-                    else:self._set_status('error',('line_send_uncertain' if state=='uncertain' else type(exc).__name__),target['name'])
+                    else:self._set_status('error',('LINE 交談歷史讀取失敗，本次未回覆。' if isinstance(exc,LineHistoryError) else 'line_send_uncertain' if state=='uncertain' else type(exc).__name__),target['name'])
                 log_event(self.logger,'reply_failed',target_id=target_id,status=state,error=type(exc).__name__)
         if not stop.is_set() and self._status not in ('error','ai_rate_limited'):
             self._set_status('monitoring' if processed else 'waiting')

@@ -5,7 +5,7 @@ from sweety_app.api import create_app
 
 def test_directory_bind_and_bulk_state_cannot_overwrite_server_identity(tmp_path):
     repo,store,service=setup(tmp_path)
-    old=repo.create_target(assignment());repo.record_exchange(old['id'],'old','reply')
+    old=repo.create_target(assignment());repo.record_reply(old['id'])
     client=TestClient(create_app(repo.database,line_service=service))
     assert len(client.get('/api/line/contacts').json())==3
     state=client.get('/api/state').json()

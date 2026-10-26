@@ -1,6 +1,6 @@
 # Canonical macOS 12.7+ build
 
-Both Apple Silicon and Intel are built from the same main source. The previous compatibility branch is historical only. Release 2.0.1 removes conversation export, retains only 4–30 recent AI-context messages (default 6), and clears completed/abandoned journal payloads while preserving receipt deduplication and statistics.
+Both Apple Silicon and Intel are built from the same main source. The previous compatibility branch is historical only. Release 2.0.2 fetches 4–30 context messages (default6) directly from OKLine for every reply; history and pending payloads stay in RAM only. SQLite contains only delivery metadata, receipts and statistics. Legacy transcript content is purged on startup. History read/decryption failures skip AI generation and delivery.
 
 Use architecture-matched Python 3.12.11 and official Node 22.23.4, verify Node archive SHASUMS256.txt, and set:
 

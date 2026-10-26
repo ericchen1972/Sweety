@@ -9,8 +9,8 @@ export function resolveLocale(locales, fallbackLocale) {
 
 export const downloadConfig = Object.freeze({
   windows: 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.2-d1f2664b',
-  macos: 'https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.1-20261026',
-  macosIntel: 'https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.1-20261026',
+  macos: 'https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.2-20261026',
+  macosIntel: 'https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.2-20261026',
 });
 
 export function parseDownloadTotal(payload) {
@@ -202,7 +202,7 @@ export const copy = {
         },
         basicSettings: {
           title: '基本設定',
-          body: "選擇 Agnes 或 OpenAI，填寫該服務的 API Key 與 Model；Agnes 預設 agnes-3.0-flash，下方提供兩家的 Key 申請連結。兩家的 Key 與模型分開保存，切換時不會清除。交談歷史預設 6 筆，可設 4–30 筆；只保留最近訊息供 AI 參考，不長期保存完整交談，也不提供交談匯出；也可設定回覆送出前的等待時間。完成後按「儲存設定」。",
+          body: "選擇 Agnes 或 OpenAI，填寫該服務的 API Key 與 Model；Agnes 預設 agnes-3.0-flash，下方提供兩家的 Key 申請連結。兩家的 Key 與模型分開保存，切換時不會清除。交談歷史預設 6 筆，可設 4–30 筆；每次直接從 LINE 取得上下文，交談內容不存入本機資料庫，也不提供交談匯出；也可設定回覆送出前的等待時間。完成後按「儲存設定」。",
           imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
@@ -360,7 +360,7 @@ export const copy = {
         },
         basicSettings: {
           title: 'Basic settings',
-          body: "Choose Agnes or OpenAI and enter that provider’s API Key and Model. Agnes defaults to agnes-3.0-flash. Links below the fields open both key application pages. Keys and models are saved separately and retained when switching. History defaults to 6 messages and accepts 4–30. Only recent AI context is retained; full conversations are not archived or exported. Set a reply delay and select Save settings.",
+          body: "Choose Agnes or OpenAI and enter that provider’s API Key and Model. Agnes defaults to agnes-3.0-flash. Links below the fields open both key application pages. Keys and models are saved separately and retained when switching. History defaults to 6 messages and accepts 4–30. Context is fetched directly from LINE for each reply and kept only in memory; conversation content is not saved to the local database or exported. Set a reply delay and select Save settings.",
           imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {
@@ -518,7 +518,7 @@ export const copy = {
         },
         basicSettings: {
           title: '基本設定',
-          body: "AgnesまたはOpenAIを選び、そのサービスのAPI KeyとModelを入力します。Agnesの初期モデルはagnes-3.0-flashです。各社のKey取得リンクもあります。切り替えても両社のKeyとモデルは個別に保持されます。会話履歴は初期値6件、設定範囲4～30件です。AI用の最新メッセージのみを保持し、会話全体の長期保存やエクスポートは行いません。返信の待ち時間を設定し「保存」を押してください。",
+          body: "AgnesまたはOpenAIを選び、そのサービスのAPI KeyとModelを入力します。Agnesの初期モデルはagnes-3.0-flashです。各社のKey取得リンクもあります。切り替えても両社のKeyとモデルは個別に保持されます。会話履歴は初期値6件、設定範囲4～30件です。返信ごとにLINEから履歴を取得してメモリ内だけで使用し、会話内容のローカル保存やエクスポートは行いません。返信の待ち時間を設定し「保存」を押してください。",
           imageAlt: "Sweety 2.0 — Agnes API Key, agnes-3.0-flash, conversation history",
         },
         targetList: {

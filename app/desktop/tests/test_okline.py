@@ -15,6 +15,15 @@ def setup(tmp_path):
     service=LineService(repo,store)
     service.state={'status':'connected'}
     service.api=SimpleNamespace(send_text=lambda mid,text:{'id':'receipt'},mark_as_read=lambda *a:None)
+    # A fake remote LINE server keeps history separately from the local journal.
+    service.api.history=[]
+    service.api.get_recent_messages=lambda mid,count:service.api.history[-count:]
+    service.api.get_previous_messages=lambda *a,**kw:[]
+    original_ingest=store.ingest
+    def remote_ingest(message,*a,**kw):
+        service.api.history.append(dict(message))
+        return original_ingest(message,*a,**kw)
+    store.ingest=remote_ingest
     return repo,store,service
 
 
@@ -24,11 +33,11 @@ def assignment(name='Old'):
 
 def test_binding_retains_everything_and_same_names_are_distinct(tmp_path):
     repo,store,service=setup(tmp_path)
-    old=repo.create_target(assignment()); repo.record_exchange(old['id'],'before','reply')
-    before=repo.get_target(old['id']); messages=repo.list_messages(old['id'])
+    old=repo.create_target(assignment()); repo.record_reply(old['id'])
+    before=repo.get_target(old['id'])
     bound=store.bind(old['id'],'u1')
     assert bound['id']==old['id'] and bound['weapon_id']==before['weapon_id']
-    assert bound['round_trips']==1 and repo.list_messages(old['id'])==messages
+    assert bound['round_trips']==1
     other=store.add('u2',assignment())
     assert other['name']==bound['name'] and other['id']!=bound['id']
     with pytest.raises(ValueError):store.bind(other['id'],'u1')
@@ -126,8 +135,8 @@ def test_unaddressed_group_messages_are_context_only_and_retain_sender(tmp_path)
     store.ingest({'id':'group-m1','from':'u-member','to':'c1','toType':2,'text':'群組內容','contentType':0,'createdTime':int(time.time()*1000)+10})
     monitor.run_cycle()
     assert calls==[]
-    messages=repo.list_messages(target['id'])
-    assert '群組內容' in messages[0]['content'] and 'u-member' in messages[0]['content']
+    assert store.row('group-m1')['raw']=='{}'
+    assert service.api.history[0]['text']=='群組內容'
     assert repo.get_target(target['id'])['round_trips']==0
 
 
@@ -166,8 +175,8 @@ def test_start_requires_selected_provider_key_even_if_other_key_exists(tmp_path,
 def test_worker_respects_history_setting(tmp_path,limit):
     repo,store,service,target,monitor,calls=ready(tmp_path)
     repo.update_settings({'history_limit':limit})
-    for i in range(20):repo.record_exchange(target['id'],f'past-{i}',f'reply-{i}')
+    service.api.history=[incoming(f'past-{i}',f'past-{i}',createdTime=int(time.time()*1000)-10000+i) for i in range(40)]
     store.ingest(incoming('new-message'))
     assert monitor.run_cycle()
     assert len(calls[0]['history'])==limit
-    assert all(m['id']!='new-message' for m in calls[0]['history'])
+    assert all(m['content'].startswith('past-') for m in calls[0]['history'])

@@ -9,7 +9,7 @@ from typing import Iterator
 from .catalog import BASE_PERSONAS, DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
-CURRENT_SCHEMA_VERSION = 12
+CURRENT_SCHEMA_VERSION = 13
 
 
 SCHEMA = """
@@ -269,8 +269,8 @@ class Database:
                 connection.execute("ALTER TABLE settings ADD COLUMN history_limit INTEGER NOT NULL DEFAULT 6")
             if previous_version < 12:
                 connection.execute("UPDATE settings SET history_limit=6 WHERE history_limit=20 OR history_limit<4 OR history_limit>30")
-            from .history import prune_context
-            prune_context(connection)
+            from .history import purge_legacy_content
+            purge_legacy_content(connection)
             target_columns = {row["name"] for row in connection.execute("PRAGMA table_info(targets)")}
             for name, definition in (("line_kind", "TEXT NOT NULL DEFAULT 'person'"),
                                      ("line_account", "TEXT NOT NULL DEFAULT ''"),

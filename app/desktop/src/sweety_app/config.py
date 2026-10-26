@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 APP_NAME = "Sweety"
-APP_VERSION = "2.0.1"
+APP_VERSION = "2.0.2"
 API_HOST = "127.0.0.1"
 API_PORT = 8891
 MANAGEMENT_URL = f"http://{API_HOST}:{API_PORT}/"

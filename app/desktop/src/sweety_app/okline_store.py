@@ -3,6 +3,7 @@ import hashlib
 import json
 import time
 import uuid
+import threading
 
 from .group_replies import should_reply_in_group
 
@@ -22,6 +23,8 @@ class LineStore:
         self.repo = repo
         self.account = ''
         self.since = 0
+        self._payloads = {}
+        self._guard = threading.RLock()
         with repo.database.connect() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS line_contacts (
@@ -51,7 +54,10 @@ class LineStore:
         return self.account
 
     def activate(self, account):
-        self.account = str(account)
+        with self._guard:
+            if self.account != str(account):
+                self.archive_pending()
+            self.account = str(account)
 
     def refresh_contacts(self, contacts):
         if not self.scope:
@@ -121,7 +127,7 @@ class LineStore:
             db.execute('INSERT INTO line_cursor VALUES(?,?) ON CONFLICT(account) DO UPDATE SET revision=max(revision,excluded.revision)',(self.scope,int(revision)))
 
     def ingest(self, message, revision=None, *, context_only=False):
-        with self.repo.database.connect() as db:
+        with self._guard, self.repo.database.connect() as db:
             self.advance(revision)
             if not self.scope or not message.get('id'):
                 return False
@@ -138,13 +144,20 @@ class LineStore:
             eligible=(group_trigger and not context_only and not outgoing and target['status']=='active' and target['reply_enabled']
                       and stamp>=self.since and int(message.get('contentType') or 0) in (0,1,7) and message_content(message))
             inserted=bool(db.execute('INSERT OR IGNORE INTO line_inbox(account,id,target_id,raw,status,created) VALUES(?,?,?,?,?,?)',
-                (self.scope,str(message['id']),target['id'],json.dumps(message,ensure_ascii=False),'pending' if eligible else 'context',stamp)).rowcount)
+                (self.scope,str(message['id']),target['id'],'{}','pending' if eligible else 'archived',stamp)).rowcount)
+            if inserted and eligible:
+                self._payloads[(self.scope,str(message["id"]))] = dict(message)
             return inserted
 
-    def rows(self, statuses=('pending','context')):
+    def rows(self, statuses=('pending',)):
         marks=','.join('?' for _ in statuses)
-        with self.repo.database.connect() as db:
-            return [dict(r) for r in db.execute(f'SELECT * FROM line_inbox WHERE account=? AND status IN ({marks}) ORDER BY created,rowid',(self.scope,*statuses))]
+        with self._guard, self.repo.database.connect() as db:
+            result=[]
+            for r in db.execute(f'SELECT * FROM line_inbox WHERE account=? AND status IN ({marks}) ORDER BY created,rowid',(self.scope,*statuses)):
+                payload=self._payloads.get((self.scope,r['id']))
+                if payload is not None:
+                    result.append({**dict(r),'raw':json.dumps(payload,ensure_ascii=False)})
+            return result
 
     def row(self, mid):
         with self.repo.database.connect() as db:
@@ -152,61 +165,26 @@ class LineStore:
         return dict(r) if r else None
 
     def update(self, mid, status, *, receipt='', error=''):
-        with self.repo.database.connect() as db:
+        with self._guard, self.repo.database.connect() as db:
             db.execute('UPDATE line_inbox SET status=?,receipt=?,error=? WHERE account=? AND id=?',(status,receipt,error,self.scope,mid))
-
-    def archive(self, row):
-        """Save real input once, without incrementing completed-reply statistics."""
-        with self.repo.database.connect() as db:
-            current=self.row(row['id'])
-            if not current or current['incoming_id']:
-                return current['incoming_id'] if current else None
-            raw=json.loads(row['raw']);content=message_content(raw)
-            if int(raw.get('toType') or 0)!=0:
-                content=f"[{raw.get('from', '?')}] {content}"
-            if not content:
-                return None
-            role='assistant' if raw.get('from')==self.account else 'scammer'
-            cursor=db.execute('INSERT INTO messages(target_id,role,content,created_at) VALUES(?,?,?,?)',
-                             (row['target_id'],role,content,time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(row['created']/1000))))
-            db.execute('UPDATE line_inbox SET incoming_id=? WHERE account=? AND id=?',(cursor.lastrowid,self.scope,row['id']))
-            return cursor.lastrowid
-
-    def describe_media(self, rows, descriptions):
-        by_id={item.message_id:item.description for item in descriptions}
-        with self.repo.database.connect() as db:
-            for row in rows:
-                if row['id'] not in by_id:
-                    continue
-                raw=json.loads(row['raw'])
-                kind=int(raw.get('contentType') or 0)
-                if kind not in (1,7):
-                    continue
-                content=('貼圖' if kind==7 else '圖片')+'辨識：'+by_id[row['id']]
-                if int(raw.get('toType') or 0)!=0:
-                    content=f"[{raw.get('from','?')}] {content}"
-                db.execute('UPDATE messages SET content=? WHERE id=? AND target_id=?',
-                           (content,row['incoming_id'],row['target_id']))
+            if status in ('sent','archived','failed','uncertain'):
+                self._payloads.pop((self.scope,mid),None)
 
     def recover(self):
-        with self.repo.database.connect() as db:
+        with self._guard, self.repo.database.connect() as db:
             db.execute("UPDATE line_inbox SET status='uncertain',error='interrupted_during_send' WHERE account=? AND status='sending'",(self.scope,))
-            db.execute("UPDATE line_inbox SET status='context' WHERE account=? AND status IN ('pending','processing')",(self.scope,))
             self.archive_pending()
 
     def archive_pending(self):
-        with self.repo.database.connect() as db:
-            db.execute("UPDATE line_inbox SET status='context' WHERE account=? AND status IN ('pending','processing')",(self.scope,))
-            for row in self.rows(('context',)):
-                self.archive(row)
-                self.update(row['id'],'archived')
-            self.repo.prune_context()
+        with self._guard, self.repo.database.connect() as db:
+            db.execute("UPDATE line_inbox SET status='archived' WHERE account=? AND status IN ('pending','processing','context')",(self.scope,))
+            self._payloads={key:value for key,value in self._payloads.items() if key[0]!=self.scope}
 
-    def complete(self, rows, reply, receipt):
-        with self.repo.database.connect() as db:
+    def complete(self, rows, receipt):
+        with self._guard, self.repo.database.connect() as db:
             if db.execute('SELECT 1 FROM line_sent WHERE account=? AND id=?',(self.scope,receipt)).fetchone():
                 return
-            self.repo.add_message(rows[0]['target_id'],'assistant',reply)
+            self.repo.record_reply(rows[0]['target_id'])
             db.execute('INSERT INTO line_sent VALUES(?,?)',(self.scope,receipt))
             for row in rows:
                 self.update(row['id'],'sent',receipt=receipt)

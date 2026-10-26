@@ -212,6 +212,23 @@ class LineService:
             if not self.connected(): raise ValueError('line_login_required')
             return self.api.decrypt_message(raw) if raw.get('chunks') else raw
 
+    def history_for_reply(self,target_id,limit,*,exclude_ids,before,allowed=lambda:True):
+        from .line_history import read_history
+        from .okline_errors import LineHistoryError
+        try:
+            with self.lock:
+                if not self.connected() or not allowed():
+                    raise LineHistoryError('history_cancelled')
+                target=self.repo.get_target(target_id)
+                if target not in self.store.targets():
+                    raise LineHistoryError('history_target_unavailable')
+                return read_history(self.api,target,self.store.account,limit,set(exclude_ids),
+                    before,self.decode,allowed)
+        except LineHistoryError:
+            raise
+        except Exception as exc:
+            raise LineHistoryError('line_history_unavailable') from exc
+
     def image_inputs(self, raw, *, allowed=lambda: True):
         from .visual_media import download_image, download_sticker, encode_images, MediaError
         with self.lock:
