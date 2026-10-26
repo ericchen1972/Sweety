@@ -8,7 +8,7 @@ import time
 import logging
 from .diagnostics import log_event
 from .okline_session import sdk_factory
-from .okline_errors import SendNotStarted
+from .okline_errors import SendNotStarted, login_error_details
 
 
 def avatar_url(picture_path):
@@ -122,7 +122,7 @@ class LineService:
             with self.guard:
                 if generation==self.generation:
                     self.api=None;self.store.activate('')
-                    self.state={'status':'error','qr':'','pin':'','error':'line_login_failed: '+type(exc).__name__}
+                    self.state={'status':'error','qr':'','pin':'','error':'line_login_failed: '+login_error_details(exc)}
             if api is not None: api.close()
         finally:
             if self.login_api is api: self.login_api=None
@@ -161,7 +161,7 @@ class LineService:
                 if api: api.close()
                 with self.guard:
                     if generation==self.generation:
-                        self.state={'status':'error','error':'line_restore_failed: '+type(exc).__name__,'qr':'','pin':''}
+                        self.state={'status':'error','error':'line_restore_failed: '+login_error_details(exc),'qr':'','pin':''}
         threading.Thread(target=run,daemon=True,name='Sweety-LineRestore').start()
 
     def disconnect(self,clear=True):

@@ -180,3 +180,29 @@ def test_worker_respects_history_setting(tmp_path,limit):
     assert monitor.run_cycle()
     assert len(calls[0]['history'])==limit
     assert all(m['content'].startswith('past-') for m in calls[0]['history'])
+
+
+def test_login_failure_keeps_message_cause_and_traceback(tmp_path):
+    _,store,service=setup(tmp_path)
+    class LineAuthError(Exception): pass
+    def fail_login(**kwargs):
+        try:
+            raise OSError('TLS handshake failed on Windows')
+        except OSError as cause:
+            error=LineAuthError('QR session rejected: code=401')
+            error.reason='Device certificate rejected'
+            error.status=401
+            error.path='/api/auth/qr'
+            raise error from cause
+    service.factory=lambda:SimpleNamespace(qr_login=fail_login,close=lambda:None)
+    service.state={'status':'connecting','expiresAt':time.time()+180}
+    service._login(service.generation)
+    error=service.snapshot()['error']
+    assert 'QR session rejected: code=401' in error
+    assert 'TLS handshake failed on Windows' in error
+    assert 'Device certificate rejected' in error
+    assert '/api/auth/qr' in error
+    assert 'status=401' in error
+    assert 'Traceback' in error
+    assert 'fail_login' in error
+    assert service.snapshot()['qr']=='' and service.snapshot()['pin']==''
