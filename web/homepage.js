@@ -8,9 +8,9 @@ export function resolveLocale(locales, fallbackLocale) {
 }
 
 export const downloadConfig = Object.freeze({
-  windows: 'https://sweety.tw/downloads/Sweety-Windows-Setup-latest.exe?release=1.0.2-d1f2664b',
-  macos: 'https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.2-20261026',
-  macosIntel: 'https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.2-20261026',
+  windows: 'https://sweety.tw/downloads/Sweety-Windows.zip?release=2.0.2-20261027',
+  macos: 'https://sweety.tw/downloads/Sweety.dmg?release=2.0.2-20261027',
+  macosIntel: 'https://sweety.tw/downloads/Sweety-Intel.dmg?release=2.0.2-20261027',
 });
 
 export function parseDownloadTotal(payload) {
