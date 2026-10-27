@@ -9,6 +9,7 @@ ok_data, ok_binaries, ok_imports = collect_all('okline')
 datas = ok_data + [
     (str(BUILD / 'frontend'), 'frontend'),
     (str(ROOT / 'web/images/logo.png'), '.'),
+    (str(ROOT / 'assets/panel-background.png'), 'assets'),
     (str(BUILD / 'runtime-config.json'), '.'),
     (str(BUILD / 'third-party'), 'third-party'),
 ]

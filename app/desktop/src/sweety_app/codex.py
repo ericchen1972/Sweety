@@ -161,8 +161,10 @@ class CodexService:
             command += ['--disable', feature]
         self.work_root.mkdir(parents=True, exist_ok=True)
         try:
+            from .background_processes import background_options
             process = self.process_factory(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL, text=True, bufsize=1, cwd=str(self.work_root))
+                stderr=subprocess.DEVNULL, text=True, bufsize=1, cwd=str(self.work_root),
+                **background_options())
         except OSError as exc:
             raise CodexError('codex_unavailable') from exc
         rpc = _Rpc(process, self.timeout if timeout is None else timeout)

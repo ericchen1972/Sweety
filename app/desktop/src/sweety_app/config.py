@@ -70,6 +70,11 @@ def normalize_locale(identifier: str | None) -> str:
 
 
 def preferred_locale(fallback: str | None = None) -> str:
+    if sys.platform == 'win32':
+        import ctypes
+        # Python's locale describes regional formatting, not Windows display language.
+        language = ctypes.WinDLL('kernel32').GetUserDefaultUILanguage()
+        return windows_ui_locale(language)
     try:
         from Foundation import NSUserDefaults
 
@@ -79,6 +84,11 @@ def preferred_locale(fallback: str | None = None) -> str:
     except ImportError:
         pass
     return normalize_locale(fallback)
+
+
+def windows_ui_locale(language_id: int) -> str:
+    # Traditional Chinese: Taiwan, Hong Kong, Macao and the neutral Hant language.
+    return 'zh-TW' if language_id in {0x0404, 0x0C04, 0x1404, 0x7C04} else 'en'
 
 
 def about_url_for_locale(locale: str) -> str:

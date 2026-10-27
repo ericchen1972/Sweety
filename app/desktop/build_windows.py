@@ -1,4 +1,4 @@
-"""Build a self-contained Windows x64 onedir test ZIP (run on Windows)."""
+"""Build a self-contained Windows x64 directory and optional ZIP (run on Windows)."""
 from __future__ import annotations
 
 import argparse
@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tomllib
 import urllib.request
 import zipfile
 
@@ -18,6 +19,8 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--logging', choices=('0', '1'), default='1',
                         help='SWEETY_LOG_ENABLED bundled value: tests=1, releases=0')
+    parser.add_argument('--no-zip', action='store_true',
+                        help='Build the portable Sweety directory without creating a ZIP')
     args = parser.parse_args()
     if sys.platform != 'win32' or sys.maxsize <= 2**32:
         parser.error('Build using 64-bit Python on Windows.')
@@ -62,9 +65,21 @@ def main():
         '--noconfirm', '--clean', '--workpath', str(build / 'work'),
         '--distpath', str(build / 'dist')], cwd=desktop, env=environment, check=True)
     package = build / 'dist/Sweety'
-    shutil.copy2(desktop / 'WINDOWS-README.txt', package / 'README.txt')
+    readme = (desktop / 'WINDOWS-README.txt').read_text(encoding='utf-8')
+    if args.logging == '1':
+        readme = readme.replace('正式版預設關閉診斷日誌。', '此測試建置已開啟診斷日誌。')
+        readme = readme.replace('Diagnostic logging is disabled by default.',
+                                'Diagnostic logging is enabled in this test build.')
+    (package / 'README.txt').write_text(readme, encoding='utf-8')
+    if args.no_zip:
+        print(package)
+        return
     # Keep the archive as a single top-level folder; never copy developer sessions.
-    archive_path = Path(shutil.make_archive(str(build / 'Sweety-2.0.0-Windows-x64-portable-test'),
+    version = tomllib.loads((desktop / 'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+    # Preserve the test artifact name expected by the existing CI workflow.
+    archive_name = ('Sweety-2.0.0-Windows-x64-portable-test' if args.logging == '1'
+                    else f'Sweety-{version}-Windows-x64-portable')
+    archive_path = Path(shutil.make_archive(str(build / archive_name),
                         'zip', root_dir=build / 'dist', base_dir='Sweety'))
     digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
     archive_path.with_suffix('.zip.sha256').write_text(f'{digest}  {archive_path.name}\n', encoding='ascii')

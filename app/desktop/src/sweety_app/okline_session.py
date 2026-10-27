@@ -70,6 +70,8 @@ def enforce_sse_utf8(transport):
 
 
 def sdk_factory(vault=None, saved=None):
+    from .background_processes import configure_line_background_processes
+    configure_line_background_processes()
     from okline import OkLine
     from okline.transport import LineConfig
     from okline.session import Session
