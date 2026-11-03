@@ -8,7 +8,7 @@ export function resolveLocale(locales, fallbackLocale) {
 }
 
 export const downloadConfig = Object.freeze({
-  windows: 'https://sweety.tw/downloads/Sweety-Windows.zip?release=2.0.2-20261027',
+  windows: 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.2.exe',
   macos: 'https://sweety.tw/downloads/Sweety.dmg?release=2.0.2-20261027',
   macosIntel: 'https://sweety.tw/downloads/Sweety-Intel.dmg?release=2.0.2-20261027',
 });

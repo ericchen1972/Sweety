@@ -127,8 +127,8 @@ try {
     $result->free();
 
     foreach (['20-35', '35-50', '50-65', '65+'] as $ageGroup) {
-        if (($genderCounts[$ageGroup]['female'] ?? 0) !== 3 || ($genderCounts[$ageGroup]['male'] ?? 0) !== 3) {
-            throw new RuntimeException("The {$ageGroup} catalog must contain three female and three male personas.");
+        if (($genderCounts[$ageGroup]['female'] ?? 0) < 3 || ($genderCounts[$ageGroup]['male'] ?? 0) < 3) {
+            throw new RuntimeException("The {$ageGroup} catalog must retain at least three female and three male personas.");
         }
     }
 
@@ -138,7 +138,7 @@ try {
          LEFT JOIN base_persona_weapons pw ON pw.persona_id = p.id
          LEFT JOIN base_persona_examples e ON e.persona_id = p.id
          JOIN catalog_age_groups a ON a.id = p.age_group_id
-         WHERE a.slug = '20-35'
+         WHERE a.slug = '20-35' AND p.slug IN ('cautious-accounting-assistant', 'busy-nail-salon-assistant', 'home-freelance-designer', 'night-shift-convenience-clerk', 'junior-sales-representative', 'reserved-freelance-photographer')
          GROUP BY p.id, p.slug"
     );
 
@@ -165,7 +165,7 @@ try {
     );
     $readableStylePersonas = (int) $result->fetch_assoc()['total'];
     $result->free();
-    if ($readableStylePersonas !== 24) {
+    if ($readableStylePersonas !== (int) '__EXPECTED_PERSONAS__') {
         $result = $mysqli->query(
             "SELECT COUNT(*) AS total,
                     MIN(CHAR_LENGTH(TRIM(content_zh_tw))) AS min_zh,
@@ -175,7 +175,7 @@ try {
         $contentStats = $result->fetch_assoc();
         $result->free();
         throw new RuntimeException(sprintf(
-            'Expected detailed localized content for all 24 personas; qualifying=%d total=%d min_zh=%d min_en=%d.',
+            'Expected detailed localized content for all canonical personas; qualifying=%d total=%d min_zh=%d min_en=%d.',
             $readableStylePersonas,
             (int) $contentStats['total'],
             (int) $contentStats['min_zh'],
@@ -189,7 +189,7 @@ try {
         'counts' => $counts,
         'checks' => [
             'age_groups_verified' => 4,
-            'personas_per_age_group' => 6,
+            'minimum_personas_per_age_group' => 6,
             'weapons_per_persona' => 3,
             'examples_per_persona' => 4,
             'detailed_personas' => $readableStylePersonas,

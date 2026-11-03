@@ -17,13 +17,13 @@ describe("bundled persona catalog contract", () => {
     }
   });
 
-  it("contains six detailed personas in every age group with balanced gender", () => {
-    expect(basePersonas).toHaveLength(24);
+  it("preserves the original personas and adds the four parody characters", () => {
+    expect(basePersonas).toHaveLength(28);
     for (const ageGroup of ["20-35", "35-50", "50-65", "65+"] as const) {
       const group = basePersonas.filter((persona) => persona.ageGroup === ageGroup);
-      expect(group).toHaveLength(6);
-      expect(group.filter((persona) => persona.gender === "female")).toHaveLength(3);
-      expect(group.filter((persona) => persona.gender === "male")).toHaveLength(3);
+      expect(group).toHaveLength({ "20-35": 7, "35-50": 8, "50-65": 6, "65+": 7 }[ageGroup]);
+      expect(group.filter((persona) => persona.gender === "female").length).toBeGreaterThanOrEqual(3);
+      expect(group.filter((persona) => persona.gender === "male").length).toBeGreaterThanOrEqual(3);
     }
     for (const persona of basePersonas) {
       expect(Array.from(persona.content["zh-TW"]).length).toBeGreaterThanOrEqual(180);

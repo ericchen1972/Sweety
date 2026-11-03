@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -38,3 +39,30 @@ def test_generator_keeps_ai_persona_source_in_traditional_chinese():
     source = 'BASE_WEAPON_TEXT = {"persona-only": ""}\n'
     generated = generator.update_catalog_module(source)
     assert 'persona["content"]["zh-TW"]' in generated
+
+
+def test_live_refresh_accepts_expanded_modern_catalog_without_rewriting_content(tmp_path, monkeypatch):
+    personas = json.loads(generator.CANONICAL.read_text())
+    canonical = tmp_path / "personas.json"
+    canonical.write_text(json.dumps(personas))
+    monkeypatch.setattr(generator, "CANONICAL", canonical)
+    class Response:
+        def raise_for_status(self): pass
+        def json(self): return {"basePersonas": personas}
+    monkeypatch.setattr(generator.requests, "get", lambda *a, **kw: Response())
+    assert generator.refresh_from_live() == personas
+
+
+def test_incomplete_live_refresh_preserves_canonical_file(tmp_path, monkeypatch):
+    import pytest
+    canonical = tmp_path / "personas.json"
+    original = generator.CANONICAL.read_text()
+    canonical.write_text(original)
+    monkeypatch.setattr(generator, "CANONICAL", canonical)
+    class Response:
+        def raise_for_status(self): pass
+        def json(self): return {"basePersonas": []}
+    monkeypatch.setattr(generator.requests, "get", lambda *a, **kw: Response())
+    with pytest.raises(ValueError):
+        generator.refresh_from_live()
+    assert canonical.read_text() == original

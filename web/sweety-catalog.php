@@ -81,9 +81,9 @@ try {
     }
 
     $rows = $db->rawQuery(
-        "SELECT p.slug, p.gender, p.name_zh_tw, p.name_en,
+        "SELECT p.slug, p.gender, p.name_zh_tw, p.name_en, p.name_ja,
                 a.slug AS age_group_slug,
-                p.content_zh_tw, p.content_en, p.image_path
+                p.content_zh_tw, p.content_en, p.content_ja, p.image_path
          FROM base_personas p
          JOIN catalog_age_groups a ON a.id = p.age_group_id
          WHERE a.slug IN ('20-35', '35-50', '50-65', '65+')

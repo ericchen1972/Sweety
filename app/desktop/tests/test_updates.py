@@ -41,17 +41,13 @@ class ExplosiveTruthinessSession(FakeSession):
 
 
 def manifest(version="1.10.0", downloads=None):
-    return {
-        "latestVersion": version,
-        "downloads": (
-            {
-                "windows": "https://downloads.example.test/Sweety.exe",
-                "macos": "https://downloads.example.test/Sweety.dmg",
-            }
-            if downloads is None
-            else downloads
-        ),
-    }
+    downloads = {"windows": "https://downloads.example.test/Sweety.exe", "macos": "https://downloads.example.test/Sweety.dmg"} if downloads is None else downloads
+    return {"platforms": {key: {"latestVersion": version, "downloadUrl": url} for key, url in downloads.items()}}
+
+
+@pytest.fixture(autouse=True)
+def windows_runtime(monkeypatch):
+    monkeypatch.setattr(updates.sys, "platform", "win32")
 
 
 def test_remote_update_url_uses_stripped_environment_value(monkeypatch):
@@ -93,8 +89,7 @@ def test_normalize_manifest_marks_newer_numeric_version_available_in_supported_o
     result = normalize_manifest(
         manifest(
             downloads={
-                "macos": "https://downloads.example.test/Sweety.dmg",
-                "windows": "https://downloads.example.test/Sweety.exe",
+                    "windows": "https://downloads.example.test/Sweety.exe",
             }
         ),
         "1.9.9",
@@ -106,7 +101,6 @@ def test_normalize_manifest_marks_newer_numeric_version_available_in_supported_o
         "latestVersion": "1.10.0",
         "downloads": {
             "windows": "https://downloads.example.test/Sweety.exe",
-            "macos": "https://downloads.example.test/Sweety.dmg",
         },
     }
 
@@ -137,7 +131,7 @@ def test_normalize_manifest_rejects_http_download_urls():
 def test_normalize_manifest_allows_one_supported_platform():
     assert normalize_manifest(
         manifest(downloads={"macos": "https://downloads.example.test/Sweety.dmg"}),
-        "1.0.0",
+        "1.0.0", platform="macos",
     ) == {
         "checked": True,
         "updateAvailable": True,

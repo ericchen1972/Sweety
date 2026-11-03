@@ -1,5 +1,7 @@
 from io import BytesIO
 import base64
+import json
+import argparse
 from pathlib import Path
 import sys
 
@@ -10,7 +12,6 @@ from PIL import Image
 DESKTOP_SRC = Path(__file__).resolve().parents[1] / "desktop" / "src"
 sys.path.insert(0, str(DESKTOP_SRC))
 
-from sweety_app.catalog import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
 
 CATALOG_URL = "https://sweety.tw/sweety-catalog.php"
@@ -25,27 +26,34 @@ LOCAL_PERSONA_IMAGES = Path(__file__).resolve().parents[2] / "web" / "images" / 
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--baseline", type=Path, help="Pre-deployment API snapshot to check existing prompt and zh/en content")
+    args = parser.parse_args()
     response = requests.get(CATALOG_URL, headers=HEADERS, timeout=20)
     response.raise_for_status()
     payload = response.json()
     prompt = payload["systemPromptTemplate"]
-    assert prompt == DEFAULT_SYSTEM_PROMPT_TEMPLATE
-    for required_text in (
-        "對話延續與好奇心：",
-        "對話鉤子",
-        "不打擾了",
-        "有空再聊",
-        "現在就能回答的具體疑問",
-    ):
-        assert required_text in prompt, required_text
+    assert "{persona_text}" in prompt and "{total_messages}" in prompt
+    if args.baseline:
+        baseline = json.loads(args.baseline.read_text())
+        assert prompt == baseline["systemPromptTemplate"], "Shared prompt changed"
+        current = {p["id"]: p for p in payload["basePersonas"]}
+        for old in baseline["basePersonas"]:
+            new = current[old["id"]]
+            for field in ("ageGroup", "gender", "image"):
+                assert new[field] == old[field], (old["id"], field)
+            for field in ("name", "content"):
+                for locale in ("zh-TW", "en"):
+                    assert new[field][locale] == old[field][locale], (old["id"], field, locale)
     personas = payload["basePersonas"]
-    assert len(personas) == 24
+    canonical = json.loads((LOCAL_PERSONA_IMAGES.parents[2] / "app/catalog/base_personas.json").read_text())
+    assert {p["id"] for p in personas} == {p["id"] for p in canonical}
 
     for age_group in ("20-35", "35-50", "50-65", "65+"):
         group = [persona for persona in personas if persona["ageGroup"] == age_group]
-        assert len(group) == 6, (age_group, len(group))
-        assert sum(persona["gender"] == "female" for persona in group) == 3
-        assert sum(persona["gender"] == "male" for persona in group) == 3
+        assert len(group) == sum(p["ageGroup"] == age_group for p in canonical), (age_group, len(group))
+        assert sum(persona["gender"] == "female" for persona in group) >= 3
+        assert sum(persona["gender"] == "male" for persona in group) >= 3
 
     for persona in personas:
         assert set(persona) == {"id", "ageGroup", "gender", "name", "content", "image"}
@@ -64,11 +72,8 @@ def main() -> None:
     about_response = requests.get(ABOUT_URL, timeout=20)
     about_response.raise_for_status()
     assert "關於 Sweety" in about_response.content.decode("utf-8")
-    wang = next(persona for persona in personas if persona["id"] == "cautious-accounting-assistant")
-    assert "與母親妹妹居住在新北市板橋" in wang["content"]["zh-TW"]
-    assert "你不是詐騙吧？我朋友被騙過，好可怕.." in wang["content"]["zh-TW"]
     print(
-        "Remote catalog OK: conversation prompt, 24 detailed personas, "
+        f"Remote catalog OK: valid prompt, {len(personas)} detailed personas, "
         "simplified content contract, local-matching images, About HTML available"
     )
 

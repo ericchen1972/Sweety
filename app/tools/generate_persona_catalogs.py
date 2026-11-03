@@ -175,27 +175,25 @@ def refresh_from_live() -> list[dict[str, Any]]:
         item["id"]: item
         for item in json.loads(CANONICAL.read_text(encoding="utf-8"))
     } if CANONICAL.exists() else {}
+    ids = [item["id"] for item in live]
+    if not ids or len(set(ids)) != len(ids) or not set(existing).issubset(ids):
+        raise ValueError("live catalog is empty, duplicated or omits existing personas")
     result = []
     for index, item in enumerate(live):
+        for field in ("name", "content"):
+            for locale in SUPPORTED_LOCALES:
+                value = item.get(field, {}).get(locale)
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError(f"{item['id']} missing {field}.{locale}")
         result.append({
             "id": item["id"],
             "ageGroup": item["ageGroup"],
             "gender": item["gender"],
-            "name": {
-                "zh-TW": item["name"]["zh-TW"],
-                "en": item["name"]["en"],
-                "ja": item.get("name", {}).get("ja") or existing[item["id"]]["name"]["ja"],
-            },
-            "content": {
-                "zh-TW": canonical_content(item, "zh-TW"),
-                "en": canonical_content(item, "en"),
-                "ja": existing[item["id"]]["content"]["ja"],
-            },
+            "name": item["name"],
+            "content": item["content"],
             "image": f"/images/personas/{item['id']}.jpg",
-            "sortOrder": (index + 1) * 10,
+            "sortOrder": existing.get(item["id"], {}).get("sortOrder", (index + 1) * 10),
         })
-    if len(result) != 24 or set(IDENTITIES) != {item["id"] for item in result}:
-        raise RuntimeError("live catalog does not match the expected 24 personas")
     CANONICAL.parent.mkdir(parents=True, exist_ok=True)
     CANONICAL.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return result
@@ -220,8 +218,8 @@ def update_catalog_module(catalog_module: str) -> str:
 
 
 def generate(personas: list[dict[str, Any]]) -> None:
-    if len(personas) != 24:
-        raise ValueError("persona catalog must contain exactly 24 entries")
+    if not personas or len({p["id"] for p in personas}) != len(personas):
+        raise ValueError("persona catalog must contain unique entries")
     for persona in personas:
         for field in ("name", "content"):
             localized = persona.get(field)

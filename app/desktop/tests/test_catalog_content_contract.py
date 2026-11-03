@@ -12,7 +12,7 @@ def test_base_personas_do_not_repeat_shared_system_policy():
 
 
 def test_base_personas_include_complete_japanese_localization():
-    assert len(BASE_PERSONAS) == 24
+    assert len(BASE_PERSONAS) == 28
     for persona in BASE_PERSONAS:
         assert persona["name"]["ja"].strip()
         assert len(persona["content"]["ja"].strip()) >= 180

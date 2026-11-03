@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from threading import Lock
 from typing import Any, Protocol
 from urllib.parse import urlparse
@@ -25,32 +26,29 @@ def parse_version(value: Any) -> tuple[int, int, int] | None:
     return tuple(int(part) for part in match.groups())
 
 
-def normalize_manifest(payload: Any, current_version: Any) -> dict[str, Any]:
-    if not isinstance(payload, dict):
+def normalize_manifest(payload: Any, current_version: Any, *, platform: str | None = None) -> dict[str, Any]:
+    platform = platform if platform is not None else {"win32": "windows", "darwin": "macos"}.get(sys.platform)
+    if platform not in SUPPORTED_PLATFORMS or not isinstance(payload, dict):
         return _no_update()
-
-    latest_version = payload.get("latestVersion")
+    platforms = payload.get("platforms")
+    if not isinstance(platforms, dict):
+        return _no_update()
+    release = platforms.get(platform)
+    if not isinstance(release, dict):
+        return _no_update()
+    latest_version = release.get("latestVersion")
     parsed_current = parse_version(current_version)
     parsed_latest = parse_version(latest_version)
     if parsed_current is None or parsed_latest is None or parsed_latest <= parsed_current:
         return _no_update()
-
-    raw_downloads = payload.get("downloads")
-    if not isinstance(raw_downloads, dict):
+    url = release.get("downloadUrl")
+    if not is_valid_https_url(url):
         return _no_update()
-    downloads = {
-        platform: url
-        for platform in SUPPORTED_PLATFORMS
-        if is_valid_https_url(url := raw_downloads.get(platform))
-    }
-    if not downloads:
-        return _no_update()
-
     return {
         "checked": True,
         "updateAvailable": True,
         "latestVersion": latest_version,
-        "downloads": downloads,
+        "downloads": {platform: url},
     }
 
 

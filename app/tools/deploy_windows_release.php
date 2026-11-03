@@ -55,8 +55,8 @@ function ensureDirectory(FTP\Connection $ftp, string $path): void
 
 $root = dirname(__DIR__, 2);
 $remoteDirectory = '/sweety.tw/downloads';
-$remotePath = '/sweety.tw/downloads/Sweety-Windows-Setup-latest.exe';
-$localPath = $root . '/app/desktop/dist/Sweety-Setup-1.0.2-Windows-x64.exe';
+$remotePath = '/sweety.tw/downloads/Sweety-Windows-Setup-2.0.2.exe';
+$localPath = $root . '/dist/Sweety-Windows-Setup-2.0.2.exe';
 $config = readConfig($root . '/web/sftp-config.json');
 
 if (!is_file($localPath) || filesize($localPath) <= 0) {

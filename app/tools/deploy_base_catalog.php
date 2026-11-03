@@ -84,6 +84,10 @@ ensureRemoteDirectory($ftp, $siteRemoteRoot . '/images/personas');
 ensureRemoteDirectory($ftp, $siteRemoteRoot . '/images/weapons');
 
 $assets = [
+    'images/personas/immortal-han-li.jpg',
+    'images/personas/palace-zhen-wan.jpg',
+    'images/personas/domineering-ceo.jpg',
+    'images/personas/red-chamber-lin-ruodai.jpg',
     'images/personas/cautious-accounting-assistant.jpg',
     'images/personas/busy-nail-salon-assistant.jpg',
     'images/personas/home-freelance-designer.jpg',
@@ -151,8 +155,8 @@ $canonicalPersonas = json_decode((string) file_get_contents($root . '/app/catalo
 if ($template === false || $sql === false || $generatedPersonas === false || !is_array($canonicalPersonas)) {
     fail('Unable to read migration files.');
 }
-if (count($canonicalPersonas) !== 24) {
-    fail('Canonical persona catalog must contain 24 entries.');
+if (count($canonicalPersonas) < 24) {
+    fail('Canonical persona catalog must retain the original 24 entries.');
 }
 foreach ($canonicalPersonas as $persona) {
     foreach (['name', 'content'] as $field) {
@@ -166,7 +170,7 @@ if (!str_contains($sql, '-- __BASE_PERSONAS_GENERATED__')) {
 }
 $sql = str_replace('-- __BASE_PERSONAS_GENERATED__', $generatedPersonas, $sql);
 
-$runner = str_replace(['__TOKEN__', '__SQL_FILE__'], [$token, $sqlName], $template);
+$runner = str_replace(['__TOKEN__', '__SQL_FILE__', '__EXPECTED_PERSONAS__'], [$token, $sqlName, (string) count($canonicalPersonas)], $template);
 uploadString($ftp, $migrationRemoteRoot . '/' . $sqlName, $sql);
 uploadString($ftp, $migrationRemoteRoot . '/' . $runnerName, $runner);
 

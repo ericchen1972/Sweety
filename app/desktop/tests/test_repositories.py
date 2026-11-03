@@ -50,12 +50,12 @@ def test_prompt_and_base_personas_are_seeded_locally(repo):
 
     assert "{persona_text}" in prompt
     assert "{total_messages}" in prompt
-    assert len(personas) == 24
+    assert len(personas) == 28
     for age_group in ("20-35", "35-50", "50-65", "65+"):
         group = [item for item in personas if item["ageGroup"] == age_group]
-        assert len(group) == 6
-        assert sum(item["gender"] == "female" for item in group) == 3
-        assert sum(item["gender"] == "male" for item in group) == 3
+        assert len(group) == {"20-35": 7, "35-50": 8, "50-65": 6, "65+": 7}[age_group]
+        assert sum(item["gender"] == "female" for item in group) >= 3
+        assert sum(item["gender"] == "male" for item in group) >= 3
     content = repo.get_base_persona_text("cautious-accounting-assistant")
     assert content.startswith("人物資料")
     assert "與母親妹妹居住在新北市板橋" in content
