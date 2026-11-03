@@ -17,7 +17,7 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.2.exe';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.3.exe';
 const expectedMacDownload = 'https://sweety.tw/downloads/Sweety.dmg?release=2.0.2-20261027';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
@@ -49,7 +49,7 @@ test('macOS release helper preserves the metrics environment and verifies the up
 
 test('Windows release helper validates and verifies the uploaded Inno Setup binary', () => {
   assert.match(windowsReleaseHelper, /web\/sftp-config\.json/);
-  assert.match(windowsReleaseHelper, /app\/desktop\/dist\/Sweety-Windows-Setup-2\.0\.3\.exe/);
+  assert.match(windowsReleaseHelper, /dist\/Sweety-Windows-Setup-2\.0\.3\.exe/);
   assert.match(windowsReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-Windows-Setup-2\.0\.3\.exe/);
   assert.match(windowsReleaseHelper, /fread\([^,]+,\s*2\)[^;]*===\s*['"]MZ['"]/s);
   assert.match(windowsReleaseHelper, /FTP_BINARY/);
@@ -70,11 +70,11 @@ test('production update manifest separates platform releases and preserves legac
   assert.deepEqual(updateManifest, {
     latestVersion: '2.0.2',
     downloads: {
-      windows: expectedWindowsDownload,
+      windows: "https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.2.exe",
       macos: "https://sweety.tw/#download",
     },
     platforms: {
-      windows: { latestVersion: "2.0.2", downloadUrl: expectedWindowsDownload },
+      windows: { latestVersion: "2.0.3", downloadUrl: expectedWindowsDownload },
       macos: { latestVersion: "2.0.2", downloadUrl: expectedMacDownload },
     },
   });
@@ -83,7 +83,7 @@ test('production update manifest separates platform releases and preserves legac
 });
 
 test('machine-readable homepage copy lists both desktop downloads', () => {
-  assert.match(llms, /最新版本：2\.0\.2/);
+  assert.match(llms, /最新版本：Windows 2\.0\.3；macOS 2\.0\.2/);
   assert.match(llms, /目前下載：Windows、macOS/);
   assert.doesNotMatch(llms, /Windows：稍後提供/);
 });

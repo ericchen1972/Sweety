@@ -4,7 +4,7 @@ Sweety 是一套完全開源的主動式反詐騙桌面 App。使用者登入 LI
 
 - 官方網站：[sweety.tw](https://sweety.tw)
 - 目前版本：`2.0.3`
-- 2.0 正式安裝包：macOS 12.7 以上（Apple Silicon／Intel）；Windows／Mac 已發布下載仍為 2.0.2；2.0.3 為目前原始碼版本，待各平台完成安裝檔驗證後獨立發布
+- 2.0 正式安裝包：macOS 12.7 以上（Apple Silicon／Intel）；Windows 已發布 2.0.3；Mac 維持 2.0.2，各平台獨立發布
 - 授權：MIT
 
 ![Sweety 主動反詐](web/images/sweety-social-1200x630.png)

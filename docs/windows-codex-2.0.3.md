@@ -1,5 +1,7 @@
 # 給 Windows Codex 的交接提示
 
+> 發布狀態更新（2026-11-03）：Windows 2.0.3 安裝檔已交由 Mac 發布，Mac 維持 2.0.2。下方原始交接中的「尚未建立」描述為本次發布前狀態。今後 Windows 端負責打包並交付安裝檔，Mac 負責上傳與更新正式 manifest；Windows 不需要 web/sftp-config.json，此私密設定不可加入 Git 或安裝包。
+
 請在 SweetyGame 的既有 main 工作，不開分支或 worktree。先檢查本機未提交修改並保留，再拉取 origin/main；不要 reset --hard 或覆蓋本機資料。
 
 這次版本是 2.0.3。Mac 端已新增四位惡搞基礎人設及無文字插圖：仙界韓天尊（韓立，男，65+）、後宮甄嬛（甄婉，女，35–50）、霸道總裁（顧霆深，男，35–50）、紅樓黛玉（林若黛，女，20–35）。原24位保留，共28位。canonical 檔案是 `app/catalog/base_personas.json`，圖在 `web/images/personas/`，前後端與SQL生成檔已同步。伺服器人設也已更新；不需要重跑整份 base_catalog.sql，以免覆寫伺服器提示詞。

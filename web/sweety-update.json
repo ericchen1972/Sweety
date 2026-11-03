@@ -6,8 +6,8 @@
   },
   "platforms": {
     "windows": {
-      "latestVersion": "2.0.2",
-      "downloadUrl": "https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.2.exe"
+      "latestVersion": "2.0.3",
+      "downloadUrl": "https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.3.exe"
     },
     "macos": {
       "latestVersion": "2.0.2",
