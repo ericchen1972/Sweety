@@ -46,6 +46,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#PackageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+; Old Windows checkouts packaged the images symlink as a text file. Remove
+; only that file so the real images directory can be installed during upgrade.
+Type: files; Name: "{app}\_internal\frontend\images"
+
 [Icons]
 Name: "{group}\Sweety"; Filename: "{app}\Sweety.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\Sweety"; Filename: "{app}\Sweety.exe"; WorkingDir: "{app}"; Tasks: desktopicon

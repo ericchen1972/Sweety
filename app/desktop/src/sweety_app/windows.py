@@ -13,6 +13,7 @@ from .bootstrap import start_services
 from .config import APP_VERSION, LOG_PATH, LOGO_PATH, MANAGEMENT_URL, PANEL_BACKGROUND_PATH, preferred_locale
 from .diagnostics import log_event
 from .panel_text import ai_timeout_alert_copy, panel_ui_copy, status_text
+from .panel_updates import panel_update_copy, panel_update_downloads
 
 
 class WindowsPanel:
@@ -50,6 +51,8 @@ class WindowsPanel:
             fill='#3b2c16', outline='#cf8b32', state='hidden')
         self.warning = self._text(44, 316, '', 12, width=412, fill='#ffcf87')
         self.buttons = {}
+        self.update_card = None
+        self.update_key = None
         self.icons = {}
         # Draw icons as images so Windows font coverage cannot hide the symbols.
         for name in ('play', 'stop', 'manage', 'quit'):
@@ -111,6 +114,32 @@ class WindowsPanel:
 
     def set_status(self, text):
         self.canvas.itemconfigure(self.status, text=text)
+
+    def refresh_update(self, update):
+        # The shared update checker supplies only this runtime's platform.
+        url = dict(panel_update_downloads(update)).get('windows')
+        key = (self.locale, update.get('latestVersion'), url)
+        if key == self.update_key:
+            return
+        self.update_key = key
+        if self.update_card is not None:
+            self.update_card.destroy()
+            self.update_card = None
+        if not url:
+            return
+        import tkinter as tk
+        copy = panel_update_copy(self.locale, update)
+        self.update_card = tk.Frame(self.canvas, bg='#081c32',
+            highlightbackground='#2871a8', highlightthickness=1)
+        self.update_card.place(x=32, y=198, width=436, height=106)
+        tk.Label(self.update_card, text=copy['heading'], bg='#081c32', fg='white',
+            font=('Microsoft JhengHei UI', -14, 'bold'), anchor='w',
+            wraplength=406).pack(fill='x', padx=12, pady=(10, 6))
+        self.update_button = tk.Button(self.update_card, text=copy['windows'],
+            command=lambda: webbrowser.open(url), bg='#0084ff', fg='white',
+            activebackground='#0084ff', activeforeground='white', cursor='hand2',
+            borderwidth=0, font=('Microsoft JhengHei UI', -13, 'bold'))
+        self.update_button.pack(fill='x', padx=12, pady=(0, 10))
 
     def refresh(self, snapshot):
         enabled = bool(snapshot.get('enabled'))
@@ -186,6 +215,7 @@ def run_window(*, factory=start_services, on_ready=None, open_browser=True):
         except queue.Empty:
             if services is not None and not busy and not closing:
                 panel.refresh(services.monitor.snapshot())
+                panel.refresh_update(services.update_state.snapshot() if hasattr(services, 'update_state') else {})
             root.after(100, poll)
             return
         if kind == 'stopped':

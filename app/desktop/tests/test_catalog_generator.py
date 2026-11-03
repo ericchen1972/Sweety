@@ -42,9 +42,9 @@ def test_generator_keeps_ai_persona_source_in_traditional_chinese():
 
 
 def test_live_refresh_accepts_expanded_modern_catalog_without_rewriting_content(tmp_path, monkeypatch):
-    personas = json.loads(generator.CANONICAL.read_text())
+    personas = json.loads(generator.CANONICAL.read_text(encoding="utf-8"))
     canonical = tmp_path / "personas.json"
-    canonical.write_text(json.dumps(personas))
+    canonical.write_text(json.dumps(personas), encoding="utf-8")
     monkeypatch.setattr(generator, "CANONICAL", canonical)
     class Response:
         def raise_for_status(self): pass
@@ -56,8 +56,8 @@ def test_live_refresh_accepts_expanded_modern_catalog_without_rewriting_content(
 def test_incomplete_live_refresh_preserves_canonical_file(tmp_path, monkeypatch):
     import pytest
     canonical = tmp_path / "personas.json"
-    original = generator.CANONICAL.read_text()
-    canonical.write_text(original)
+    original = generator.CANONICAL.read_text(encoding="utf-8")
+    canonical.write_text(original, encoding="utf-8")
     monkeypatch.setattr(generator, "CANONICAL", canonical)
     class Response:
         def raise_for_status(self): pass
@@ -65,4 +65,4 @@ def test_incomplete_live_refresh_preserves_canonical_file(tmp_path, monkeypatch)
     monkeypatch.setattr(generator.requests, "get", lambda *a, **kw: Response())
     with pytest.raises(ValueError):
         generator.refresh_from_live()
-    assert canonical.read_text() == original
+    assert canonical.read_text(encoding="utf-8") == original

@@ -65,6 +65,16 @@ def self_check(output):
                 assert scripts, 'dashboard scripts'
                 for script in scripts:
                     assert requests.get(base + '/' + script.lstrip('/'), timeout=5).status_code == 200, script
+                from .catalog_personas import BASE_PERSONAS
+                from io import BytesIO
+                from PIL import Image
+                for persona in BASE_PERSONAS:
+                    image = requests.get(base + persona['image'], timeout=5)
+                    image.raise_for_status()
+                    assert image.headers['content-type'].startswith('image/'), persona['id']
+                    with Image.open(BytesIO(image.content)) as decoded:
+                        decoded.verify()
+                report['personaImages'] = len(BASE_PERSONAS)
                 assert requests.get(base + '/api/state', timeout=5).status_code == 200, 'dashboard state'
                 assert requests.get(base + '/api/line/status', timeout=5).json()['status'] == 'disconnected'
                 assert root.winfo_exists()

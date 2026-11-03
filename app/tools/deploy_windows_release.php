@@ -55,8 +55,8 @@ function ensureDirectory(FTP\Connection $ftp, string $path): void
 
 $root = dirname(__DIR__, 2);
 $remoteDirectory = '/sweety.tw/downloads';
-$remotePath = '/sweety.tw/downloads/Sweety-Windows-Setup-2.0.2.exe';
-$localPath = $root . '/dist/Sweety-Windows-Setup-2.0.2.exe';
+$remotePath = '/sweety.tw/downloads/Sweety-Windows-Setup-2.0.3.exe';
+$localPath = $root . '/app/desktop/dist/Sweety-Windows-Setup-2.0.3.exe';
 $config = readConfig($root . '/web/sftp-config.json');
 
 if (!is_file($localPath) || filesize($localPath) <= 0) {
@@ -73,13 +73,28 @@ if (!$hasMzSignature) {
 
 $ftp = connectFtp($config);
 ensureDirectory($ftp, $remoteDirectory);
-if (!ftp_put($ftp, $remotePath, $localPath, FTP_BINARY)) {
+$temporaryPath = $remotePath . '.uploading';
+if (!ftp_put($ftp, $temporaryPath, $localPath, FTP_BINARY)) {
     ftp_close($ftp);
     fail('Unable to upload the Windows installer.');
 }
-if (ftp_size($ftp, $remotePath) !== filesize($localPath)) {
+if (ftp_size($ftp, $temporaryPath) !== filesize($localPath)) {
     ftp_close($ftp);
     fail('Remote Windows installer size verification failed.');
+}
+$verified = tmpfile();
+if ($verified === false || !ftp_fget($ftp, $verified, $temporaryPath, FTP_BINARY)) {
+    fail('Unable to read back uploaded installer.');
+}
+rewind($verified);
+$hash = hash_init('sha256');
+hash_update_stream($hash, $verified);
+fclose($verified);
+if (!hash_equals(hash_file('sha256', $localPath), hash_final($hash))) {
+    fail('Remote Windows installer SHA-256 verification failed.');
+}
+if (!ftp_rename($ftp, $temporaryPath, $remotePath)) {
+    fail('Unable to publish verified Windows installer.');
 }
 ftp_close($ftp);
 

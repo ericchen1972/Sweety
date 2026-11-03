@@ -28,4 +28,4 @@ def test_release_version_is_2_0_3_across_product_surfaces():
     assert '"CFBundleShortVersionString": "2.0.3"' in spec
     assert '"CFBundleVersion": "203"' in spec
     assert "目前版本：`2.0.3`" in readme
-    assert "Sweety-Windows-Setup-2.0.2.exe" in windows_deploy  # Existing Windows release remains unchanged.
+    assert "Sweety-Windows-Setup-2.0.3.exe" in windows_deploy

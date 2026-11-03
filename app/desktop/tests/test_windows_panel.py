@@ -33,6 +33,34 @@ def test_shared_panel_status_keeps_login_errors_and_localized_controls():
 
 
 @pytest.mark.skipif(sys.platform != 'win32', reason='Windows native panel')
+def test_panel_shows_and_opens_only_windows_update(monkeypatch):
+    import tkinter as tk
+    from sweety_app import windows
+
+    opened = []
+    monkeypatch.setattr(windows.webbrowser, 'open', opened.append)
+    root = tk.Tk()
+    try:
+        panel = windows.WindowsPanel(root, toggle=lambda: None, manage=lambda: None, quit=root.destroy)
+        update = {'checked': True, 'updateAvailable': True, 'latestVersion': '2.0.4',
+                  'downloads': {'windows': 'https://example.test/win.exe', 'macos': 'https://example.test/mac.dmg'}}
+        for locale, label in [('zh-TW', 'Win 版'), ('en', 'Windows'), ('ja', 'Windows版')]:
+            panel.set_locale(locale)
+            panel.refresh_update(update)
+            root.update_idletasks()
+            assert panel.update_button['text'] == label
+            assert panel.update_card.winfo_y() + panel.update_card.winfo_height() <= 310
+            panel.update_button.invoke()
+        assert opened == ['https://example.test/win.exe'] * 3
+        panel.refresh_update({**update, 'downloads': {'macos': 'https://example.test/mac.dmg'}})
+        assert panel.update_card is None
+        panel.refresh_update({'checked': True, 'updateAvailable': False})
+        assert panel.update_card is None
+    finally:
+        root.destroy()
+
+
+@pytest.mark.skipif(sys.platform != 'win32', reason='Windows native panel')
 def test_window_controls_refresh_monitor_and_close_without_reopening_browser(monkeypatch):
     from sweety_app import windows
 

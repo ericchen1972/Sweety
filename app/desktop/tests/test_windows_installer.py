@@ -37,3 +37,9 @@ def test_installer_rejects_accidentally_copied_user_data(package, name):
 
 def test_release_package_passes_preflight(package):
     builder.validate_package(package)
+
+
+def test_upgrade_removes_legacy_images_file_without_removing_directories():
+    source = (Path(__file__).resolve().parents[1] / 'Sweety-Setup.iss').read_text(encoding='utf-8')
+    assert 'Type: files; Name: "{app}\\_internal\\frontend\\images"' in source
+    assert 'filesandordirs' not in source.lower()

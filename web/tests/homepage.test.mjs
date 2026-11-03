@@ -49,10 +49,13 @@ test('macOS release helper preserves the metrics environment and verifies the up
 
 test('Windows release helper validates and verifies the uploaded Inno Setup binary', () => {
   assert.match(windowsReleaseHelper, /web\/sftp-config\.json/);
-  assert.match(windowsReleaseHelper, /dist\/Sweety-Windows-Setup-2\.0\.2\.exe/);
-  assert.match(windowsReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-Windows-Setup-2\.0\.2\.exe/);
+  assert.match(windowsReleaseHelper, /app\/desktop\/dist\/Sweety-Windows-Setup-2\.0\.3\.exe/);
+  assert.match(windowsReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-Windows-Setup-2\.0\.3\.exe/);
   assert.match(windowsReleaseHelper, /fread\([^,]+,\s*2\)[^;]*===\s*['"]MZ['"]/s);
   assert.match(windowsReleaseHelper, /FTP_BINARY/);
+  assert.match(windowsReleaseHelper, /hash_equals/);
+  assert.match(windowsReleaseHelper, /ftp_fget/);
+  assert.match(windowsReleaseHelper, /ftp_rename/);
   assert.match(windowsReleaseHelper, /ftp_size\([^)]*\)[^;]*filesize\(/s);
   assert.doesNotMatch(windowsReleaseHelper, /echo[^;]*(?:password|user)/i);
 });
@@ -671,7 +674,8 @@ test('landing page has semantic sections, required assets, and no dead download 
 test('homepage stylesheet and module script share an explicit cache-busting version', () => {
   const stylesheetVersion = html.match(/<link[^>]+href="homepage\.css\?v=([^"&]+)"/)?.[1] ?? '';
   const scriptVersion = html.match(/<script[^>]+src="homepage\.js\?v=([^"&]+)"/)?.[1] ?? '';
-  const assetVersion = createHash('sha256').update(css).update('\0').update(javascript).digest('hex').slice(0, 12);
+  // Match repository content even when Git checks text out as CRLF on Windows.
+  const assetVersion = createHash('sha256').update(css.replace(/\r\n/g, '\n')).update('\0').update(javascript.replace(/\r\n/g, '\n')).digest('hex').slice(0, 12);
   assert.ok(stylesheetVersion, 'homepage.css URL should include a non-empty version query');
   assert.equal(scriptVersion, stylesheetVersion, 'homepage.js should use the same version query');
   assert.equal(scriptVersion, assetVersion, 'homepage asset version should match the CSS and JavaScript content hash');

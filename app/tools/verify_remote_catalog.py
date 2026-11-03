@@ -35,7 +35,7 @@ def main() -> None:
     prompt = payload["systemPromptTemplate"]
     assert "{persona_text}" in prompt and "{total_messages}" in prompt
     if args.baseline:
-        baseline = json.loads(args.baseline.read_text())
+        baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
         assert prompt == baseline["systemPromptTemplate"], "Shared prompt changed"
         current = {p["id"]: p for p in payload["basePersonas"]}
         for old in baseline["basePersonas"]:
@@ -46,7 +46,7 @@ def main() -> None:
                 for locale in ("zh-TW", "en"):
                     assert new[field][locale] == old[field][locale], (old["id"], field, locale)
     personas = payload["basePersonas"]
-    canonical = json.loads((LOCAL_PERSONA_IMAGES.parents[2] / "app/catalog/base_personas.json").read_text())
+    canonical = json.loads((LOCAL_PERSONA_IMAGES.parents[2] / "app/catalog/base_personas.json").read_text(encoding="utf-8"))
     assert {p["id"] for p in personas} == {p["id"] for p in canonical}
 
     for age_group in ("20-35", "35-50", "50-65", "65+"):

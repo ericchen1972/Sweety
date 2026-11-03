@@ -68,6 +68,18 @@ describe("UpdateNotice", () => {
     expect(html).toContain("デスクトップ操作権限は不要です。");
   });
 
+  it("renders only the Windows link supplied by the platform update API", () => {
+    const html = renderToStaticMarkup(createElement(UpdateNotice, {
+      update: { checked: true, updateAvailable: true, latestVersion: "2.0.4",
+        downloads: { windows: "https://example.test/win.exe" } },
+      copy: getCopy("zh-TW"),
+    }));
+    expect(html).toContain("https://example.test/win.exe");
+    expect(html).toContain("Win 版");
+    expect(html).not.toContain("Mac OS");
+    expect(html.match(/target="_blank"/g)).toHaveLength(1);
+  });
+
   it("does not render before a checked update with a usable download", () => {
     expect(renderToStaticMarkup(createElement(UpdateNotice, {
       update: { checked: false, updateAvailable: false },

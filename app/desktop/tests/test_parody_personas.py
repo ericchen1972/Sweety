@@ -6,7 +6,7 @@ from sweety_app.catalog_personas import BASE_PERSONAS
 
 def test_four_parody_personas_are_bundled_with_localized_content_and_art():
     root = Path(__file__).resolve().parents[3]
-    canonical = json.loads((root / "app/catalog/base_personas.json").read_text())
+    canonical = json.loads((root / "app/catalog/base_personas.json").read_text(encoding="utf-8"))
     assert len(canonical) == len(BASE_PERSONAS) == 28
     for slug, age, gender, name in [
         ("immortal-han-li", "65+", "male", "韓立"),
