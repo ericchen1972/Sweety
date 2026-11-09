@@ -6,7 +6,7 @@
 
 - 官方網站：https://sweety.tw/
 - 開源程式碼：https://github.com/ericchen1972/Sweety
-- 最新版本：Windows 2.0.3；macOS 2.0.2（各平台獨立更新）
+- 最新版本：Windows 2.0.4；macOS 2.0.4（各平台獨立更新）
 - 授權：MIT License
 - 目前下載：Windows、macOS
 - 作者：Eric，網站與 AI 工程師，20 年開發經驗
@@ -25,5 +25,6 @@ Sweety 2.0 使用 OKLine：先在基本設定選擇 Agnes 或 OpenAI 並填寫 A
 - 首頁常見問題：https://sweety.tw/#instructions
 
 macOS 12.7 以上：Apple Silicon 與 Intel 分開下載。
-- Apple Silicon: https://sweety.tw/downloads/Sweety-macos12.7-arm64-latest.dmg?release=2.0.2-20261026
-- Intel: https://sweety.tw/downloads/Sweety-macos12.7-x86_64-latest.dmg?release=2.0.2-20261026
+- Apple Silicon: https://sweety.tw/downloads/Sweety-M1-2.0.4.dmg
+- Intel: https://sweety.tw/downloads/Sweety-Intel-2.0.4.dmg
+- Windows x64: https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.4.exe

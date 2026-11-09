@@ -1,17 +1,17 @@
 {
-  "latestVersion": "2.0.2",
+  "latestVersion": "2.0.4",
   "downloads": {
-    "windows": "https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.2.exe",
+    "windows": "https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.4.exe",
     "macos": "https://sweety.tw/#download"
   },
   "platforms": {
     "windows": {
-      "latestVersion": "2.0.3",
-      "downloadUrl": "https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.3.exe"
+      "latestVersion": "2.0.4",
+      "downloadUrl": "https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.4.exe"
     },
     "macos": {
-      "latestVersion": "2.0.2",
-      "downloadUrl": "https://sweety.tw/downloads/Sweety.dmg?release=2.0.2-20261027"
+      "latestVersion": "2.0.4",
+      "downloadUrl": "https://sweety.tw/#download"
     }
   }
 }
