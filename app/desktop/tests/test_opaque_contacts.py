@@ -13,7 +13,7 @@ def test_real_directory_ids_are_opaque_not_u_c_prefixed(tmp_path):
     person=store.add('9f-person-opaque',assignment())
     group=store.add('8a-group-opaque',assignment())
     assert person['line_kind']=='person' and group['line_kind']=='group'
-    client=TestClient(create_app(repo.database,line_service=service))
+    client=TestClient(create_app(repo.database,line_service=service), base_url="http://127.0.0.1:8891")
     targets=client.get('/api/state').json()['targets']
     assert {t['lineKind'] for t in targets}=={'person','group'}
     repo.update_target(person['id'],{'reply_enabled':True})

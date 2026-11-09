@@ -87,8 +87,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleDisplayName": "Sweety",
         "CFBundleName": "Sweety",
-        "CFBundleShortVersionString": "2.0.3",
-        "CFBundleVersion": "203",
+        "CFBundleShortVersionString": "2.0.4",
+        "CFBundleVersion": "204",
         "LSMinimumSystemVersion": "12.7",
         "NSHighResolutionCapable": True,
         **(

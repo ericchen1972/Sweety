@@ -76,6 +76,10 @@ def self_check(output):
                         decoded.verify()
                 report['personaImages'] = len(BASE_PERSONAS)
                 assert requests.get(base + '/api/state', timeout=5).status_code == 200, 'dashboard state'
+                foreign_host = {'Host': 'rebind.example'}
+                assert requests.get(base + '/api/state', headers=foreign_host, timeout=5).status_code == 400
+                assert requests.post(base + '/api/monitor/start', headers=foreign_host, timeout=5).status_code == 400
+                report['foreignHostRejected'] = True
                 assert requests.get(base + '/api/line/status', timeout=5).json()['status'] == 'disconnected'
                 assert root.winfo_exists()
                 report.update(gui=True, frontend=True, api=True)

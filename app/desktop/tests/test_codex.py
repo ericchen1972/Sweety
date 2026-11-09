@@ -11,7 +11,7 @@ from sweety_app.database import Database
 
 
 def test_codex_selection_persists_without_api_keys(tmp_path):
-    client = TestClient(create_app(Database(tmp_path / 'state.db')))
+    client = TestClient(create_app(Database(tmp_path / 'state.db')), base_url="http://127.0.0.1:8891")
     state = client.get('/api/state').json()
     state['settings'].update(aiProvider='codex', agnesApiKey='', openAiApiKey='')
     response = client.put('/api/state', json=state)
@@ -157,7 +157,7 @@ def test_api_uses_injected_codex_service_and_sanitized_errors(tmp_path):
             return {'available': True, 'ready': False, 'status': 'codex_login_required'}
         def login(self): return {'authUrl': 'https://auth.openai.com/example'}
         def test(self): raise CodexError('codex_rate_limited')
-    client = TestClient(create_app(Database(tmp_path / 'api.db'), codex_service=Service()))
+    client = TestClient(create_app(Database(tmp_path / 'api.db'), codex_service=Service()), base_url="http://127.0.0.1:8891")
     assert client.get('/api/codex/status').json()['available'] is True
     assert client.post('/api/codex/login').json()['authUrl'].startswith('https://')
     response = client.post('/api/codex/test')

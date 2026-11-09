@@ -41,6 +41,7 @@ from Foundation import NSMutableAttributedString, NSMakeRange, NSObject, NSTimer
 from .config import APP_VERSION, LOGO_PATH, MANAGEMENT_URL, PANEL_BACKGROUND_PATH
 from .repositories import Repository
 from .panel_updates import panel_update_copy, panel_update_downloads
+from .updates import SUPPORTED_PLATFORMS
 
 
 from .panel_text import (

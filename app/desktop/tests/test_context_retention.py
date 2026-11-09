@@ -16,7 +16,7 @@ def make_repo(tmp_path):
 def test_context_default_and_api_boundaries(tmp_path):
     db, repo = make_repo(tmp_path)
     assert repo.get_settings()['history_limit'] == 6
-    client = TestClient(create_app(db))
+    client = TestClient(create_app(db), base_url="http://127.0.0.1:8891")
     for value in (3, 31):
         state = client.get('/api/state').json()
         state['settings']['historyLimit'] = value
@@ -30,7 +30,7 @@ def test_context_default_and_api_boundaries(tmp_path):
 def test_conversation_export_removed(tmp_path):
     db,repo = make_repo(tmp_path)
     t = repo.create_target(target_payload())
-    client=TestClient(create_app(db))
+    client=TestClient(create_app(db), base_url="http://127.0.0.1:8891")
     assert client.get(f"/api/targets/{t['id']}/export").status_code == 404
 
 

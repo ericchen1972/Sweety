@@ -6,7 +6,7 @@ from sweety_app.api import create_app
 def test_directory_bind_and_bulk_state_cannot_overwrite_server_identity(tmp_path):
     repo,store,service=setup(tmp_path)
     old=repo.create_target(assignment());repo.record_reply(old['id'])
-    client=TestClient(create_app(repo.database,line_service=service))
+    client=TestClient(create_app(repo.database,line_service=service), base_url="http://127.0.0.1:8891")
     assert len(client.get('/api/line/contacts').json())==3
     state=client.get('/api/state').json()
     assert not state['targets'][0]['lineBound']
@@ -22,7 +22,7 @@ def test_directory_bind_and_bulk_state_cannot_overwrite_server_identity(tmp_path
 
 def test_enroll_requires_real_contact_and_preserves_assignment(tmp_path):
     repo,store,service=setup(tmp_path)
-    client=TestClient(create_app(repo.database,line_service=service))
+    client=TestClient(create_app(repo.database,line_service=service), base_url="http://127.0.0.1:8891")
     payload={'contactId':'u2','assignment':{'name':'ignored','ageGroup':'20-35','gender':'female','personaId':'cautious-accounting-assistant','personaSource':'base','weaponId':'one-step-at-a-time','weaponSource':'base','replyEnabled':True}}
     response=client.post('/api/line/contacts/add',json=payload)
     assert response.status_code==201

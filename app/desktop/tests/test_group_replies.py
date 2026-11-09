@@ -78,7 +78,7 @@ def test_user_names_api_round_trip_and_legacy_payload(tmp_path):
     from fastapi.testclient import TestClient
     from sweety_app.api import create_app
     repo,store,service=setup(tmp_path)
-    client=TestClient(create_app(repo.database,line_service=service))
+    client=TestClient(create_app(repo.database,line_service=service), base_url="http://127.0.0.1:8891")
     state=client.get('/api/state').json()
     state['settings']['userNames']='小美,美姐'
     assert client.put('/api/state',json=state).json()['settings']['userNames']=='小美,美姐'

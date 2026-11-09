@@ -42,7 +42,7 @@ class RejectPersonaValidator:
 @pytest.fixture
 def client(tmp_path):
     database = Database(tmp_path / "api.sqlite3")
-    return TestClient(create_app(database))
+    return TestClient(create_app(database), base_url="http://127.0.0.1:8891")
 
 
 def target_payload(name: str = "Fraud1") -> dict:
@@ -68,9 +68,22 @@ def test_health_and_empty_state(client):
     assert state["targets"] == []
 
 
+@pytest.mark.parametrize("host", ["rebind.example:8891", "localhost.rebind.example:8891", "testserver"])
+@pytest.mark.parametrize(("method", "path"), [("GET", "/api/state"), ("POST", "/api/monitor/start")])
+def test_management_api_rejects_untrusted_hosts(client, host, method, path):
+    response = client.request(method, path, headers={"Host": host})
+
+    assert response.status_code == 400
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1:8891", "localhost:8891"])
+def test_management_api_accepts_loopback_hosts(client, host):
+    assert client.get("/api/state", headers={"Host": host}).status_code == 200
+
+
 def test_update_endpoint_reflects_the_same_injected_state_as_it_finishes(tmp_path):
     update_state = FakeUpdateState({"checked": False, "updateAvailable": False})
-    client = TestClient(create_app(Database(tmp_path / "updates.sqlite3"), update_state=update_state))
+    client = TestClient(create_app(Database(tmp_path / "updates.sqlite3"), update_state=update_state), base_url="http://127.0.0.1:8891")
 
     assert client.get("/api/update").json() == {"checked": False, "updateAvailable": False}
 
@@ -97,7 +110,7 @@ def test_update_endpoint_defaults_to_checked_unavailable_without_state(client):
 
 
 def test_about_endpoint_returns_sanitized_remote_content(tmp_path):
-    client = TestClient(create_app(Database(tmp_path / "about.sqlite3"), about_loader=FakeAboutLoader()))
+    client = TestClient(create_app(Database(tmp_path / "about.sqlite3"), about_loader=FakeAboutLoader()), base_url="http://127.0.0.1:8891")
 
     response = client.get("/api/about")
 
@@ -161,7 +174,7 @@ def test_state_snapshot_retains_imported_legacy_display_name(client):
 
 def test_state_snapshot_allows_unchanged_legacy_target_name(tmp_path):
     database = Database(tmp_path / "legacy-target.sqlite3")
-    client = TestClient(create_app(database))
+    client = TestClient(create_app(database), base_url="http://127.0.0.1:8891")
     parsed = TargetPayload.model_validate(target_payload("舊名稱😀"))
     client.app.state.repository.create_target({**parsed.model_dump(), "id": "target-legacy"})
     state = client.get("/api/state").json()
@@ -202,7 +215,7 @@ def test_custom_catalog_and_reference_guard(client):
 
 def test_custom_persona_is_validated_before_save(tmp_path):
     validator = AllowPersonaValidator()
-    client = TestClient(create_app(Database(tmp_path / "validated.sqlite3"), persona_validator=validator))
+    client = TestClient(create_app(Database(tmp_path / "validated.sqlite3"), persona_validator=validator), base_url="http://127.0.0.1:8891")
 
     response = client.post(
         "/api/catalog/custom/persona",
@@ -215,7 +228,7 @@ def test_custom_persona_is_validated_before_save(tmp_path):
 
 def test_rejected_custom_persona_is_not_persisted(tmp_path):
     database = Database(tmp_path / "rejected.sqlite3")
-    client = TestClient(create_app(database, persona_validator=RejectPersonaValidator()))
+    client = TestClient(create_app(database, persona_validator=RejectPersonaValidator()), base_url="http://127.0.0.1:8891")
 
     response = client.post(
         "/api/catalog/custom/persona",
@@ -229,7 +242,7 @@ def test_rejected_custom_persona_is_not_persisted(tmp_path):
 
 def test_rejected_persona_in_state_snapshot_leaves_state_unchanged(tmp_path):
     database = Database(tmp_path / "rejected-state.sqlite3")
-    client = TestClient(create_app(database, persona_validator=RejectPersonaValidator()))
+    client = TestClient(create_app(database, persona_validator=RejectPersonaValidator()), base_url="http://127.0.0.1:8891")
     state = client.get("/api/state").json()
     original_interval = state["settings"]["checkIntervalSeconds"]
     state["settings"]["checkIntervalSeconds"] = 99
