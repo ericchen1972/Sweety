@@ -86,6 +86,16 @@ jobs:
             choco install innosetup --yes --no-progress
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+          $language = Join-Path (Split-Path $iscc) 'Languages/ChineseTraditional.isl'
+          if (-not (Test-Path $language)) {
+            $source = 'https://raw.githubusercontent.com/jrsoftware/issrc/cfdf48923178df4b4f040e038b423aa555a61ffc/Files/Languages/Unofficial/ChineseTraditional.isl'
+            $download = "$env:RUNNER_TEMP/ChineseTraditional.isl"
+            Invoke-WebRequest $source -OutFile $download
+            if ((Get-FileHash $download).Hash -ne 'ab22b0ebf82969d1c9a7208e0e9f60e5119c0c95b9dacc00eb8e5582c7d3c604') {
+              throw 'Inno Setup translation checksum mismatch'
+            }
+            Copy-Item $download $language
+          }
           & $python app/desktop/build_windows.py --output $build --logging 0 --no-zip
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $python app/desktop/build_windows_installer.py --package "$build/dist/Sweety" --output "$build/installer" --iscc $iscc
