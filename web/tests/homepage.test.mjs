@@ -17,7 +17,7 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.4.exe';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.4-f073adf2b591.exe';
 const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-M1-2.0.4.dmg';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
@@ -50,7 +50,7 @@ test('macOS release helper preserves the metrics environment and verifies the up
 test('Windows release helper validates and verifies the uploaded Inno Setup binary', () => {
   assert.match(windowsReleaseHelper, /web\/sftp-config\.json/);
   assert.match(windowsReleaseHelper, /dist\/Sweety-Windows-Setup\.exe/);
-  assert.match(windowsReleaseHelper, /\/sweety\.tw\/downloads\/Sweety-Windows-Setup-2\.0\.4\.exe/);
+  assert.ok(windowsReleaseHelper.includes(new URL(expectedWindowsDownload).pathname));
   assert.match(windowsReleaseHelper, /fread\([^,]+,\s*2\)[^;]*===\s*['"]MZ['"]/s);
   assert.match(windowsReleaseHelper, /FTP_BINARY/);
   assert.match(windowsReleaseHelper, /hash_equals/);
