@@ -17,8 +17,8 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.4-f073adf2b591.exe';
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-M1-2.0.4.dmg';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.5-6e78113d1b09.exe';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-M1-2.0.5.dmg';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -66,16 +66,16 @@ test('homepage deployment remains website-only and never rebuilds the desktop ap
   assert.doesNotMatch(deployHelper, /dist\/Sweety\.app/);
 });
 
-test('production update manifest announces 2.0.4 to legacy and platform-specific clients', () => {
+test('production update manifest announces 2.0.5 to legacy and platform-specific clients', () => {
   assert.deepEqual(updateManifest, {
-    latestVersion: '2.0.4',
+    latestVersion: '2.0.5',
     downloads: {
       windows: expectedWindowsDownload,
       macos: "https://sweety.tw/#download",
     },
     platforms: {
-      windows: { latestVersion: "2.0.4", downloadUrl: expectedWindowsDownload },
-      macos: { latestVersion: "2.0.4", downloadUrl: "https://sweety.tw/#download" },
+      windows: { latestVersion: "2.0.5", downloadUrl: expectedWindowsDownload },
+      macos: { latestVersion: "2.0.5", downloadUrl: "https://sweety.tw/#download" },
     },
   });
   const manifest = deployHelper.match(/\$files\s*=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
@@ -83,7 +83,7 @@ test('production update manifest announces 2.0.4 to legacy and platform-specific
 });
 
 test('machine-readable homepage copy lists both desktop downloads', () => {
-  assert.match(llms, /最新版本：Windows 2\.0\.4；macOS 2\.0\.4/);
+  assert.match(llms, /最新版本：Windows 2\.0\.5；macOS 2\.0\.5/);
   assert.match(llms, /目前下載：Windows、macOS/);
   assert.doesNotMatch(llms, /Windows：稍後提供/);
 });
@@ -484,7 +484,7 @@ test('download configuration enables Windows and macOS', () => {
   assert.deepEqual(homepage.downloadConfig, {
     windows: expectedWindowsDownload,
     macos: expectedMacDownload,
-    macosIntel: 'https://sweety.tw/downloads/Sweety-Intel-2.0.4.dmg',
+    macosIntel: 'https://sweety.tw/downloads/Sweety-Intel-2.0.5.dmg',
   });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
     enabled: true,
