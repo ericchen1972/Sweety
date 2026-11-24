@@ -120,6 +120,21 @@ def test_reply_marks_latest_processed_message_read_after_delivery(tmp_path, read
     assert repo.get_target(target['id'])['round_trips'] == 1
 
 
+def test_read_watermark_stays_within_processed_batch(tmp_path):
+    _, store, service, _, monitor, _ = ready(tmp_path)
+    checked = []
+    service.api.mark_as_read = lambda mid, message_id: checked.append(message_id)
+    stamp = incoming('107')['createdTime']
+    for message_id in range(107, 98, -1):
+        assert store.ingest(incoming(str(message_id), createdTime=stamp))
+
+    assert monitor.run_cycle()
+    assert store.row('107')['status'] == 'pending'
+    assert checked == ['106']
+    assert monitor.run_cycle()
+    assert checked == ['106', '107']
+
+
 def test_stop_during_ai_never_sends_or_replays(tmp_path):
     repo,store,service,t,monitor,calls=ready(tmp_path)
     sent=[];service.api.send_text=lambda *a:sent.append(a)

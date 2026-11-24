@@ -98,6 +98,9 @@ class MonitorController:
         for row in self.store.rows():
             pending.setdefault(row['target_id'],[]).append(row)
         for target_id, queued_rows in pending.items():
+            # Keep the reply batch and read watermark in the same order.
+            # LINE message IDs are decimal strings and break timestamp ties.
+            queued_rows.sort(key=lambda row: (row['created'], len(row['id']), row['id']))
             rows=queued_rows[:8]
             if not self._valid(stop,scope,target_id):
                 continue
@@ -152,10 +155,8 @@ class MonitorController:
                     receipt=self.line.send(target_id,decision.msg_reply,
                         allowed=lambda:self._valid(stop,scope,target_id),expected_scope=scope)
                     self.store.complete(rows,receipt)
-                    # LINE message IDs are decimal strings. Break timestamp ties by ID.
-                    latest = max(rows, key=lambda row: (row['created'], len(row['id']), row['id']))
                     try:
-                        self.line.mark_as_read(target['line_mid'], latest['id'])
+                        self.line.mark_as_read(target['line_mid'], rows[-1]['id'])
                     except Exception as exc:
                         log_event(self.logger, 'line_mark_read_failed', target_id=target_id,
                                   error=type(exc).__name__)
