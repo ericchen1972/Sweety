@@ -152,6 +152,13 @@ class MonitorController:
                     receipt=self.line.send(target_id,decision.msg_reply,
                         allowed=lambda:self._valid(stop,scope,target_id),expected_scope=scope)
                     self.store.complete(rows,receipt)
+                    # LINE message IDs are decimal strings. Break timestamp ties by ID.
+                    latest = max(rows, key=lambda row: (row['created'], len(row['id']), row['id']))
+                    try:
+                        self.line.mark_as_read(target['line_mid'], latest['id'])
+                    except Exception as exc:
+                        log_event(self.logger, 'line_mark_read_failed', target_id=target_id,
+                                  error=type(exc).__name__)
                 processed=True
                 log_event(self.logger,'exchange_committed',target_id=target_id,receipt=receipt)
                 if self.on_exchange_committed:

@@ -263,6 +263,10 @@ class LineService:
                 raise ValueError('line_receipt_uncertain')
             return str(message['id'])
 
+    def mark_as_read(self, chat_mid, message_id):
+        with self.lock:
+            self.api.mark_as_read(chat_mid, message_id)
+
     def ingest(self, message, revision=None, *, stop=None):
         with self.lock:
             if (not self.allow_receiving() or not self.connected() or

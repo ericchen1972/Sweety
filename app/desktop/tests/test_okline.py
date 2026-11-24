@@ -93,6 +93,33 @@ def test_manual_outgoing_is_context_only(tmp_path):
     assert any(x['content']=='manual' and x['role']=='assistant' for x in calls[0]['history'])
 
 
+@pytest.mark.parametrize('read_fails', [False, True])
+def test_reply_marks_latest_processed_message_read_after_delivery(tmp_path, read_fails):
+    repo, store, service, target, monitor, _ = ready(tmp_path)
+    events = []
+
+    def send(mid, text):
+        events.append(('send', mid, text))
+        return {'id': 'receipt'}
+
+    def mark_as_read(mid, message_id):
+        events.append(('read', mid, message_id))
+        if read_fails:
+            raise TimeoutError('read receipt unavailable')
+
+    service.api.send_text = send
+    service.api.mark_as_read = mark_as_read
+    first = incoming('100')
+    latest = incoming('101', createdTime=first['createdTime'] + 1)
+    assert store.ingest(latest)
+    assert store.ingest(first)
+
+    assert monitor.run_cycle()
+    assert not monitor.run_cycle()
+    assert events == [('send', 'u1', 'reply'), ('read', 'u1', '101')]
+    assert repo.get_target(target['id'])['round_trips'] == 1
+
+
 def test_stop_during_ai_never_sends_or_replays(tmp_path):
     repo,store,service,t,monitor,calls=ready(tmp_path)
     sent=[];service.api.send_text=lambda *a:sent.append(a)
@@ -111,6 +138,7 @@ def test_uncertain_send_is_not_retried_or_counted(tmp_path):
     sent=[]
     def uncertain(*args):sent.append(args);raise TimeoutError('unknown')
     service.api.send_text=uncertain
+    service.api.mark_as_read=lambda *args: pytest.fail('Unconfirmed reply marked as read')
     store.ingest(incoming('m1'));monitor.run_cycle();monitor.run_cycle()
     assert len(sent)==1 and repo.get_target(t['id'])['round_trips']==0
     assert store.row('m1')['status']=='uncertain'
