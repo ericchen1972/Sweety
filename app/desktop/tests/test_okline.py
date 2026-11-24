@@ -1,4 +1,5 @@
 import time
+from threading import Event
 from types import SimpleNamespace
 import pytest
 from sweety_app.database import Database
@@ -93,10 +94,33 @@ def test_manual_outgoing_is_context_only(tmp_path):
     assert any(x['content']=='manual' and x['role']=='assistant' for x in calls[0]['history'])
 
 
-@pytest.mark.parametrize('read_fails', [False, True])
-def test_reply_marks_latest_processed_message_read_after_delivery(tmp_path, read_fails):
-    repo, store, service, target, monitor, _ = ready(tmp_path)
+@pytest.mark.parametrize(('read_fails', 'ai_seconds'), [(False, 1), (True, 9)])
+def test_reply_waits_to_read_and_type(tmp_path, monkeypatch, read_fails, ai_seconds):
+    from sweety_app import monitor as monitor_module, okline_store
+
+    repo, store, service, target, monitor, calls = ready(tmp_path)
+    repo.update_settings({'reply_delay_min_seconds': 6, 'reply_delay_max_seconds': 8})
     events = []
+    now = 100.0
+    clock = SimpleNamespace(time=time.time, sleep=time.sleep, monotonic=lambda: now)
+    monkeypatch.setattr(monitor_module, 'time', clock)
+    monkeypatch.setattr(okline_store, 'time', clock)
+    draws = []
+
+    def uniform(low, high):
+        draws.append((low, high))
+        return 5 if low == 3 else 7
+
+    monkeypatch.setattr(monitor_module.random, 'uniform', uniform)
+    first = incoming('100')
+    latest = incoming('101', createdTime=first['createdTime'] + 1)
+
+    def sleep(seconds):
+        nonlocal now
+        now += seconds
+        if not events:
+            assert store.ingest(latest)
+        events.append(('wait', seconds))
 
     def send(mid, text):
         events.append(('send', mid, text))
@@ -109,14 +133,27 @@ def test_reply_marks_latest_processed_message_read_after_delivery(tmp_path, read
 
     service.api.send_text = send
     service.api.mark_as_read = mark_as_read
-    first = incoming('100')
-    latest = incoming('101', createdTime=first['createdTime'] + 1)
-    assert store.ingest(latest)
+    monitor.sleeper = sleep
+    generate = monitor.ai.generate_reply
+
+    def generate_reply(**kwargs):
+        nonlocal now
+        events.append(('ai',))
+        now += ai_seconds
+        return generate(**kwargs)
+
+    monitor.ai.generate_reply = generate_reply
     assert store.ingest(first)
+    now += 2  # The worker picked up the batch two seconds after receipt.
 
     assert monitor.run_cycle()
     assert not monitor.run_cycle()
-    assert events == [('send', 'u1', 'reply'), ('read', 'u1', '101')]
+    assert draws == [(3, 10), (6, 8)]
+    expected = [('wait', 3), ('read', 'u1', '101'), ('ai',)]
+    if ai_seconds < 7:
+        expected.append(('wait', 7 - ai_seconds))
+    assert events == expected + [('send', 'u1', 'reply')]
+    assert [message['id'] for message in calls[0]['incoming_messages']] == ['100', '101']
     assert repo.get_target(target['id'])['round_trips'] == 1
 
 
@@ -153,10 +190,64 @@ def test_uncertain_send_is_not_retried_or_counted(tmp_path):
     sent=[]
     def uncertain(*args):sent.append(args);raise TimeoutError('unknown')
     service.api.send_text=uncertain
-    service.api.mark_as_read=lambda *args: pytest.fail('Unconfirmed reply marked as read')
+    reads=[]
+    service.api.mark_as_read=lambda *args: reads.append(args)
     store.ingest(incoming('m1'));monitor.run_cycle();monitor.run_cycle()
+    assert reads == [('u1', 'm1')]
     assert len(sent)==1 and repo.get_target(t['id'])['round_trips']==0
     assert store.row('m1')['status']=='uncertain'
+
+
+@pytest.mark.parametrize('stop_on_wait', [1, 2])
+def test_stop_during_read_or_typing_wait(tmp_path, stop_on_wait):
+    _, store, service, _, monitor, _ = ready(tmp_path)
+    waits, reads, sends = [], [], []
+
+    def sleep(seconds):
+        waits.append(seconds)
+        if len(waits) == stop_on_wait:
+            monitor.stop()
+
+    monitor.sleeper = sleep
+    service.api.mark_as_read = lambda *args: reads.append(args)
+    service.api.send_text = lambda *args: sends.append(args)
+    assert store.ingest(incoming('100'))
+    assert not monitor.run_cycle()
+    assert reads == ([('u1', '100')] if stop_on_wait == 2 else [])
+    assert not sends
+    assert store.row('100')['status'] == 'archived'
+
+
+def test_background_read_continues_while_another_chat_waits_for_ai(tmp_path, monkeypatch):
+    from sweety_app import monitor as monitor_module
+
+    repo, store, service, _, monitor, _ = ready(tmp_path)
+    monitor.stop()
+    second = store.add('u2', assignment())
+    repo.update_target(second['id'], {'reply_enabled': True})
+    monkeypatch.setattr(monitor_module.random, 'uniform', lambda *_: 0)
+    ai_started, release_ai, second_read = Event(), Event(), Event()
+
+    def generate_reply(**kwargs):
+        ai_started.set()
+        release_ai.wait(timeout=6)
+        return ReplyDecision(incoming_summary='incoming', msg_reply='reply')
+
+    def mark_as_read(mid, message_id):
+        if (mid, message_id) == ('u2', '101'):
+            second_read.set()
+
+    monitor.ai.generate_reply = generate_reply
+    service.api.mark_as_read = mark_as_read
+    assert monitor.start()
+    try:
+        assert service.ingest(incoming('100'))
+        assert ai_started.wait(timeout=2)
+        assert service.ingest(incoming('101', **{'from': 'u2'}))
+        assert second_read.wait(timeout=2)
+    finally:
+        release_ai.set()
+        monitor.stop()
 
 
 def test_renaming_contact_preserves_binding_and_assignments(tmp_path):

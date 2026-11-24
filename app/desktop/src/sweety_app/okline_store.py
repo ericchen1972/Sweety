@@ -146,17 +146,20 @@ class LineStore:
             inserted=bool(db.execute('INSERT OR IGNORE INTO line_inbox(account,id,target_id,raw,status,created) VALUES(?,?,?,?,?,?)',
                 (self.scope,str(message['id']),target['id'],'{}','pending' if eligible else 'archived',stamp)).rowcount)
             if inserted and eligible:
-                self._payloads[(self.scope,str(message["id"]))] = dict(message)
+                self._payloads[(self.scope,str(message["id"]))] = (time.monotonic(), dict(message))
             return inserted
 
-    def rows(self, statuses=('pending',)):
+    def rows(self, statuses=('pending',), *, target_id=None):
         marks=','.join('?' for _ in statuses)
+        target_clause = ' AND target_id=?' if target_id is not None else ''
         with self._guard, self.repo.database.connect() as db:
+            params = (self.scope, *statuses) if target_id is None else (self.scope, *statuses, target_id)
             result=[]
-            for r in db.execute(f'SELECT * FROM line_inbox WHERE account=? AND status IN ({marks}) ORDER BY created,rowid',(self.scope,*statuses)):
-                payload=self._payloads.get((self.scope,r['id']))
-                if payload is not None:
-                    result.append({**dict(r),'raw':json.dumps(payload,ensure_ascii=False)})
+            for r in db.execute(f'SELECT * FROM line_inbox WHERE account=? AND status IN ({marks}){target_clause} ORDER BY created,rowid', params):
+                queued = self._payloads.get((self.scope, r['id']))
+                if queued is not None:
+                    received_at, payload = queued
+                    result.append({**dict(r), 'received_at': received_at, 'raw': json.dumps(payload, ensure_ascii=False)})
             return result
 
     def row(self, mid):
