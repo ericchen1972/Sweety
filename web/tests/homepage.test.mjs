@@ -17,8 +17,8 @@ const sitemap = await readFile(new URL('sitemap.xml', webRoot), 'utf8').catch(()
 const llms = await readFile(new URL('llms.txt', webRoot), 'utf8').catch(() => '');
 const moduleUrl = new URL('homepage.js', webRoot);
 const homepage = await import(moduleUrl).catch(() => ({}));
-const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.5-6e78113d1b09.exe';
-const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-M1-2.0.5.dmg';
+const expectedWindowsDownload = 'https://sweety.tw/downloads/Sweety-Windows-Setup-2.0.5-ff32dbf78880.exe';
+const expectedMacDownload = 'https://sweety.tw/downloads/Sweety-M1-2.0.5-r2.dmg';
 
 test('macOS DMG build uses a drag-to-Applications staging folder and verifies the mounted image', () => {
   assert.match(dmgBuildHelper, /codesign --verify --deep --strict .*Sweety\.app/);
@@ -484,7 +484,7 @@ test('download configuration enables Windows and macOS', () => {
   assert.deepEqual(homepage.downloadConfig, {
     windows: expectedWindowsDownload,
     macos: expectedMacDownload,
-    macosIntel: 'https://sweety.tw/downloads/Sweety-Intel-2.0.5.dmg',
+    macosIntel: 'https://sweety.tw/downloads/Sweety-Intel-2.0.5-r2.dmg',
   });
   assert.deepEqual(homepage.getDownloadDecision('macos', 'zh-TW'), {
     enabled: true,
